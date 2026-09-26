@@ -1,0 +1,25 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  # The rules for main require a job named "title". If you rename it, change scripts/configure-github too.
+  title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check that the title follows the rules for a commit subject
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          types="feat|fix|docs|test|refactor|perf|build|ci|revert|chore"
+          pattern="^($types)(\([^)]+\))?!?: [^ ]"
+          if [[ "$TITLE" =~ $pattern ]]; then
+            exit 0
+          fi
+          echo "::error::The title \"$TITLE\" doesn't start with a commit type. Write it as \"<type>: <what changed>\", for example \"fix: keep photos on network drives in place\". The types are ${types//|/, }."
+          exit 1

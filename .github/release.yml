@@ -1,0 +1,5 @@
+# Leave Dependabot's version updates out of the release notes, so the notes list only changes to the product.
+changelog:
+  exclude:
+    authors:
+      - dependabot[bot]
