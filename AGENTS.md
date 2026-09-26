@@ -22,7 +22,7 @@ These rules apply to every coding agent and every person who changes the reposit
 
 The project has no slow tests yet. When it has some, list their command here. CI doesn't run slow tests, so run them before each release.
 
-Planning and building a milestone use the `--blocked-by` flag and the `blockedBy` field, which need gh 2.94 or later. Update gh before you plan or build a milestone.
+Planning and building a milestone use the `--blocked-by` flag and the `blockedBy` field, which need gh 2.94 or later. If `gh --version` shows an older version, stop and tell the owner.
 
 ## Write text and code
 
@@ -89,7 +89,7 @@ A change is done when all of these are true:
 - Compare the change with its issue's "Done when" list and the definition of done.
 - Report only what needs to change: wrong behavior, a missing test, a security problem, or text and code that break the guides. For each one, say what to change and why.
 - Don't ask for changes that a formatter would make, or for work outside the issue.
-- Post the review as a comment on the pull request, with `gh pr review <number> --comment`.
+- Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
 
 ## Plan a release
 
