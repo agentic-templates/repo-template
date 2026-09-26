@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Runs every check that CI runs. Run it before you push.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# CI installs every tool, so a missing tool there is an error.
+# On your machine the check is skipped, and CI still runs it.
+has() {
+  local tool=$1 install_url=$2
+  if command -v "$tool" >/dev/null; then
+    return 0
+  fi
+  if [[ -n "${CI:-}" ]]; then
+    echo "error: $tool is not installed. Install it in .github/workflows/ci.yml." >&2
+    exit 1
+  fi
+  echo "Skipped the $tool check because $tool is not installed. To run it here, install it: $install_url" >&2
+  return 1
+}
+
+if has shellcheck https://github.com/koalaman/shellcheck#installing; then
+  shellcheck scripts/check scripts/configure-github
+fi
+
+if has actionlint https://github.com/rhysd/actionlint/blob/main/docs/install.md; then
+  actionlint
+fi
+
+# Add the project's formatter check, linter and fast tests here.
+
+echo "Checks passed."
