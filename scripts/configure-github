@@ -53,9 +53,9 @@ fi
 while IFS='|' read -r name color description; do
   gh label create "$name" --repo "$repo" --force --color "$color" --description "$description" >/dev/null
 done <<'LABELS'
-bug|d73a4a|Something doesn't work the way the docs say it should
-feature|a2eeef|New or changed behavior that users notice
-maintenance|c5def5|Work that doesn't change how the product behaves, such as refactoring, tooling or docs
+bug|d73a4a|Something is broken, such as a crash, a wrong result or docs that don't match the product
+feature|a2eeef|New or changed behavior or docs that users notice, other than a fix
+maintenance|c5def5|Work that users don't notice, such as refactoring, tooling, tests or CI
 research|d4c5f9|A question to answer before building. It ends in a comment, not code
 needs-triage|fbca04|The owner hasn't accepted or rejected this yet
 needs-breakdown|f9d0c4|Accepted, but too big for one pull request. Split it before building

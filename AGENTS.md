@@ -22,6 +22,8 @@ These rules apply to every coding agent and every person who changes the reposit
 
 The project has no slow tests yet. When it has some, list their command here. CI doesn't run slow tests, so run them before each release.
 
+The `gh` commands in these rules need gh 2.98 or later. If `gh --version` shows an older version, stop and tell the owner.
+
 ## Write text and code
 
 Read both guides before you write or review anything in a session:
@@ -33,20 +35,20 @@ Read both guides before you write or review anything in a session:
 
 Use only these labels. To add, rename or remove one, change this section and `scripts/configure-github` in the same pull request.
 
-Every issue has exactly one type label:
+Every issue has exactly one type label. Choose it by what users notice:
 
-- `bug`: something doesn't work the way the docs say it should.
-- `feature`: new or changed behavior that users notice.
-- `maintenance`: work that doesn't change how the product behaves, such as refactoring, tooling or docs.
+- `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
+- `feature`: new or changed behavior or docs that users notice, other than a fix. The pieces of a split feature are features too.
+- `maintenance`: work that users don't notice, such as refactoring, tooling, tests or CI.
 - `research`: a question to answer before anyone builds. It ends in a comment, not in code.
 
 A status label says what an issue is waiting for. An issue that's ready to build has none:
 
-- `needs-triage`: the owner hasn't accepted or rejected it yet. The issue forms add it. An agent adds it, with a type label, to an issue the owner didn't ask for. An issue without a type label also needs triage.
-- `needs-breakdown`: accepted, but too big for one pull request. It gets split into smaller issues before anyone builds it.
-- `needs-decision`: waiting for the owner to answer a question or make a decision. The owner removes it after answering.
+- `needs-triage`: the owner hasn't accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues the owner asks for don't get it, including the ones created while planning a release.
+- `needs-breakdown`: accepted, but too big for one pull request. While planning a release, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent and closes when they're all closed.
+- `needs-decision`: waiting for the owner to answer a question or make a decision. Remove it once the owner has answered, on the issue or in the conversation.
 
-The owner decides triage. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
+Triage is the owner's decision. An agent carries it out when the owner says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
 
 Dependabot adds `dependencies` to its pull requests. Pull requests get no other labels.
 
@@ -54,11 +56,11 @@ Dependabot adds `dependencies` to its pull requests. Pull requests get no other 
 
 Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
 
-1. Start from an issue. If there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Give the issue one type label, as "Labels" describes.
+1. Start from an issue. If there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Give it one type label, as "Labels" describes. If the owner asks you to work on an issue that has `needs-triage`, remove that label, because the request accepts the issue.
 2. Create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue. If the issue already has a branch, check out that branch instead.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
 4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it and the repository is public. If it isn't, stop and tell the owner.
-5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours. Open an issue for it with the `bug` and `needs-triage` labels, unless one is open already, and mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the owner.
+5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the owner.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
 8. Merge only when the owner has asked you to, either for this pull request or for a whole milestone. Merge with `gh pr merge --squash`.
@@ -113,7 +115,7 @@ A change is done when all of these are true:
 
 ## Plan a release
 
-A release is a milestone of issues. Plan the whole release before anyone builds it, so that an agent can build it in one run. The steps here and in "Build a milestone" need gh 2.94 or later. If `gh --version` shows an older version, stop and tell the owner.
+A release is a milestone of issues. Plan the whole release before anyone builds it, so that an agent can build it in one run.
 
 1. Agree on the goal with the owner: what a user can do after the release that they can't do now.
 2. Choose the version, such as `v0.2.0`. It also names the milestone, and the commands below show it as `<version>`. Versions follow semantic versioning: raise the patch number for a release with only fixes, the minor number for new features, and the major number for a change that breaks existing use. Before version 1.0, a breaking change raises the minor number instead.
@@ -125,16 +127,17 @@ A release is a milestone of issues. Plan the whole release before anyone builds 
 
 ## Build a milestone
 
-When the owner asks you to build a milestone, work through its issues without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. If an issue would make you break one of these rules, handle it as step 4 below describes.
+When the owner asks you to build a milestone, work through its issues without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. If an issue would make you break one of these rules, handle it as step 5 below describes.
 
 1. Merge each open Dependabot pull request whose checks have passed. `gh pr list --app dependabot` lists them. Leave the others for the owner.
-2. List the milestone's open issues with `gh issue list --milestone <version> --json number,title,labels,blockedBy`. The `blockedBy` field lists each blocking issue with its state.
-3. Take the lowest-numbered issue that has no status label and whose blocking issues are all closed. Make the change as "Make a change" describes. Merge the pull request once the change meets the definition of done and its checks pass. If the issue has the `research` label, answer its question in a comment instead, with the evidence and a recommendation, and close it without merging any code.
-4. If the issue is unclear, too big or against one of these rules, or you can't make its checks pass, stop working on it. Comment on the issue with what you need and add the `needs-decision` label. If it has a pull request, leave that open. The owner removes the label after answering.
-5. Go back to step 2. When no issue is left that you can build, report to the owner:
+2. List the milestone's open issues with `gh issue list --milestone <version> --json number,title,labels,blockedBy,subIssuesSummary`. The `blockedBy` field lists each blocking issue with its state, and `subIssuesSummary` counts the issue's sub-issues.
+3. Take the lowest-numbered issue that has a type label, no status label and no open sub-issues, and whose blocking issues are all closed. Make the change as "Make a change" describes, and merge the pull request once the change meets the definition of done and its checks pass. Close a parent issue once all its sub-issues are closed.
+4. If the issue has the `research` label, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. If the answer fits what the issues it blocks ask for, close it. If it changes what they ask for, add `needs-decision` instead, so the owner decides before they're built.
+5. If the issue is unclear or against one of these rules, or its checks fail because of your change and you can't fix them, stop working on it. Comment on the issue with what you need and add `needs-decision`. If it's too big for one pull request, add `needs-breakdown` instead. If it has a pull request, leave that open.
+6. Go back to step 2. When no issue is left that you can build, report to the owner:
    - the pull requests that merged
    - the issues that have the `needs-decision` label
-   - the issues you skipped because they have `needs-triage` or `needs-breakdown`
+   - the issues you skipped because they have a status label or no type label, and the issues they block
    - the issues you opened for failures that your changes didn't cause
    - the Dependabot pull requests you didn't merge
    - anything the owner needs to run, such as `scripts/configure-github`
