@@ -56,8 +56,8 @@ Plan, build and release each later version with the same three requests. The req
 - "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you approve.
 - "Triage the new issues." The agent recommends what to do with each issue that someone else opened, and carries out what you decide.
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label. The next time you ask it to build the ready issues, it builds those issues too.
-- "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. To have it merged too, add "and merge it" to your request, or ask later.
-- "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, because CI runs that code on GitHub's machines instead.
+- "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Ready issues merge on their own because you approved them while planning, but this pull request waits until you ask. Add "and merge it" to your request, or ask later.
+- "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
 
 ## Limits
 
