@@ -63,7 +63,7 @@ Plan, build and release each later version with the same three requests. The req
 
 - The template works only with GitHub. Its settings script works only on public repositories, because GitHub offers private vulnerability reporting only for them. On a free plan, a private repository also can't protect main or merge pull requests on its own.
 - A build run merges its pull requests, and Dependabot's, once their checks pass, without anyone reviewing them. The checks catch only what the tests and linters cover.
-- Run one build of the ready issues per repository at a time, and ask for helpers to build faster. Two builds that start together can take the same issue. Helpers need an agent that can start other agents.
+- Run one build of the ready issues per repository at a time, and ask for helpers to build faster. Two builds that start together can take the same issue. Helpers need an agent that can launch other agents.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 
 ## License
