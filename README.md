@@ -45,7 +45,7 @@ You need the GitHub CLI 2.94 or later, signed in with `gh auth login`. If you us
 These are the requests you give your agent. `AGENTS.md` tells it what each one involves.
 
 1. "Plan release v0.1.0: photo-sorter finds duplicate photos in a folder and moves the extra copies to the trash." The agent creates the milestone v0.1.0 and splits the work into issues, each small enough for one pull request. It creates the issues in the order they should be built. When one issue depends on another, the agent marks the first as blocked by the second. Read the issues and correct them before the build starts.
-2. "Build milestone v0.1.0." The agent works through the issues one at a time. For each issue, it opens a pull request and merges it once the checks pass. You can read every merged pull request afterwards, because each one records what changed and why. If the agent can't build an issue, it comments on the issue and adds the `question` label. It skips the issues that depend on that one and builds the rest. Once you have answered, ask it to build the milestone again.
+2. "Build milestone v0.1.0." The agent works through the issues one at a time. For each issue, it opens a pull request and merges it once the checks pass. You can read every merged pull request afterwards, because each one records what changed and why. If the agent can't build an issue, it comments on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you have answered, ask it to build the milestone again.
 3. "Publish release v0.1.0." The agent checks that every issue in the milestone is closed and runs the slow tests, if there are any. Then it publishes a GitHub release with notes built from the merged pull requests.
 
 ## License
