@@ -34,7 +34,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 
 3. Set up the project in its first pull request. You can ask your agent, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." The list:
 
-   - In `AGENTS.md`, rewrite "What this project is" for the project: its goal, what's out of scope and the decisions every change keeps. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
+   - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the language version in its version file, such as `.python-version`, and commit the lockfile for the project's packages. Add a step to `.github/workflows/ci.yml` that installs the language and the packages.
    - Add the formatter, linter and fast tests to `scripts/check`. If the project has slow tests, such as end-to-end tests, list their command under "Commands" in `AGENTS.md`.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.

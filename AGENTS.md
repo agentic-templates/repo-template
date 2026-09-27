@@ -4,19 +4,9 @@ These rules apply to every coding agent and every person who changes the reposit
 
 ## What this project is
 
-repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it.
+repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup. Checks on pull requests stay fast, and nothing publishes the owner's email address.
 
-Out of scope:
-
-- Files and settings for one language or framework. Each project made from the template adds its own during setup.
-- Instruction files for one coding agent. A settings file, such as `.claude/settings.json`, is fine when it makes a tool follow these rules.
-
-Decisions that every change must respect:
-
-- The checks that run on every pull request finish within five minutes. Slower tests run before a release.
-- Nothing in the repository or its history publishes the owner's email address.
-
-Only the owner changes this section. When a request goes against it, point out the conflict. If the owner still wants the change, update this section in the same pull request, so that the rules and the repository agree.
+When a request pulls against this direction, say so, and ask the owner whether to change the request or the direction. A change of direction updates this section in the same pull request.
 
 ## Where things are
 
@@ -56,7 +46,7 @@ Every issue has exactly one type label. Choose it by what users notice:
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
 - `feature`: new or changed behavior or docs that users notice, other than a fix. The pieces of a split feature are features too.
 - `maintenance`: work that users don't notice, such as refactoring, tooling, tests or CI.
-- `research`: a question to answer before anyone builds. It ends in a comment, not in code.
+- `research`: something to find out before anyone builds, such as whether a library can do the job. It ends in a comment, not in code. A user's question about how to use the project isn't research.
 
 A status label says what an issue is waiting for. An issue that's ready to build has none:
 
