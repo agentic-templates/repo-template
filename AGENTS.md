@@ -1,8 +1,12 @@
 # How to work in this repository
 
-This repository is repo-template, a starting point for new projects.
-
 These rules apply to every coding agent and every person who changes the repository. In them, the owner is the person who has admin access to the repository and decides what happens to it. If a rule conflicts with what the owner asks for, point out the conflict and ask before you break the rule.
+
+## What this project is
+
+repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
+
+When a request pulls against this direction, say so, and ask the owner whether to change the request or the direction. A change of direction updates this section in the same pull request.
 
 ## Where things are
 
@@ -10,6 +14,7 @@ These rules apply to every coding agent and every person who changes the reposit
 - `AGENTS.md`: these rules.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
 - `docs/code.md`: how to write code.
+- `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan a release.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release note settings, and the contributing and security pages.
@@ -20,16 +25,17 @@ These rules apply to every coding agent and every person who changes the reposit
 - `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
 - `scripts/configure-github`: the owner runs it after creating the repository on GitHub, and again whenever the script changes. It needs admin access.
 
-The project has no slow tests yet. When it has some, list their command here. CI doesn't run slow tests, so run them before each release.
+The project has no slow tests yet. When it has some, list their command here. The checks on pull requests don't run slow tests, so run them before each release.
 
-The `gh` commands in these rules need gh 2.98 or later. If `gh --version` shows an older version, stop and tell the owner.
+The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the owner before you run any `gh` command.
 
-## Write text and code
+## Read the guides
 
-Read both guides before you write or review anything in a session:
+Read each guide before you first do its kind of work in a session:
 
-- [docs/writing.md](docs/writing.md) covers all text: docs, issues, pull requests, commit messages, comments and error messages.
-- [docs/code.md](docs/code.md) covers all code.
+- [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
+- [docs/code.md](docs/code.md), before you write or review code.
+- [docs/planning.md](docs/planning.md), before you triage ideas, turn them into issues or plan a release. It decides what goes into an issue, and the writing guide decides how the issue reads.
 
 ## Labels
 
@@ -40,12 +46,12 @@ Every issue has exactly one type label. Choose it by what users notice:
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
 - `feature`: new or changed behavior or docs that users notice, other than a fix. The pieces of a split feature are features too.
 - `maintenance`: work that users don't notice, such as refactoring, tooling, tests or CI.
-- `research`: a question to answer before anyone builds. It ends in a comment, not in code.
+- `research`: something to find out before anyone builds, such as whether a library can do the job. It ends in a comment, not in code. A user's question about how to use the project isn't research.
 
 A status label says what an issue is waiting for. An issue that's ready to build has none:
 
 - `needs-triage`: the owner hasn't accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues the owner asks for don't get it, including the ones created while planning a release.
-- `needs-breakdown`: accepted, but too big for one pull request. While planning a release, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent and closes when they're all closed.
+- `needs-breakdown`: accepted, but too big for one pull request. While planning a release, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent, and it closes once they're all closed and its "Done when" is met.
 - `needs-decision`: waiting for the owner to answer a question or make a decision. Remove it once the owner has answered, on the issue or in the conversation.
 
 Triage is the owner's decision. An agent carries it out when the owner says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
@@ -56,7 +62,7 @@ Pull requests get their labels without anyone's help. A workflow gives each one 
 
 Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
 
-1. Start from an issue. If there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Give it one type label, as "Labels" describes. If the owner asks you to work on an issue that has `needs-triage`, remove that label, because the request accepts the issue.
+1. Start from an issue. Search for one with `gh issue list --state all --search "<words>"`, and if there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Give it one type label, as "Labels" describes. If the owner asks you to work on an issue that has `needs-triage`, remove that label, because the request accepts the issue.
 2. Create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue. If the issue already has a branch, check out that branch instead.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
 4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it and the repository is public. If it isn't, stop and tell the owner.
@@ -115,15 +121,7 @@ A change is done when all of these are true:
 
 ## Plan a release
 
-A release is a milestone of issues. Plan the whole release before anyone builds it, so that an agent can build it in one run.
-
-1. Agree on the goal with the owner: what a user can do after the release that they can't do now.
-2. Choose the version, such as `v0.2.0`. It also names the milestone, and the commands below show it as `<version>`. Versions follow semantic versioning: raise the patch number for a release with only fixes, the minor number for new features, and the major number for a change that breaks existing use. Before version 1.0, a breaking change raises the minor number instead.
-3. Create the milestone. `gh` fills in `{owner}` and `{repo}`:
-   `gh api repos/{owner}/{repo}/milestones -f title=<version> -f description="<goal>"`
-4. Split the goal into issues. Each issue fits in one pull request and leaves main working when it merges. Its body has the three headings from "Make a change". Write it for a builder who has read nothing but the issue and the code.
-5. Create the issues in the order they should be built, because the builder takes the lowest-numbered issue first. Use `gh issue create --milestone <version> --label <type>`. If an issue needs another issue's change first, add `--blocked-by <other issue>`.
-6. Ask the owner to review the milestone before anyone builds it.
+When the owner asks you to plan a release, follow the steps in [docs/planning.md](docs/planning.md). Only issues that meet its definition of ready can join the milestone.
 
 ## Build a milestone
 
@@ -131,8 +129,8 @@ When the owner asks you to build a milestone, work through its issues without st
 
 1. Merge each open Dependabot pull request whose checks have passed. `gh pr list --app dependabot` lists them. Leave the others for the owner.
 2. List the milestone's open issues with `gh issue list --milestone <version> --json number,title,labels,blockedBy,subIssuesSummary`. The `blockedBy` field lists each blocking issue with its state, and `subIssuesSummary` counts the issue's sub-issues.
-3. Take the lowest-numbered issue that has a type label, no status label and no open sub-issues, and whose blocking issues are all closed. Make the change as "Make a change" describes, and merge the pull request once the change meets the definition of done and its checks pass. Close a parent issue once all its sub-issues are closed.
-4. If the issue has the `research` label, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. If the answer fits what the issues it blocks ask for, close it. If it changes what they ask for, add `needs-decision` instead, so the owner decides before they're built.
+3. Take the lowest-numbered issue that has a type label, no status label and no open sub-issues, and whose blocking issues are all closed. Make the change as "Make a change" describes, and merge the pull request once the change meets the definition of done and its checks pass. If the issue is a parent whose sub-issues are all closed, don't build it. Check its "Done when" instead: close it if the result is reached, and add `needs-decision` if it isn't.
+4. If the issue has the `research` label, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation, and close it. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. If the answer changes what an issue it blocked asks for, add `needs-decision` to that issue, so the owner decides before it's built.
 5. If the issue is unclear or against one of these rules, or its checks fail because of your change and you can't fix them, stop working on it. Comment on the issue with what you need and add `needs-decision`. If it's too big for one pull request, add `needs-breakdown` instead. If it has a pull request, leave that open.
 6. Go back to step 2. When no issue is left that you can build, report to the owner:
    - the pull requests that merged
@@ -167,6 +165,6 @@ The repository holds the product and the rules for building it. Everything in it
 
 ## Change these rules
 
-- Inside the repository, instructions for agents live in AGENTS.md files and the two guides in `docs/`. Put a writing or code rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`.
+- Inside the repository, instructions for agents live in AGENTS.md files and the three guides in `docs/`. Put a writing or code rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`.
 - Don't create a `CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the owner. Personal instructions in `~/.claude/CLAUDE.md` are fine, because that folder isn't above the repository.
 - Add a rule only when the same mistake keeps happening and no check or setting can prevent it. Keep the rules that explain what a check expects. Remove a rule once it no longer applies.
