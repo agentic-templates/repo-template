@@ -43,7 +43,7 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 - Pair every bug fix with a test that fails without the fix.
 - Name each test for the behavior and the condition, such as "leaves photos on a network drive in place".
 - Keep tests independent of the network, the clock and the order in which they run.
-- When the checks on pull requests take longer than "Commands" in AGENTS.md says they should, make them faster, such as by caching or by running tests in parallel. If they're still too slow, move only the slow tests that check the product as a whole, such as end-to-end tests, into a CI run after each merge to main. List their command under "Commands".
+- When you speed up the checks on pull requests, start with changes that keep every test in them, such as caching or running tests in parallel. If they're still slower than "Commands" in AGENTS.md says they should be, move only the slow tests that check the product as a whole, such as end-to-end tests, into a CI run after each merge to main. List their command under "Commands".
 
 ## Pin versions
 

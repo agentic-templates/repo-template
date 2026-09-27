@@ -136,7 +136,7 @@ When a maintainer asks you to build a milestone, work through its issues without
    - the pull requests that merged
    - the issues that have the `needs-decision` label
    - the issues you skipped because they have a status label or no type label, and the issues they block
-   - the issues you opened for failures that your changes didn't cause
+   - the issues you opened on your own, for problems you noticed
    - the Dependabot pull requests you didn't merge
    - anything a maintainer needs to run, such as `scripts/configure-github`
 
