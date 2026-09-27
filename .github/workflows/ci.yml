@@ -15,6 +15,8 @@ concurrency:
 
 jobs:
   # The rules for main require a job named "check". If you rename it, change scripts/configure-github too.
+  # If you split the checks into several jobs, make "check" need them all, run with if: always() and fail
+  # unless each one passed or was skipped. Otherwise a failed job skips "check", and GitHub counts a skip as a pass.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10

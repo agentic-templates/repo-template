@@ -43,8 +43,7 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 - Pair every bug fix with a test that fails without the fix.
 - Name each test for the behavior and the condition, such as "leaves photos on a network drive in place".
 - Keep tests independent of the network, the clock and the order in which they run.
-- Keep the checks on pull requests within the time limit under "Commands" in AGENTS.md, because every merge waits for them. When they take longer, move the slowest tests, such as end-to-end tests, into a second script, such as `scripts/test-slow`. List it under "Commands", because the steps for publishing a release run the slow tests listed there.
-- When the project has parts that change separately, a pull request can run only the checks for the parts it touches. Keep one required job named `check` that waits for the others and fails if any of them failed, because the rules for main require that job.
+- When the checks on pull requests take longer than "Commands" in AGENTS.md says they should, make them faster, such as by caching or by running tests in parallel. If they're still too slow, move only the slow tests that check the product as a whole, such as end-to-end tests, into a CI run after each merge to main. List their command under "Commands".
 
 ## Pin versions
 
