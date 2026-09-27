@@ -25,7 +25,7 @@ When a request pulls against this direction, say so, and ask the owner whether t
 - `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
 - `scripts/configure-github`: the owner runs it after creating the repository on GitHub, and again whenever the script changes. It needs admin access.
 
-The project has no slow tests yet. When it has some, list their command here. The checks on pull requests don't run slow tests, so run them before each release.
+The checks on a pull request should finish within five minutes, because every merge waits for them. If yours take longer, open an issue for it with `maintenance` and `needs-triage`, unless one is open already. Slow tests don't belong in these checks. The project has none yet. When it has some, list their command here, and run them before each release.
 
 The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the owner before you run any `gh` command.
 
