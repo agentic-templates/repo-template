@@ -19,7 +19,7 @@ The template works with any language. Agents get their instructions from one fil
 
 You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.277 or later, because earlier versions don't read `AGENTS.md`.
 
-1. Create a public repository from the template, and clone it. The settings script is written for public repositories. On a private repository in a personal account, it can stop partway, because GitHub doesn't offer some of its settings there, such as secret scanning.
+1. Create a public repository from the template, and clone it. The settings script is written for public repositories. On a private repository, it stops at private vulnerability reporting, which GitHub offers only for public repositories. The settings after it, such as the rules that protect main, don't get applied.
 
    ```bash
    gh repo create photo-sorter --public --template jtmpl/repo-template --clone
@@ -32,10 +32,10 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
    scripts/configure-github
    ```
 
-3. Set up the project in its first pull request. You can ask your agent, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." If you already have text about the project, add it to your request or point the agent to it. The list:
+3. Set up the project in its first pull request. You can ask your agent, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." If you already have text about the project, add it to your request or point the agent to it. The agent asks you about anything on the list that your request doesn't settle, such as which languages, frameworks or database to use. The list:
 
    - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
-   - Pin the language version in its version file, such as `.python-version`, and commit the lockfile for the project's packages. Add a step to `.github/workflows/ci.yml` that installs the language and the packages.
+   - Pin the version of each main technology, such as the language in its version file, like `.python-version`, and commit the lockfile for the project's packages. Add steps to `.github/workflows/ci.yml` that install them.
    - Add the formatter, linter and fast tests to `scripts/check`. If the project has slow tests, such as end-to-end tests, list their command under "Commands" in `AGENTS.md`.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - Set the year and the copyright holder in `LICENSE`.
