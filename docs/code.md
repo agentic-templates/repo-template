@@ -47,7 +47,7 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 
 ## Pin versions
 
-- When you add a tool or a dependency, use its current stable version.
+- When you add a tool or a dependency, use its newest stable version that is at least 7 days old, as Dependabot does.
 - Record the exact version of every tool and package that the project installs. The language's version goes in its version file, such as `.python-version`. Packages go in a committed lockfile. A tool that the lockfile doesn't cover gets its version and checksum in the file that installs it, as `.github/workflows/ci.yml` does for shellcheck.
 - Pin each GitHub Action to a full commit SHA, with its version in a comment. The repository's settings stop any workflow that uses an action without a commit SHA.
 - Add a dependency only when it saves more work than it costs to review, update and secure. Prefer the standard library.
