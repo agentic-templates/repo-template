@@ -1,12 +1,12 @@
 # How to work in this repository
 
-These rules apply to every coding agent and every person who changes the repository. In them, the owner is the person who has admin access to the repository and decides what happens to it. If a rule conflicts with what the owner asks for, point out the conflict and ask before you break the rule.
+These rules apply to every coding agent and every person who changes the repository. In them, a maintainer is anyone with write access to the repository: its owner and the collaborators they add. Maintainers decide what happens to the repository, and "the maintainer" means the one you're working with. If a rule conflicts with what the maintainer asks for, point out the conflict and ask before you break the rule.
 
 ## What this project is
 
 repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
 
-When a request pulls against this direction, say so, and ask the owner whether to change the request or the direction. A change of direction updates this section in the same pull request.
+When a request pulls against this direction, say so, and ask the maintainer whether to change the request or the direction. A change of direction updates this section in the same pull request.
 
 ## Where things are
 
@@ -23,11 +23,11 @@ When a request pulls against this direction, say so, and ask the owner whether t
 ## Commands
 
 - `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
-- `scripts/configure-github`: the owner runs it after creating the repository on GitHub, and again whenever the script changes. It needs admin access.
+- `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes.
 
 The checks on a pull request should finish within five minutes, because every merge waits for them. If yours take longer, open an issue for it with `maintenance` and `needs-triage`, unless one is open already. Slow tests don't belong in these checks. The project has none yet. When it has some, list their command here, and run them before each release.
 
-The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the owner before you run any `gh` command.
+The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the maintainer before you run any `gh` command.
 
 ## Read the guides
 
@@ -50,26 +50,26 @@ Every issue has exactly one type label. Choose it by what users notice:
 
 A status label says what an issue is waiting for. An issue that's ready to build has none:
 
-- `needs-triage`: the owner hasn't accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues the owner asks for don't get it, including the ones created while planning a release.
+- `needs-triage`: no maintainer has accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning a release.
 - `needs-breakdown`: accepted, but too big for one pull request. While planning a release, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent, and it closes once they're all closed and its "Done when" is met.
-- `needs-decision`: waiting for the owner to answer a question or make a decision. Remove it once the owner has answered, on the issue or in the conversation.
+- `needs-decision`: waiting for a maintainer to answer a question or make a decision. Remove it once a maintainer has answered, on the issue or in the conversation.
 
-Triage is the owner's decision. An agent carries it out when the owner says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
+Triage is a maintainer's decision. An agent carries it out when a maintainer says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
 
-Pull requests get their labels without anyone's help. A workflow gives each one the type label that matches its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Release notes group pull requests by these labels. Dependabot's pull requests get `dependencies` instead. The owner labels a pull request from a fork by hand.
+Pull requests get their labels without anyone's help. A workflow gives each one the type label that matches its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Release notes group pull requests by these labels. Dependabot's pull requests get `dependencies` instead. A maintainer labels a pull request from a fork by hand.
 
 ## Make a change
 
 Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
 
-1. Start from an issue. Search for one with `gh issue list --state all --search "<words>"`, and if there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Give it one type label, as "Labels" describes. If the owner asks you to work on an issue that has `needs-triage`, remove that label, because the request accepts the issue.
+1. Start from an issue. Search for one with `gh issue list --state all --search "<words>"`, and if there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Give it one type label, as "Labels" describes. If a maintainer asks you to work on an issue that has `needs-triage`, remove that label, because the request accepts the issue.
 2. Create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue. If the issue already has a branch, check out that branch instead.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
-4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it and the repository is public. If it isn't, stop and tell the owner.
-5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the owner.
+4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it and the repository is public. If it isn't, stop and tell the maintainer.
+5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
-8. Merge only when the owner has asked you to, either for this pull request or for a whole milestone. Merge with `gh pr merge --squash`.
+8. Merge only when a maintainer has asked you to, either for this pull request or for a whole milestone. Merge with `gh pr merge --squash`.
 
 ## Commits
 
@@ -98,7 +98,7 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject, because it becomes the commit subject on main. CI checks its format.
 - The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. If a test covers the change but you didn't run it, such as a slow test, say so and say why.
-- If the pull request changes `scripts/configure-github`, say in its description that the owner needs to run the script after the merge.
+- If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
 ## Definition of done
 
@@ -121,32 +121,32 @@ A change is done when all of these are true:
 
 ## Plan a release
 
-When the owner asks you to plan a release, follow the steps in [docs/planning.md](docs/planning.md). Only issues that meet its definition of ready can join the milestone.
+When a maintainer asks you to plan a release, follow the steps in [docs/planning.md](docs/planning.md). Only issues that meet its definition of ready can join the milestone.
 
 ## Build a milestone
 
-When the owner asks you to build a milestone, work through its issues without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. If an issue would make you break one of these rules, handle it as step 5 below describes.
+When a maintainer asks you to build a milestone, work through its issues without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. If an issue would make you break one of these rules, handle it as step 5 below describes.
 
-1. Merge each open Dependabot pull request whose checks have passed. `gh pr list --app dependabot` lists them. Leave the others for the owner.
+1. Merge each open Dependabot pull request whose checks have passed. `gh pr list --app dependabot` lists them. Leave the others for the maintainer.
 2. List the milestone's open issues with `gh issue list --milestone <version> --json number,title,labels,blockedBy,subIssuesSummary`. The `blockedBy` field lists each blocking issue with its state, and `subIssuesSummary` counts the issue's sub-issues.
 3. Take the lowest-numbered issue that has a type label, no status label and no open sub-issues, and whose blocking issues are all closed. Make the change as "Make a change" describes, and merge the pull request once the change meets the definition of done and its checks pass. If the issue is a parent whose sub-issues are all closed, don't build it. Check its "Done when" instead: close it if the result is reached, and add `needs-decision` if it isn't.
-4. If the issue has the `research` label, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation, and close it. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. If the answer changes what an issue it blocked asks for, add `needs-decision` to that issue, so the owner decides before it's built.
+4. If the issue has the `research` label, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation, and close it. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. If the answer changes what an issue it blocked asks for, add `needs-decision` to that issue, so the maintainer decides before it's built.
 5. If the issue is unclear or against one of these rules, or its checks fail because of your change and you can't fix them, stop working on it. Comment on the issue with what you need and add `needs-decision`. If it's too big for one pull request, add `needs-breakdown` instead. If it has a pull request, leave that open.
-6. Go back to step 2. When no issue is left that you can build, report to the owner:
+6. Go back to step 2. When no issue is left that you can build, report to the maintainer:
    - the pull requests that merged
    - the issues that have the `needs-decision` label
    - the issues you skipped because they have a status label or no type label, and the issues they block
    - the issues you opened for failures that your changes didn't cause
    - the Dependabot pull requests you didn't merge
-   - anything the owner needs to run, such as `scripts/configure-github`
+   - anything a maintainer needs to run, such as `scripts/configure-github`
 
 ## Publish a release
 
-When the owner asks you to publish a release:
+When a maintainer asks you to publish a release:
 
-1. Check that every issue in the milestone is closed. If some are open, stop and tell the owner, who can resolve them or move them to a later milestone.
-2. Check that the version still fits the merged work. A new feature needs at least a minor release, and a breaking change needs a major one, or a minor one before version 1.0. If the version doesn't fit, ask the owner which version to publish.
-3. Run the slow tests listed under "Commands", if there are any. If one fails, stop and tell the owner.
+1. Check that every issue in the milestone is closed. If some are open, stop and tell the maintainer, who can resolve them or move them to a later milestone.
+2. Check that the version still fits the merged work. A new feature needs at least a minor release, and a breaking change needs a major one, or a minor one before version 1.0. If the version doesn't fit, ask the maintainer which version to publish.
+3. Run the slow tests listed under "Commands", if there are any. If one fails, stop and tell the maintainer.
 4. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target main --generate-notes`
 5. Close the milestone. `gh api repos/{owner}/{repo}/milestones` shows its number:
@@ -166,5 +166,5 @@ The repository holds the product and the rules for building it. Everything in it
 ## Change these rules
 
 - Inside the repository, instructions for agents live in AGENTS.md files and the three guides in `docs/`. Put a writing or code rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`.
-- Don't create a `CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the owner. Personal instructions in `~/.claude/CLAUDE.md` are fine, because that folder isn't above the repository.
+- Don't create a `CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the maintainer. Personal instructions in `~/.claude/CLAUDE.md` are fine, because that folder isn't above the repository.
 - Add a rule only when the same mistake keeps happening and no check or setting can prevent it. Keep the rules that explain what a check expects. Remove a rule once it no longer applies.

@@ -7,7 +7,7 @@ set -euo pipefail
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 permission=$(gh repo view --json viewerPermission --jq .viewerPermission)
 if [[ "$permission" != "ADMIN" ]]; then
-  echo "error: changing the settings of $repo needs admin access, and you have $permission access. Ask the owner to run this script." >&2
+  echo "error: changing the settings of $repo needs admin access, and you have $permission access. Ask a maintainer with admin access to run this script." >&2
   exit 1
 fi
 
@@ -57,9 +57,9 @@ bug|d73a4a|Something is broken, such as a crash, a wrong result or docs that don
 feature|a2eeef|New or changed behavior or docs that users notice, other than a fix
 maintenance|c5def5|Work that users don't notice, such as refactoring, tooling, tests or CI
 research|d4c5f9|Something to find out before building, such as whether a library works. Ends in a comment
-needs-triage|fbca04|The owner hasn't accepted or rejected this yet
+needs-triage|fbca04|No maintainer has accepted or rejected this yet
 needs-breakdown|f9d0c4|Accepted, but too big for one pull request. Split it before building
-needs-decision|d876e3|Waiting for the owner to answer a question or make a decision
+needs-decision|d876e3|Waiting for a maintainer to answer a question or make a decision
 dependencies|0366d6|Dependabot's version updates
 LABELS
 
