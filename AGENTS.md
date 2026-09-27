@@ -41,7 +41,7 @@ Read each guide before you first do its kind of work in a session:
 
 Use only these labels. To add, rename or remove one, change this section and `scripts/configure-github` in the same pull request.
 
-Every issue has exactly one type label. Choose it by what users notice:
+Every accepted issue has exactly one type label. Choose it by what users notice:
 
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
 - `feature`: new or changed behavior or docs that users notice, other than a fix. The pieces of a split feature are features too.
@@ -83,7 +83,7 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
 - Use one of these types:
   - `feat`: new behavior
   - `fix`: a bug fix
-  - `docs`: documentation only
+  - `docs`: docs that only developers read. A change to docs that users read is a `feat` or a `fix`.
   - `test`: tests only
   - `refactor`: a code change that keeps behavior the same
   - `perf`: a change that makes the code faster or use less memory
@@ -151,7 +151,7 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
 When a maintainer asks you to publish a release:
 
 1. Check that the CI runs on the latest commit on main passed, and wait for any that are still running. `gh run list --branch main` lists the runs, newest first. If one failed, stop and tell the maintainer.
-2. Choose the version. `gh release list --limit 1` shows the latest release. After `git fetch`, `git log --format=%s <latest release>..origin/main` lists the titles of the pull requests merged since then. If it lists none, there's nothing to release, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
+2. Choose the version. `gh release list --limit 1` shows the latest release. After `git fetch`, `git log --format=%s <latest release>..origin/main` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
 3. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target main --generate-notes`
 
