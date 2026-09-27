@@ -46,8 +46,18 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 These are the requests you give your agent. `AGENTS.md` tells it what each one involves.
 
 1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have text about the project, add it to this request as well, or point the agent to it, because an agent in a new conversation doesn't know what you gave the agent during setup. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues and correct them. Tell the agent which ones you approve, and it adds the `ready` label, which lets agents build them.
-2. "Build the ready issues." The agent works through them, lowest number first. For each issue, it opens a pull request that merges on its own once the checks pass, and the agent starts the next issue without waiting for the checks. To build several issues at once, ask for helpers, if your agent can start them: "Build the ready issues, with up to 3 helpers." The agent then gives each issue it can start to a helper that works in its own worktree. You can read every merged pull request afterwards, because each one records what changed and why. If an agent can't build an issue, it asks its question in a comment on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you've answered the question, remove the label and ask the agent to build the ready issues again.
+2. "Build the ready issues." The agent works through them, lowest number first. For each issue, it opens a pull request that merges on its own once the checks pass, and the agent starts the next issue without waiting for the checks. To build several issues at once, ask for helpers, if your agent can start them: "Build the ready issues, with up to 3 helpers." The agent then gives each issue it can start to a helper that works in its own worktree. You can read every merged pull request afterwards, because each one records what changed and why. If an agent can't build an issue, it asks its question in a comment on the issue and adds the `needs-decision` label. It closes the issue's pull request, if there is one, and keeps the branch for the next try. It skips the issues that depend on that one and builds the rest.
 3. "Publish a release." The agent checks that CI passed on main. It picks the version from the biggest change merged since the last release: a fix, a new feature or a breaking change. The first release is v0.1.0. Then the agent publishes a GitHub release with notes built from the merged pull requests.
+
+### After the first release
+
+Plan, build and release each later version with the same three requests. These requests cover the rest of the work, and any wording that asks for the same thing works.
+
+- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you approve.
+- "Triage the new issues." The agent recommends what to do with each issue that someone else opened, and carries out what you decide.
+- "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label, so that the next build takes the issue.
+- "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it, and merges only when you ask.
+- "Review pull request #12." The agent reads the change without running its code, and comments with what should change.
 
 ## Limits
 
