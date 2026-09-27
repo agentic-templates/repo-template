@@ -1,0 +1,31 @@
+name: Ready
+
+on:
+  issues:
+    types: [edited]
+
+permissions: {}
+
+jobs:
+  # The ready label approves an issue's title and body as they stand, and agents build what it approved.
+  # When someone without write access changes either one, a maintainer has to approve the new text.
+  unready:
+    if: contains(github.event.issue.labels.*.name, 'ready')
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      issues: write
+    steps:
+      - name: Take ready off the issue if someone without write access edited it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EDITED_BY: ${{ github.event.sender.login }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: |
+          # A failed lookup, such as for an account that isn't a user, counts as no write access.
+          permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$EDITED_BY/permission" --jq .permission || echo none)
+          if [[ "$permission" == admin || "$permission" == write ]]; then
+            exit 0
+          fi
+          gh issue edit "$ISSUE_URL" --remove-label ready
+          gh issue comment "$ISSUE_URL" --body "This issue changed after a maintainer approved it, so it no longer has the \`ready\` label. A maintainer adds the label back once they've read the change."
