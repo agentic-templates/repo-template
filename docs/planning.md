@@ -83,7 +83,7 @@ An issue can get the `ready` label when all of these are true:
 - "Why" says who needs the change and what for.
 - Someone could check each "Done when" item by running or looking at something. Where quality matters, such as accuracy or speed, the item gives a number that a maintainer chose or approved.
 - Nothing is left to decide, except a question that a research issue blocking it will answer. The issue has no "maybe", no "to be decided" and no "A or B".
-- "What should change" says what's out of scope wherever a builder might do more.
+- "What should change" says what's out of scope wherever the agent building it might do more.
 - It's blocked by every issue whose change it needs first.
 - It has one type label and no status label.
 
