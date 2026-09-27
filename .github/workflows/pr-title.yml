@@ -23,3 +23,28 @@ jobs:
           fi
           echo "::error::The title \"$TITLE\" doesn't start with a commit type. Write it as \"<type>: <what changed>\", for example \"fix: keep photos on network drives in place\". The types are ${types//|/, }."
           exit 1
+
+  # Release notes group pull requests by this label, as .github/release.yml sets out.
+  # Pull requests from forks and from Dependabot get a read-only token, so this job skips them.
+  # Dependabot's updates are left out of release notes, and the owner labels a fork's pull request by hand.
+  label:
+    needs: title
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Label the pull request with the type in its title
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          case "$TITLE" in
+            feat*) label=feature ;;
+            fix*) label=bug ;;
+            *) label=maintenance ;;
+          esac
+          others=$(printf '%s\n' feature bug maintenance | grep -vx "$label" | paste -sd, -)
+          gh pr edit "$PR_URL" --add-label "$label" --remove-label "$others"
