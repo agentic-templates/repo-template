@@ -66,7 +66,7 @@ A status label says what an issue is waiting for. An issue that's ready to build
 
 Triage is the owner's decision. An agent carries it out when the owner says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
 
-Dependabot adds `dependencies` to its pull requests. Pull requests get no other labels.
+Pull requests get their labels without anyone's help. A workflow gives each one the type label that matches its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Release notes group pull requests by these labels. Dependabot's pull requests get `dependencies` instead. The owner labels a pull request from a fork by hand.
 
 ## Make a change
 
