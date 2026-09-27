@@ -25,7 +25,7 @@ When a request pulls against this direction, say so, and ask the maintainer whet
 - `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
 - `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes.
 
-The checks on a pull request should finish within five minutes, because every merge waits for them. If yours take longer, open an issue for it with `maintenance` and `needs-triage`, unless one is open already. Slow tests don't belong in these checks. The project has none yet. When it has some, list their command here, and run them before each release.
+The checks on a pull request should finish within five minutes, because every merge waits for them. The project has no slow tests yet. When it has some, list their command here.
 
 The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the maintainer before you run any `gh` command.
 
@@ -136,7 +136,7 @@ When a maintainer asks you to build a milestone, work through its issues without
    - the pull requests that merged
    - the issues that have the `needs-decision` label
    - the issues you skipped because they have a status label or no type label, and the issues they block
-   - the issues you opened for failures that your changes didn't cause
+   - the issues you opened on your own, for problems you noticed
    - the Dependabot pull requests you didn't merge
    - anything a maintainer needs to run, such as `scripts/configure-github`
 
@@ -146,7 +146,7 @@ When a maintainer asks you to publish a release:
 
 1. Check that every issue in the milestone is closed. If some are open, stop and tell the maintainer, who can resolve them or move them to a later milestone.
 2. Check that the version still fits the merged work. A new feature needs at least a minor release, and a breaking change needs a major one, or a minor one before version 1.0. If the version doesn't fit, ask the maintainer which version to publish.
-3. Run the slow tests listed under "Commands", if there are any. If one fails, stop and tell the maintainer.
+3. Check that the CI runs on the latest commit on main passed, and wait for any that are still running. `gh run list --branch main` lists the runs, newest first. If one failed, stop and tell the maintainer.
 4. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target main --generate-notes`
 5. Close the milestone. `gh api repos/{owner}/{repo}/milestones` shows its number:
