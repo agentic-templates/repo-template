@@ -16,7 +16,7 @@ The template works with any language. Agents get their instructions from one fil
 
 ## Start a project
 
-You need the GitHub CLI 2.94 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.277 or later, because earlier versions don't read `AGENTS.md`.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.277 or later, because earlier versions don't read `AGENTS.md`.
 
 1. Create a public repository from the template, and clone it. The settings script is written for public repositories. On a private repository in a personal account, it can stop partway, because GitHub doesn't offer some of its settings there, such as secret scanning.
 
@@ -45,7 +45,7 @@ You need the GitHub CLI 2.94 or later, signed in with `gh auth login`. If you us
 These are the requests you give your agent. `AGENTS.md` tells it what each one involves.
 
 1. "Plan release v0.1.0: photo-sorter finds duplicate photos in a folder and moves the extra copies to the trash." The agent creates the milestone v0.1.0 and splits the work into issues, each small enough for one pull request. It creates the issues in the order they should be built. When one issue depends on another, the agent marks the first as blocked by the second. Read the issues and correct them before the build starts.
-2. "Build milestone v0.1.0." The agent works through the issues one at a time. For each issue, it opens a pull request and merges it once the checks pass. You can read every merged pull request afterwards, because each one records what changed and why. If the agent can't build an issue, it comments on the issue and adds the `question` label. It skips the issues that depend on that one and builds the rest. Once you have answered, ask it to build the milestone again.
+2. "Build milestone v0.1.0." The agent works through the issues one at a time. For each issue, it opens a pull request and merges it once the checks pass. You can read every merged pull request afterwards, because each one records what changed and why. If the agent can't build an issue, it comments on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you have answered, ask it to build the milestone again.
 3. "Publish release v0.1.0." The agent checks that every issue in the milestone is closed and runs the slow tests, if there are any. Then it publishes a GitHub release with notes built from the merged pull requests.
 
 ## License

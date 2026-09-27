@@ -13,3 +13,5 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    # Without this, Dependabot adds a label for each package manager once there's more than one.
+    labels: [dependencies]

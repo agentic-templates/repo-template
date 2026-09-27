@@ -34,12 +34,34 @@ gh api --method PATCH "repos/$repo" --silent --input - <<'JSON'
 }
 JSON
 
-echo "Labels: remove \"good first issue\", which nothing in this workflow uses"
-# GitHub adds its default labels to every new repository, so the template can't leave this one out.
-labels=$(gh label list --repo "$repo" --limit 100 --json name --jq '.[].name')
-if grep -qx 'good first issue' <<<"$labels"; then
-  gh label delete 'good first issue' --repo "$repo" --yes >/dev/null
+echo "Labels: the set that AGENTS.md describes"
+# GitHub gives every new repository its default labels, and a template can't change that.
+labels=$(gh label list --repo "$repo" --limit 200 --json name --jq '.[].name')
+for name in accessibility documentation duplicate 'good first issue' 'help wanted' invalid wontfix; do
+  if grep -qxF "$name" <<<"$labels"; then
+    gh label delete "$name" --repo "$repo" --yes >/dev/null
+  fi
+done
+# Renaming keeps the label on every issue that already has it.
+if grep -qxF enhancement <<<"$labels" && ! grep -qxF feature <<<"$labels"; then
+  gh label edit enhancement --repo "$repo" --name feature >/dev/null
 fi
+if grep -qxF question <<<"$labels" && ! grep -qxF needs-decision <<<"$labels"; then
+  gh label edit question --repo "$repo" --name needs-decision >/dev/null
+fi
+# --force updates the color and description of a label that already exists.
+while IFS='|' read -r name color description; do
+  gh label create "$name" --repo "$repo" --force --color "$color" --description "$description" >/dev/null
+done <<'LABELS'
+bug|d73a4a|Something is broken, such as a crash, a wrong result or docs that don't match the product
+feature|a2eeef|New or changed behavior or docs that users notice, other than a fix
+maintenance|c5def5|Work that users don't notice, such as refactoring, tooling, tests or CI
+research|d4c5f9|A question to answer before building. It ends in a comment, not code
+needs-triage|fbca04|The owner hasn't accepted or rejected this yet
+needs-breakdown|f9d0c4|Accepted, but too big for one pull request. Split it before building
+needs-decision|d876e3|Waiting for the owner to answer a question or make a decision
+dependencies|0366d6|Dependabot's version updates
+LABELS
 
 echo "Releases: a published release can't be changed"
 gh api --method PUT "repos/$repo/immutable-releases" --silent
