@@ -12,8 +12,8 @@ The template works with any language. Agents get their instructions from one fil
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, and how you decide which ones get built. The ideas can come from any text you share or point the agent to.
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts.
-- `.github/`: CI, issue forms, a pull request template, weekly Dependabot updates, and the contributing and security pages.
-- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests, and from reading `.env` files.
+- `.github/`: CI, a check of pull request titles, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
+- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests, and keeps its file tools and shell commands such as `cat` away from `.env` files.
 
 ## Start a project
 

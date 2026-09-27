@@ -63,7 +63,7 @@ research|d4c5f9|Something to find out before building, such as whether a library
 needs-triage|fbca04|No maintainer has accepted or rejected this yet
 needs-breakdown|f9d0c4|Accepted, but too big for one pull request. Split it before building
 needs-decision|d876e3|Waiting for a maintainer to answer a question or make a decision
-ready|0e8a16|A maintainer wants it built, and it meets the definition of ready. Agents build only these
+ready|0e8a16|A maintainer wants it built, and it meets the definition of ready. Build runs take only these
 dependencies|0366d6|Dependabot's version updates
 LABELS
 # Delete every other label, such as the defaults that GitHub gives every new repository.
