@@ -4,10 +4,9 @@ Write code that a reader understands the first time they read it. If a rule here
 
 ## Keep the design simple
 
-- Build the simplest design that works for what the project needs now.
+- Build the simplest design that meets what the project needs now, including any accuracy or speed that the issue asks for.
 - Add a layer, an option or a general version of something only when the project needs it now. For example, add a storage interface only once the project has a second storage backend, not in case it gets one.
 - Delete the code that your change leaves unused. Don't commit commented-out code, because git keeps the history. If you find other dead code, open an issue to remove it rather than removing it in your change.
-- When the problem needs complex code, such as a parser, put that code in one place behind a plain interface. The code that calls it shouldn't need to know how it works.
 - Follow the conventions the code already uses for naming style, file layout and error handling, even where this guide would choose differently. To change a convention, open an issue for it, and change it everywhere in a pull request of its own.
 
 ## Write functions a reader can follow
@@ -17,12 +16,13 @@ Write code that a reader understands the first time they read it. If a rule here
 - Prefer a plain loop and named steps to a clever one-liner.
 - Choose names that explain themselves, in whole words. Name a boolean as a yes-or-no question, such as `is_empty`.
 
-## Make code fast only where a measurement shows the need
+## Add complexity only for a requirement or a measurement
 
-- Trade readability for speed only where a measurement shows the need.
-- Keep the fast code behind a plain interface.
-- Give the fast code a comment that says what it gains and where the measurement is, such as a benchmark name or an issue.
-- Keep a plain version in the test code, such as the version from before you made it fast. Test that the fast version returns the same results.
+Some code has to be complex, and some complexity is a choice. Either way, keep the complex code in one place behind a plain interface, so that the code that calls it doesn't need to know how it works.
+
+- Complexity is required when a simpler version would fail a requirement. Examples are a parser, a matching method that must reach the accuracy an issue asks for, and the handling for a reported bug. Name the requirement in a comment.
+- Complexity is a choice when a simpler version already meets the requirements and the complex one does better, such as running faster, using less memory or giving more accurate results. Make that choice only where a measurement shows the need. Say in a comment what the code gains and where the measurement is, such as a benchmark name or an issue.
+- Keep the tests that show the complexity is worth it. For speed or memory, keep a plain version in the test code, such as the code before you optimized it, and check that both give the same results. For accuracy, keep the test cases that measure it, so that a later change can't make the results worse without anyone noticing.
 
 ## Comment only what the code can't show
 
