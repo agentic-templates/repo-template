@@ -19,7 +19,8 @@ jobs:
   # unless each one passed or was skipped. Otherwise a failed job skips "check", and GitHub counts a skip as a pass.
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Stops a stuck run. It's well above the time goal under "Commands" in AGENTS.md, so a slow run still finishes.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

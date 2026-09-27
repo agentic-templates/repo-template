@@ -25,7 +25,7 @@ When a request pulls against this direction, say so, and ask the maintainer whet
 - `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
 - `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes.
 
-The checks on a pull request should finish within five minutes, because every merge waits for them. The project has no slow tests yet. When it has some, list their command here.
+The checks on a pull request should finish within ten minutes, because every merge waits for them. Slower tests of the whole product run after each merge to main instead, as `docs/code.md` describes. The project has none yet. When it has some, list the command that runs them here.
 
 The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the maintainer before you run any `gh` command.
 
