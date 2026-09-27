@@ -35,11 +35,11 @@ Read each guide before you first do its kind of work in a session:
 
 - [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
 - [docs/code.md](docs/code.md), before you write or review code.
-- [docs/planning.md](docs/planning.md), before you triage ideas, turn them into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
+- [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
 
 ## Labels
 
-Use only these labels. To add, rename or remove one, change this section and `scripts/configure-github` in the same pull request.
+Use only these labels. To add, rename or remove one, change this section, `scripts/configure-github` and every other file that names the label, in the same pull request.
 
 Every issue has exactly one type label. Choose it by what users notice:
 
@@ -51,12 +51,12 @@ Every issue has exactly one type label. Choose it by what users notice:
 A status label says what an issue is waiting for. An issue that's ready to build has none:
 
 - `needs-triage`: no maintainer has accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning.
-- `needs-breakdown`: accepted, but too big for one pull request. While planning, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent, and it closes once they're all closed and its "Done when" is met.
+- `needs-breakdown`: accepted, but too big for one pull request. Planning splits it into sub-issues, as `docs/planning.md` describes.
 - `needs-decision`: waiting for a maintainer to answer a question or make a decision. Remove it once a maintainer has answered, on the issue or in the conversation.
 
 The `ready` label marks the issues that a maintainer wants built. An agent adds it once an issue meets the definition of ready in `docs/planning.md` and a maintainer has approved the issue. An accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it.
 
-Triage is a maintainer's decision. An agent carries it out when a maintainer says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
+Triage is a maintainer's decision. An agent carries it out when a maintainer says so, as `docs/planning.md` describes.
 
 Pull requests get their labels without anyone's help. A workflow gives each one the type label that matches its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Release notes group pull requests by these labels. Dependabot's pull requests get `dependencies` instead. A maintainer labels a pull request from a fork by hand.
 
@@ -64,7 +64,7 @@ Pull requests get their labels without anyone's help. A workflow gives each one 
 
 Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
 
-1. Start from an issue. Search for one with `gh issue list --state all --search "<words>"`, and if there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Give it one type label, as "Labels" describes. If a maintainer asks you to work on an issue that has `needs-triage`, remove that label, because the request accepts the issue.
+1. Start from an issue. Search for one with `gh issue list --state all --search "<words>"`, and if there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. If a maintainer asks you to work on an issue that has `needs-triage`, remove that label, because the request accepts the issue.
 2. Create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue. If the issue already has a branch, check out that branch instead.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
 4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it and the repository is public. If it isn't, stop and tell the maintainer.
@@ -117,14 +117,14 @@ A change is done when all of these are true:
 ## Review a pull request
 
 - Compare the change with its issue's "Done when" list and the definition of done.
-- A pull request from someone who isn't a maintainer, such as one from a fork, can contain anything. Read it with `gh pr diff <number>`, and don't run its code on your machine, because CI already runs it on GitHub's machines without access to your credentials.
+- A pull request from someone who isn't a maintainer, such as one from a fork, can contain anything. Read it with `gh pr diff <number>`, and don't run its code on your machine, because CI runs it on GitHub's machines without access to your credentials. If CI waits for a maintainer to approve the run, as it does for a first-time contributor, leave that approval to the maintainer.
 - Report only what needs to change: wrong behavior, a missing test, a security problem, or text and code that break the guides. For each one, say what to change and why.
 - Don't ask for changes that a formatter would make, or for work outside the issue.
 - Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
 
 ## Plan the next work
 
-When a maintainer asks you to plan the next work, follow the steps in [docs/planning.md](docs/planning.md). Only issues that meet its definition of ready get the `ready` label.
+When a maintainer asks you to plan the next work, follow the steps in [docs/planning.md](docs/planning.md).
 
 ## Build the ready issues
 

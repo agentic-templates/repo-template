@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # Give every package manager you add the cooldown, commit-message and labels settings below.
   - package-ecosystem: github-actions
     directory: /
     schedule:

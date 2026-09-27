@@ -2,7 +2,7 @@
 
 This guide turns ideas into issues that an agent can build. An idea can come from any text that a maintainer shares or points to. The agent does the work in each step, and maintainers make the decisions.
 
-Only two kinds of issue appear without a maintainer's yes: issues that people open through the forms, and issues that an agent opens for a problem it notices while working. Both carry `needs-triage` until a maintainer decides. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
+Issues that anyone but a maintainer opens, and issues that agents open for problems they notice while working, wait for a maintainer to triage them. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
 
 ## How an idea becomes buildable
 
@@ -51,7 +51,7 @@ Add its recommendation and its main concerns to the triage table. The critic inf
 
 ## Triage issues that others open
 
-Issues opened through a form have `needs-triage`, and so do issues that an agent opens for a problem it notices. An issue without a type label needs triage too. Triage these before you plan the next work, or sooner when the maintainer asks. Use the same checks and verdicts, and carry out what the maintainer decides:
+Triage every issue that has `needs-triage` or no type label before you plan the next work, or sooner when the maintainer asks. Use the same checks and verdicts, and carry out what the maintainer decides:
 
 - **Accept:** remove `needs-triage` and give the issue its type label, plus `needs-breakdown` if it's too big. If the author didn't use the three headings, rewrite the body under them, using only what the author wrote and what the maintainer decided.
 - **Research first:** give the issue its type label, and replace `needs-triage` with `needs-decision`. Create a research issue for the question, and mark this issue as blocked by it.
@@ -66,7 +66,7 @@ Issues opened through a form have `needs-triage`, and so do issues that an agent
 - A big idea is one parent issue. Its "What should change" states the result the maintainer wants, and its "Done when" says how to tell that the result is reached.
 - It waits in the backlog with `needs-breakdown`. Split it when the work that needs it is planned, not earlier, because the work before it changes what the pieces should be.
 - Split it into sub-issues that each fit in one pull request and leave main working. Create each one with `gh issue create --parent <parent>`, then remove `needs-breakdown` from the parent.
-- Give the parent the `ready` label along with its sub-issues. Builders skip a parent while it has open sub-issues. Once they're all closed, a builder checks the parent's "Done when" and closes it.
+- Give the parent the `ready` label along with its sub-issues, so that a build run checks its "Done when" once they're all closed.
 
 ## Write a research issue
 
@@ -74,7 +74,6 @@ A research issue answers a question that someone has to find out before anyone c
 
 - Its body has three headings: "Question", "What depends on the answer" and "Done when". "Done when" asks for a comment with the answer, the evidence and a recommendation.
 - It has the `research` label. Each issue that depends on the answer is blocked by it.
-- A builder answers it in a comment, without a pull request, and closes it. If the answer changes what a blocked issue asks for, the builder adds `needs-decision` to that issue, so the maintainer decides before it's built.
 
 ## Definition of ready
 
@@ -98,7 +97,7 @@ Planning makes the issues that a goal needs ready to build. Plan all of them bef
 
 1. Agree on the goal with the maintainer: what a user can do afterwards that they can't do now.
 2. Triage anything new, including open issues that need triage.
-3. Choose the backlog issues that the goal needs, and leave out the rest. Add the issues the goal still lacks, including research issues for what someone has to find out, and break down any big issue you chose. Issues that you create while planning with the maintainer don't get `needs-triage`, because the maintainer reviews them in step 6.
+3. Choose the backlog issues that the goal needs, and leave out the rest. Add the issues the goal still lacks, including research issues for what someone has to find out, and break down any big issue you chose.
 4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies, because a blocked issue waits until all its blockers are closed. Every blocker must be part of this plan, have the `ready` label already or be closed. Issues with no open blockers are built lowest number first, so if one change must come before another, link them.
 5. Make every issue meet the definition of ready. Then have a fresh reader check each one. Start a new agent without your conversation, let it read the code, and give it the issue with this prompt: "You're about to build this issue. You can read the code, but you know nothing else. List what you'd have to guess that could change what you build." Fix what it lists, and ask the maintainer about anything that's their decision.
 6. Ask the maintainer to review the issues.
