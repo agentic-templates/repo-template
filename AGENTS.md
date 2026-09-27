@@ -17,7 +17,7 @@ When a request pulls against this direction, say so, and ask the maintainer whet
 - `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan the next work.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
-- `.github/`: the workflows, issue forms, pull request template, Dependabot and release note settings, and the contributing and security pages.
+- `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release note settings, and the contributing and security pages.
 - `.claude/settings.json`: settings that stop Claude Code from adding attribution to commits and pull requests, and that keep its file tools and shell commands such as `cat` away from `.env` files.
 
 ## Commands
@@ -54,7 +54,7 @@ A status label says what an issue is waiting for. An issue that's ready to build
 - `needs-breakdown`: accepted, but too big for one pull request. While planning, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent, and it closes once they're all closed and its "Done when" is met.
 - `needs-decision`: waiting for a maintainer to answer a question or make a decision. Remove it once a maintainer has answered, on the issue or in the conversation.
 
-The `ready` label marks the issues that a maintainer wants built. An agent adds it once an issue meets the definition of ready in `docs/planning.md` and a maintainer has approved the issue. An accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it. A workflow takes `ready` off an issue when someone without write access edits its title or body, so that a maintainer approves the new text.
+The `ready` label marks the issues that a maintainer wants built. An agent adds it once an issue meets the definition of ready in `docs/planning.md` and a maintainer has approved the issue. An accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it.
 
 Triage is a maintainer's decision. An agent carries it out when a maintainer says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
 

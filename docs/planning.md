@@ -90,6 +90,8 @@ An issue can get the `ready` label when all of these are true:
 
 Two kinds of issue meet a shorter list. A research issue is ready when its question and what depends on the answer are clear, and it has its type label and no status label. A parent gets `ready` along with its sub-issues, and only its sub-issues need to meet the full list.
 
+Every issue that gets `ready`, including research issues and parents, must be one that a maintainer opened, so that nobody else can edit it after approval. For an issue that someone else opened, open a new one in your own words, and close the original with `gh issue close <issue> --duplicate-of <new issue>`.
+
 ## Plan the next work
 
 Planning makes the issues that a goal needs ready to build. Plan all of them before anyone builds, so that agents can build them in one run.
