@@ -4,7 +4,7 @@ These rules apply to every coding agent and every person who changes the reposit
 
 ## What this project is
 
-repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup. Checks on pull requests stay fast, and nothing publishes the owner's email address.
+repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
 
 When a request pulls against this direction, say so, and ask the owner whether to change the request or the direction. A change of direction updates this section in the same pull request.
 
