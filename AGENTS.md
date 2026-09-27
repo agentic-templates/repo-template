@@ -52,7 +52,7 @@ A status label says what an issue is waiting for. An issue that's ready to build
 
 - `needs-triage`: no maintainer has accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning.
 - `needs-breakdown`: accepted, but too big for one pull request. Planning splits it into sub-issues, as `docs/planning.md` describes.
-- `needs-decision`: waiting for a maintainer to answer a question or make a decision. Remove it once a maintainer has answered, on the issue or in the conversation.
+- `needs-decision`: waiting for a maintainer to answer a question or make a decision. Remove it once the issue's body says what the maintainer decided, because the agent that builds it reads the body.
 
 The `ready` label marks the issues that a maintainer wants built. An agent adds it once an issue meets the definition of ready in `docs/planning.md` and a maintainer has approved the issue. An accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it.
 
