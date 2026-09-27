@@ -34,6 +34,13 @@ gh api --method PATCH "repos/$repo" --silent --input - <<'JSON'
 }
 JSON
 
+echo "Labels: remove \"good first issue\", which nothing in this workflow uses"
+# GitHub adds its default labels to every new repository, so the template can't leave this one out.
+labels=$(gh label list --repo "$repo" --limit 100 --json name --jq '.[].name')
+if grep -qx 'good first issue' <<<"$labels"; then
+  gh label delete 'good first issue' --repo "$repo" --yes >/dev/null
+fi
+
 echo "Releases: a published release can't be changed"
 gh api --method PUT "repos/$repo/immutable-releases" --silent
 
