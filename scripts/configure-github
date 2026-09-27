@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Applies this repository's settings on GitHub. GitHub doesn't copy settings
 # from a template, so run this once after you create a repository from it.
-# Running it again is safe, and it resets any setting changed on GitHub.
+# Running it again is safe. It resets every setting below, and deletes any label it doesn't list.
 set -euo pipefail
 
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 permission=$(gh repo view --json viewerPermission --jq .viewerPermission)
 if [[ "$permission" != "ADMIN" ]]; then
   echo "error: changing the settings of $repo needs admin access, and you have $permission access. Ask a maintainer with admin access to run this script." >&2
+  exit 1
+fi
+visibility=$(gh repo view --json visibility --jq '.visibility | ascii_downcase')
+if [[ "$visibility" != "public" ]]; then
+  echo "error: $repo is $visibility, and this script works only on public repositories, because GitHub offers some of its settings only for them. Nothing was changed. Make the repository public and run this script again, or apply the settings you need by hand." >&2
   exit 1
 fi
 
@@ -36,14 +41,9 @@ gh api --method PATCH "repos/$repo" --silent --input - <<'JSON'
 JSON
 
 echo "Labels: the set that AGENTS.md describes"
-# GitHub gives every new repository its default labels, and a template can't change that.
 labels=$(gh label list --repo "$repo" --limit 200 --json name --jq '.[].name')
-for name in accessibility documentation duplicate 'good first issue' 'help wanted' invalid wontfix; do
-  if grep -qxF "$name" <<<"$labels"; then
-    gh label delete "$name" --repo "$repo" --yes >/dev/null
-  fi
-done
 # Renaming keeps the label on every issue that already has it.
+# To rename a label in the list below, add a rename here too.
 if grep -qxF enhancement <<<"$labels" && ! grep -qxF feature <<<"$labels"; then
   gh label edit enhancement --repo "$repo" --name feature >/dev/null
 fi
@@ -51,8 +51,10 @@ if grep -qxF question <<<"$labels" && ! grep -qxF needs-decision <<<"$labels"; t
   gh label edit question --repo "$repo" --name needs-decision >/dev/null
 fi
 # --force updates the color and description of a label that already exists.
+wanted=""
 while IFS='|' read -r name color description; do
   gh label create "$name" --repo "$repo" --force --color "$color" --description "$description" >/dev/null
+  wanted+="$name"$'\n'
 done <<'LABELS'
 bug|d73a4a|Something is broken, such as a crash, a wrong result or docs that don't match the product
 feature|a2eeef|New or changed behavior or docs that users notice, other than a fix
@@ -61,9 +63,16 @@ research|d4c5f9|Something to find out before building, such as whether a library
 needs-triage|fbca04|No maintainer has accepted or rejected this yet
 needs-breakdown|f9d0c4|Accepted, but too big for one pull request. Split it before building
 needs-decision|d876e3|Waiting for a maintainer to answer a question or make a decision
-ready|0e8a16|A maintainer wants it built, and it meets the definition of ready. Agents build only these
+ready|0e8a16|A maintainer wants it built, and it meets the definition of ready. Build runs take only these
 dependencies|0366d6|Dependabot's version updates
 LABELS
+# Delete every other label, such as the defaults that GitHub gives every new repository.
+current=$(gh label list --repo "$repo" --limit 200 --json name --jq '.[].name')
+while IFS= read -r name; do
+  if ! grep -qxF "$name" <<<"$wanted"; then
+    gh label delete "$name" --repo "$repo" --yes >/dev/null
+  fi
+done <<<"$current"
 
 echo "Releases: a published release can't be changed"
 gh api --method PUT "repos/$repo/immutable-releases" --silent
