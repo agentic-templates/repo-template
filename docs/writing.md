@@ -56,7 +56,7 @@ Until the example ends, explain only what the reader needs in order to use the p
 ## Claim only what is true
 
 - Claim only what the project delivers today. Never invent results, demos, benchmarks, users or quotes.
-- In docs and READMEs, mention planned work only when an open issue in a milestone describes it, and link to that issue.
+- In docs and READMEs, mention planned work only when an open issue with the `ready` label describes it, and link to that issue.
 - State what the project can't do, not only what it can.
 - Say only what you verified. If you didn't run a check, don't say that it passed.
 

@@ -2,15 +2,15 @@
 
 This guide turns ideas into issues that an agent can build. An idea can come from any text that a maintainer shares or points to. The agent does the work in each step, and maintainers make the decisions.
 
-Only two kinds of issue appear without a maintainer's yes: issues that people open through the forms, and issues that an agent opens for a problem it notices while working. Both carry `needs-triage` until a maintainer decides. Every other issue comes from a decision a maintainer made, and no issue joins a milestone until it's ready to build.
+Only two kinds of issue appear without a maintainer's yes: issues that people open through the forms, and issues that an agent opens for a problem it notices while working. Both carry `needs-triage` until a maintainer decides. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
 
 ## How an idea becomes buildable
 
 1. **Input.** A maintainer shares or points to any text. It stays outside the repository and its issues.
 2. **Triage.** The agent splits the input into single ideas, checks each one against the project and recommends what to do with it. The maintainer decides.
-3. **Backlog.** Each accepted idea becomes one open issue without a milestone. A big idea stays one issue, with `needs-breakdown`.
-4. **Planning.** When a maintainer plans a release, the agent picks the issues that the release needs, splits the big ones and rewrites each one until it meets the definition of ready. Then the issues join the milestone.
-5. **Building.** A builder takes only issues that are ready.
+3. **Backlog.** Each accepted idea becomes one open issue without the `ready` label. A big idea stays one issue, with `needs-breakdown`.
+4. **Planning.** When a maintainer plans the next work, the agent picks the issues that its goal needs, splits the big ones and rewrites each one until it meets the definition of ready. Once the maintainer approves them, they get the `ready` label.
+5. **Building.** Agents build only issues with the `ready` label.
 
 ## Triage new ideas
 
@@ -64,9 +64,9 @@ Issues opened through a form have `needs-triage`, and so do issues that an agent
 ## Break down a big idea
 
 - A big idea is one parent issue. Its "What should change" states the result the maintainer wants, and its "Done when" says how to tell that the result is reached.
-- It waits in the backlog with `needs-breakdown`. Split it when a release plans it, not earlier, because the releases before it change what the pieces should be.
+- It waits in the backlog with `needs-breakdown`. Split it when the work that needs it is planned, not earlier, because the work before it changes what the pieces should be.
 - Split it into sub-issues that each fit in one pull request and leave main working. Create each one with `gh issue create --parent <parent>`, then remove `needs-breakdown` from the parent.
-- Add the parent to the milestone with its sub-issues. Builders skip a parent while it has open sub-issues. Once they're all closed, a builder checks the parent's "Done when" and closes it.
+- Give the parent the `ready` label along with its sub-issues. Builders skip a parent while it has open sub-issues. Once they're all closed, a builder checks the parent's "Done when" and closes it.
 
 ## Write a research issue
 
@@ -78,7 +78,7 @@ A research issue answers a question that someone has to find out before anyone c
 
 ## Definition of ready
 
-An issue can join a milestone when all of these are true:
+An issue can get the `ready` label when all of these are true:
 
 - It asks for one change that fits in one pull request.
 - "Why" says who needs the change and what for.
@@ -88,19 +88,16 @@ An issue can join a milestone when all of these are true:
 - It's blocked by every issue whose change it needs first.
 - It has one type label and no status label.
 
-Two kinds of issue meet a shorter list. A research issue is ready when its question and what depends on the answer are clear, and it has its type label and no status label. A parent joins with its sub-issues, and only its sub-issues need to be ready.
+Two kinds of issue meet a shorter list. A research issue is ready when its question and what depends on the answer are clear, and it has its type label and no status label. A parent gets `ready` along with its sub-issues, and only its sub-issues need to meet the full list.
 
-## Plan a release
+## Plan the next work
 
-A release is a milestone of ready issues. Plan the whole release before anyone builds it, so that an agent can build it in one run.
+Planning makes the issues that a goal needs ready to build. Plan all of them before anyone builds, so that agents can build them in one run.
 
-1. Agree on the goal with the maintainer: what a user can do after the release that they can't do now.
+1. Agree on the goal with the maintainer: what a user can do afterwards that they can't do now.
 2. Triage anything new, including open issues that need triage.
-3. Choose the backlog issues that the goal needs, and leave out the rest. Add the issues the goal still lacks, including research issues for what someone has to find out, and break down any big issue you chose. Issues that you create while planning with the maintainer don't get `needs-triage`, because the maintainer reviews them in step 8.
-4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies, because a blocked issue waits until all its blockers are closed. Every blocker must be in the release or already closed. Issues with no open blockers are built in number order, so if one change must come before another, link them.
+3. Choose the backlog issues that the goal needs, and leave out the rest. Add the issues the goal still lacks, including research issues for what someone has to find out, and break down any big issue you chose. Issues that you create while planning with the maintainer don't get `needs-triage`, because the maintainer reviews them in step 6.
+4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies, because a blocked issue waits until all its blockers are closed. Every blocker must be part of this plan, have the `ready` label already or be closed. Issues with no open blockers are built lowest number first, so if one change must come before another, link them.
 5. Make every issue meet the definition of ready. Then have a fresh reader check each one. Start a new agent without your conversation, let it read the code, and give it the issue with this prompt: "You're about to build this issue. You can read the code, but you know nothing else. List what you'd have to guess that could change what you build." Fix what it lists, and ask the maintainer about anything that's their decision.
-6. Choose the version. A first release is `v0.1.0`. After that, raise the patch number for a release with only fixes, the minor number for new features, and the major number for a change that breaks existing use. Before version 1.0, a breaking change raises the minor number instead. The version names the milestone, and the commands below show it as `<version>`.
-7. Create the milestone, then add each issue to it. `gh` fills in `{owner}` and `{repo}`:
-   `gh api repos/{owner}/{repo}/milestones -f title=<version> -f description="<goal>"`
-   `gh issue edit <issue> --milestone <version>`
-8. Ask the maintainer to review the milestone before anyone builds it.
+6. Ask the maintainer to review the issues.
+7. Add the `ready` label to each issue the maintainer approved, with `gh issue edit <issue> --add-label ready`.
