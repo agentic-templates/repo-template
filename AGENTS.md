@@ -4,17 +4,19 @@ These rules apply to every coding agent and every person who changes the reposit
 
 ## What this project is
 
-repo-template gives a new GitHub project the rules, checks and settings that let people and coding agents plan, build and release it the same way.
+repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it.
 
 Out of scope:
 
-- Files and settings for one language or framework. Each project adds its own during setup.
-- Instruction files for one coding agent.
+- Files and settings for one language or framework. Each project made from the template adds its own during setup.
+- Instruction files for one coding agent. A settings file, such as `.claude/settings.json`, is fine when it makes a tool follow these rules.
 
-Decisions that every change keeps. The owner changes a decision through an issue, like any other change:
+Decisions that every change must respect:
 
-- The checks that run on every pull request stay fast. Slow tests run before a release.
-- Nothing in the template publishes the owner's email address.
+- The checks that run on every pull request finish within five minutes. Slower tests run before a release.
+- Nothing in the repository or its history publishes the owner's email address.
+
+Only the owner changes this section. When a request goes against it, point out the conflict. If the owner still wants the change, update this section in the same pull request, so that the rules and the repository agree.
 
 ## Where things are
 
@@ -33,17 +35,17 @@ Decisions that every change keeps. The owner changes a decision through an issue
 - `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
 - `scripts/configure-github`: the owner runs it after creating the repository on GitHub, and again whenever the script changes. It needs admin access.
 
-The project has no slow tests yet. When it has some, list their command here. CI doesn't run slow tests, so run them before each release.
+The project has no slow tests yet. When it has some, list their command here. The checks on pull requests don't run slow tests, so run them before each release.
 
-The `gh` commands in these rules need gh 2.98 or later. If `gh --version` shows an older version, stop and tell the owner.
+The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the owner before you run any `gh` command.
 
 ## Read the guides
 
-Read the writing and code guides before you write or review anything in a session. Read the planning guide before you triage ideas or plan a release.
+Read each guide before you first do its kind of work in a session:
 
-- [docs/writing.md](docs/writing.md) covers all text: docs, issues, pull requests, commit messages, comments and error messages.
-- [docs/code.md](docs/code.md) covers all code.
-- [docs/planning.md](docs/planning.md) covers triage, big ideas, research issues, the definition of ready and planning a release.
+- [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
+- [docs/code.md](docs/code.md), before you write or review code.
+- [docs/planning.md](docs/planning.md), before you triage ideas, turn them into issues or plan a release. It decides what goes into an issue, and the writing guide decides how the issue reads.
 
 ## Labels
 
@@ -129,7 +131,7 @@ A change is done when all of these are true:
 
 ## Plan a release
 
-Follow the steps in [docs/planning.md](docs/planning.md). A release is a milestone of issues that meet the definition of ready there.
+When the owner asks you to plan a release, follow the steps in [docs/planning.md](docs/planning.md). Only issues that meet its definition of ready can join the milestone.
 
 ## Build a milestone
 
