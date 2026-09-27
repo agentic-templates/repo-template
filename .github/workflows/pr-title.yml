@@ -26,7 +26,7 @@ jobs:
 
   # Release notes group pull requests by this label, as .github/release.yml sets out.
   # Pull requests from forks and from Dependabot get a read-only token, so this job skips them.
-  # Dependabot's updates are left out of release notes, and the owner labels a fork's pull request by hand.
+  # Dependabot's updates are left out of release notes, and a maintainer labels a fork's pull request by hand.
   label:
     needs: title
     if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
