@@ -17,9 +17,9 @@ The template works with any language. Agents get their instructions from one fil
 
 ## Start a project
 
-You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.277 or later, because earlier versions don't read `AGENTS.md`.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't always read `AGENTS.md`.
 
-1. Create a public repository from the template, and clone it. The settings script is written for public repositories. On a private repository, the script fails partway through, at a setting that GitHub offers only for public repositories. The script never reaches the step that protects main.
+1. Create a public repository from the template, and clone it. The settings script works only on public repositories.
 
    ```bash
    gh repo create photo-sorter --public --template jtmpl/repo-template --clone
@@ -48,6 +48,12 @@ These are the requests you give your agent. `AGENTS.md` tells it what each one i
 1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have text about the project, add it to this request as well, or point the agent to it, because an agent in a new conversation doesn't know what you gave the agent during setup. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues and correct them. Tell the agent which ones you approve, and it adds the `ready` label, which lets agents build them.
 2. "Build the ready issues." The agent works through them, lowest number first. For each issue, it opens a pull request that merges on its own once the checks pass, and the agent starts the next issue without waiting for the checks. To build several issues at once, ask for helpers, if your agent can start them: "Build the ready issues, with up to 3 helpers." The agent then gives each issue it can start to a helper that works in its own worktree. You can read every merged pull request afterwards, because each one records what changed and why. If an agent can't build an issue, it asks its question in a comment on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you've answered the question, remove the label and ask the agent to build the ready issues again.
 3. "Publish a release." The agent checks that CI passed on main. It picks the version from the biggest change merged since the last release: a fix, a new feature or a breaking change. The first release is v0.1.0. Then the agent publishes a GitHub release with notes built from the merged pull requests.
+
+## Limits
+
+- The template works only with GitHub. Its settings script works only on public repositories, because GitHub offers private vulnerability reporting only for them. On a free plan, a private repository also can't protect main or merge pull requests on its own.
+- A pull request merges once its checks pass, and nobody reviews it first. The checks catch only what the tests and linters cover.
+- Run one build of the ready issues per repository at a time, and ask for helpers to build faster. Two builds that start together can take the same issue. Helpers need an agent that can start other agents.
 
 ## License
 
