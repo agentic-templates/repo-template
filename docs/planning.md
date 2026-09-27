@@ -51,7 +51,7 @@ Add its recommendation and its main concerns to the triage table. The critic inf
 
 ## Triage issues that others open
 
-Issues opened through a form have `needs-triage`, and so do issues that an agent opens for a problem it notices. An issue without a type label needs triage too. Triage these before you plan each release, or sooner when the maintainer asks. Use the same checks and verdicts, and carry out what the maintainer decides:
+Issues opened through a form have `needs-triage`, and so do issues that an agent opens for a problem it notices. An issue without a type label needs triage too. Triage these before you plan the next work, or sooner when the maintainer asks. Use the same checks and verdicts, and carry out what the maintainer decides:
 
 - **Accept:** remove `needs-triage` and give the issue its type label, plus `needs-breakdown` if it's too big. If the author didn't use the three headings, rewrite the body under them, using only what the author wrote and what the maintainer decided.
 - **Research first:** give the issue its type label, and replace `needs-triage` with `needs-decision`. Create a research issue for the question, and mark this issue as blocked by it.
