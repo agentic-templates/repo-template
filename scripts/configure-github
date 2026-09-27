@@ -10,6 +10,11 @@ if [[ "$permission" != "ADMIN" ]]; then
   echo "error: changing the settings of $repo needs admin access, and you have $permission access. Ask a maintainer with admin access to run this script." >&2
   exit 1
 fi
+visibility=$(gh repo view --json visibility --jq '.visibility | ascii_downcase')
+if [[ "$visibility" != "public" ]]; then
+  echo "error: $repo is $visibility, and this script works only on public repositories, because GitHub offers some of its settings only for them. Nothing was changed. Make the repository public and run this script again, or apply the settings you need by hand." >&2
+  exit 1
+fi
 
 echo "Merging: squash only, with the pull request title as the commit subject, and auto-merge allowed"
 gh api --method PATCH "repos/$repo" --silent \
