@@ -14,7 +14,7 @@ When a request pulls against this direction, say so, and ask the maintainer whet
 - `AGENTS.md`: these rules.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
 - `docs/code.md`: how to write code.
-- `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan a release.
+- `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan the next work.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release note settings, and the contributing and security pages.
@@ -35,7 +35,7 @@ Read each guide before you first do its kind of work in a session:
 
 - [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
 - [docs/code.md](docs/code.md), before you write or review code.
-- [docs/planning.md](docs/planning.md), before you triage ideas, turn them into issues or plan a release. It decides what goes into an issue, and the writing guide decides how the issue reads.
+- [docs/planning.md](docs/planning.md), before you triage ideas, turn them into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
 
 ## Labels
 
@@ -50,9 +50,11 @@ Every issue has exactly one type label. Choose it by what users notice:
 
 A status label says what an issue is waiting for. An issue that's ready to build has none:
 
-- `needs-triage`: no maintainer has accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning a release.
-- `needs-breakdown`: accepted, but too big for one pull request. While planning a release, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent, and it closes once they're all closed and its "Done when" is met.
+- `needs-triage`: no maintainer has accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning.
+- `needs-breakdown`: accepted, but too big for one pull request. While planning, split it into sub-issues with `gh issue create --parent <issue>`, then remove the label. The original stays open as their parent, and it closes once they're all closed and its "Done when" is met.
 - `needs-decision`: waiting for a maintainer to answer a question or make a decision. Remove it once a maintainer has answered, on the issue or in the conversation.
+
+The `ready` label marks the issues that a maintainer wants built. An agent adds it once an issue meets the definition of ready in `docs/planning.md` and a maintainer has approved the issue. Agents build only issues that have `ready` and no status label. An accepted issue without `ready` waits in the backlog.
 
 Triage is a maintainer's decision. An agent carries it out when a maintainer says so, and asking an agent to work on an issue accepts it. To accept an issue, remove `needs-triage` and make sure it has a type label. To reject one, comment why and close it with `gh issue close <issue> --reason "not planned"`. To close a duplicate, use `gh issue close <issue> --duplicate-of <other issue>`.
 
@@ -69,7 +71,7 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
 5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
-8. Merge only when a maintainer has asked you to, either for this pull request or for a whole milestone. Merge with `gh pr merge --squash`.
+8. Merge only when a maintainer has asked you to, either for this pull request or by asking you to build the ready issues. Merge with `gh pr merge --squash`.
 
 ## Commits
 
@@ -119,23 +121,24 @@ A change is done when all of these are true:
 - Don't ask for changes that a formatter would make, or for work outside the issue.
 - Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
 
-## Plan a release
+## Plan the next work
 
-When a maintainer asks you to plan a release, follow the steps in [docs/planning.md](docs/planning.md). Only issues that meet its definition of ready can join the milestone.
+When a maintainer asks you to plan the next work, follow the steps in [docs/planning.md](docs/planning.md). Only issues that meet its definition of ready get the `ready` label.
 
-## Build a milestone
+## Build the ready issues
 
-When a maintainer asks you to build a milestone, work through its issues without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. If an issue would make you break one of these rules, handle it as step 5 below describes.
+When a maintainer asks you to build the ready issues, work through them without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. Don't wait for the checks: turn on auto-merge, and GitHub merges the pull request once they pass while you take the next issue. Other agents may be building at the same time, each in its own clone or worktree. If an issue would make you break one of these rules, handle it as step 6 below describes.
 
-1. Merge each open Dependabot pull request whose checks have passed. `gh pr list --app dependabot` lists them. Leave the others for the maintainer.
-2. List the milestone's open issues with `gh issue list --milestone <version> --json number,title,labels,blockedBy,subIssuesSummary`. The `blockedBy` field lists each blocking issue with its state, and `subIssuesSummary` counts the issue's sub-issues.
-3. Take the lowest-numbered issue that has a type label, no status label and no open sub-issues, and whose blocking issues are all closed. Make the change as "Make a change" describes, and merge the pull request once the change meets the definition of done and its checks pass. If the issue is a parent whose sub-issues are all closed, don't build it. Check its "Done when" instead: close it if the result is reached, and add `needs-decision` if it isn't.
-4. If the issue has the `research` label, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation, and close it. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. If the answer changes what an issue it blocked asks for, add `needs-decision` to that issue, so the maintainer decides before it's built.
-5. If the issue is unclear or against one of these rules, or its checks fail because of your change and you can't fix them, stop working on it. Comment on the issue with what you need and add `needs-decision`. If it's too big for one pull request, add `needs-breakdown` instead. If it has a pull request, leave that open.
-6. Go back to step 2. When no issue is left that you can build, report to the maintainer:
+1. For each open Dependabot pull request whose checks have passed, turn on auto-merge with `gh pr merge <number> --auto --squash`. `gh pr list --app dependabot` lists them. If one is behind main, ask Dependabot to update it with `gh pr comment <number> --body "@dependabot rebase"`. Leave the ones whose checks failed for the maintainer.
+2. Check each pull request that you opened in this run and that's still open. If you've lost track of them, `gh pr list --json number,title,autoMergeRequest,mergeStateStatus` lists the open pull requests, and yours have auto-merge turned on. If a pull request's `mergeStateStatus` is `BEHIND`, update it with `gh pr update-branch <number>`. If it's `DIRTY`, resolve the conflicts with main. If its checks failed, fix them as step 5 of "Make a change" describes.
+3. List the ready issues with `gh issue list --label ready --json number,title,labels,assignees,blockedBy,subIssuesSummary`. The `blockedBy` field lists each blocking issue with its state, and `subIssuesSummary` counts the issue's sub-issues.
+4. Take the lowest-numbered ready issue that has a type label, no status label, no assignee and no open sub-issues, and whose blocking issues are all closed. Assign it to yourself with `gh issue edit <issue> --add-assignee @me`, so that other agents skip it. Make the change as "Make a change" describes, up to opening the pull request. Once the change meets the definition of done, turn on auto-merge with `gh pr merge <number> --auto --squash`, and go back to step 2. If the issue is a parent whose sub-issues are all closed, don't build it. Check its "Done when" instead: close it if the result is reached, and add `needs-decision` if it isn't.
+5. If the issue has the `research` label, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation, and close it. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. If the answer changes what an issue it blocked asks for, add `needs-decision` to that issue, so the maintainer decides before it's built.
+6. If the issue is unclear or against one of these rules, or its checks fail because of your change and you can't fix them, stop working on it. Comment on the issue with what you need, add `needs-decision` and remove your assignment with `gh issue edit <issue> --remove-assignee @me`. If it's too big for one pull request, add `needs-breakdown` instead of `needs-decision`. If it has a pull request, turn off auto-merge with `gh pr merge <number> --disable-auto`, and leave the pull request open.
+7. When no issue is left that you can start, wait for the checks of your open pull requests with `gh pr checks <number> --watch`, then go back to step 2. Once none of your pull requests is open and no issue is left that you can start, report to the maintainer:
    - the pull requests that merged
    - the issues that have the `needs-decision` label
-   - the issues you skipped because they have a status label or no type label, and the issues they block
+   - the ready issues that are still open, and what each one waits for
    - the issues you opened on your own, for problems you noticed
    - the Dependabot pull requests you didn't merge
    - anything a maintainer needs to run, such as `scripts/configure-github`
@@ -144,13 +147,10 @@ When a maintainer asks you to build a milestone, work through its issues without
 
 When a maintainer asks you to publish a release:
 
-1. Check that every issue in the milestone is closed. If some are open, stop and tell the maintainer, who can resolve them or move them to a later milestone.
-2. Check that the version still fits the merged work. A new feature needs at least a minor release, and a breaking change needs a major one, or a minor one before version 1.0. If the version doesn't fit, ask the maintainer which version to publish.
-3. Check that the CI runs on the latest commit on main passed, and wait for any that are still running. `gh run list --branch main` lists the runs, newest first. If one failed, stop and tell the maintainer.
-4. Publish the release with notes built from the merged pull requests:
+1. Check that the CI runs on the latest commit on main passed, and wait for any that are still running. `gh run list --branch main` lists the runs, newest first. If one failed, stop and tell the maintainer.
+2. Choose the version. `gh release list --limit 1` shows the latest release. After `git fetch`, `git log --format=%s <latest release>..origin/main` lists the titles of the pull requests merged since then. If it lists none, there's nothing to release, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
+3. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target main --generate-notes`
-5. Close the milestone. `gh api repos/{owner}/{repo}/milestones` shows its number:
-   `gh api -X PATCH repos/{owner}/{repo}/milestones/<number> -f state=closed`
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake takes a new release.
 
@@ -158,7 +158,7 @@ The repository's settings lock the tag and files of a published release, so fixi
 
 The repository holds the product and the rules for building it. Everything in it, and in its issues and pull requests, is public.
 
-- Put plans in issues and milestones, the reason for a change in its pull request, and review comments on the pull request.
+- Put plans in issues, the reason for a change in its pull request, and review comments on the pull request.
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
 - Never read, print or commit secrets. Keep them in `.env`, which git ignores, and list each variable in `.env.example` with a placeholder value.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commits, issues and pull requests.

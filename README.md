@@ -1,17 +1,17 @@
 # repo-template
 
-Start a GitHub project that people and coding agents plan, build and release the same way. Every change goes from an issue to a branch to a pull request, and it merges once fast checks pass. No approval is required, so you can plan a whole release as a milestone of issues and let an agent build and merge it in one long run.
+Start a GitHub project that people and coding agents plan, build and release the same way. Every change goes from an issue to a branch to a pull request, and it merges once fast checks pass, without anyone having to approve it. So you can plan the work as issues and let agents build them in long runs, such as overnight.
 
 The template works with any language. Agents get their instructions from one file, `AGENTS.md`, which Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read on their own. Gemini CLI and Aider read it only after you point their settings at it.
 
 ## What you get
 
-- `AGENTS.md`: the rules for agents and people. They say how to make a change, and how to plan, build and publish a release.
+- `AGENTS.md`: the rules for agents and people. They say how to make a change, plan the work, build it and publish a release.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
 - `docs/code.md`: how to write code in any language, from design to tests and pinned versions.
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, with you deciding what gets built. The ideas can come from any text you share or point the agent to.
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
-- `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, and turns on security alerts.
+- `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts.
 - `.github/`: CI, issue forms, a pull request template, weekly Dependabot updates, and the contributing and security pages.
 - `.claude/settings.json`: stops Claude Code from adding attribution lines and from reading `.env` files.
 
@@ -45,9 +45,9 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 
 These are the requests you give your agent. `AGENTS.md` tells it what each one involves.
 
-1. "Plan release v0.1.0: photo-sorter finds duplicate photos in a folder and moves the extra copies to the trash." If you have text about the project, add it to this request or point the agent to it. The agent creates the milestone v0.1.0 and splits the work into issues, each small enough for one pull request. It creates the issues in the order they should be built. When one issue depends on another, the agent marks the first as blocked by the second. Read the issues and correct them before the build starts.
-2. "Build milestone v0.1.0." The agent works through the issues one at a time. For each issue, it opens a pull request and merges it once the checks pass. You can read every merged pull request afterwards, because each one records what changed and why. If the agent can't build an issue, it comments on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you have answered, ask it to build the milestone again.
-3. "Publish release v0.1.0." The agent checks that every issue in the milestone is closed and that CI passed on main. Then it publishes a GitHub release with notes built from the merged pull requests.
+1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have text about the project, add it to this request or point the agent to it. The agent splits the work into issues, each small enough for one pull request. When an issue needs another issue's change first, the agent marks it as blocked by that issue. Read the issues and correct them. Once you approve them, the agent adds the `ready` label, which lets agents build them.
+2. "Build the ready issues." The agent works through them, lowest number first. For each issue, it opens a pull request that merges on its own once the checks pass, and it starts the next issue without waiting. To build faster, give the same request to several agents, each in its own clone or worktree, and they share the issues. You can read every merged pull request afterwards, because each one records what changed and why. If an agent can't build an issue, it comments on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you've answered, remove the label or ask the agent to, and ask it to build the ready issues again.
+3. "Publish a release." The agent checks that CI passed on main and chooses the version from the merged pull requests, such as v0.1.0 for the first release. Then it publishes a GitHub release with notes built from them.
 
 ## License
 

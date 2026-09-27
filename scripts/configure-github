@@ -11,7 +11,7 @@ if [[ "$permission" != "ADMIN" ]]; then
   exit 1
 fi
 
-echo "Merging: squash only, with the pull request title as the commit subject"
+echo "Merging: squash only, with the pull request title as the commit subject, and auto-merge allowed"
 gh api --method PATCH "repos/$repo" --silent \
   -F allow_squash_merge=true \
   -F allow_merge_commit=false \
@@ -19,6 +19,7 @@ gh api --method PATCH "repos/$repo" --silent \
   -f squash_merge_commit_title=PR_TITLE \
   -f squash_merge_commit_message=BLANK \
   -F delete_branch_on_merge=true \
+  -F allow_auto_merge=true \
   -F has_wiki=false
 
 echo "Security: Dependabot alerts and fixes, private vulnerability reports, secret scanning"
@@ -60,6 +61,7 @@ research|d4c5f9|Something to find out before building, such as whether a library
 needs-triage|fbca04|No maintainer has accepted or rejected this yet
 needs-breakdown|f9d0c4|Accepted, but too big for one pull request. Split it before building
 needs-decision|d876e3|Waiting for a maintainer to answer a question or make a decision
+ready|0e8a16|A maintainer wants it built, and it meets the definition of ready. Agents build only these
 dependencies|0366d6|Dependabot's version updates
 LABELS
 
@@ -80,7 +82,8 @@ echo "Main: every change arrives through a pull request that passes CI"
 # GitHub adds an approval for pull requests that an app opens, such as Dependabot's,
 # unless require_extra_approval_for_unattributed_changes is false.
 # The required checks are job names in .github/workflows. 15368 is the ID of GitHub Actions,
-# so only a workflow can report them.
+# so only a workflow can report them. A pull request must include the latest main before it merges,
+# because agents build several issues at once, and two changes that pass alone can break main together.
 ruleset=$(cat <<'JSON'
 {
   "name": "main",
@@ -106,7 +109,7 @@ ruleset=$(cat <<'JSON'
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": false,
+        "strict_required_status_checks_policy": true,
         "required_status_checks": [
           {"context": "check", "integration_id": 15368},
           {"context": "title", "integration_id": 15368}
