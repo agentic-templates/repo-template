@@ -43,11 +43,21 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 
 ## Example: from idea to first release
 
-These are the requests you give your agent. `AGENTS.md` tells it what each one involves.
+These are the requests you give your agent, in any wording that asks for the same thing. `AGENTS.md` tells it what each one involves.
 
 1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have text about the project, add it to this request as well, or point the agent to it, because an agent in a new conversation doesn't know what you gave the agent during setup. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues and correct them. Tell the agent which ones you approve, and it adds the `ready` label, which lets agents build them.
-2. "Build the ready issues." The agent works through them, lowest number first. For each issue, it opens a pull request that merges on its own once the checks pass, and the agent starts the next issue without waiting for the checks. To build several issues at once, ask for helpers, if your agent can start them: "Build the ready issues, with up to 3 helpers." The agent then gives each issue it can start to a helper that works in its own worktree. You can read every merged pull request afterwards, because each one records what changed and why. If an agent can't build an issue, it asks its question in a comment on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you've answered the question, remove the label and ask the agent to build the ready issues again.
+2. "Build the ready issues." The agent works through them, lowest number first. For each issue, it opens a pull request that merges on its own once the checks pass, and the agent starts the next issue without waiting for the checks. To build several issues at once, ask for helpers, if your agent can start them: "Build the ready issues, with up to 3 helpers." The agent then gives each issue it can start to a helper that works in its own worktree. You can read every merged pull request afterwards, because each one records what changed and why. If an agent can't build an issue, it asks its question in a comment on the issue and adds the `needs-decision` label. It closes the issue's pull request, if there is one, so that unfinished work can't merge, and a later build continues on its branch. It skips the issues that depend on that one and builds the rest. When it's done, it reports what merged and what's waiting for you, including the issues it couldn't finish.
 3. "Publish a release." The agent checks that CI passed on main. It picks the version from the biggest change merged since the last release: a fix, a new feature or a breaking change. The first release is v0.1.0. Then the agent publishes a GitHub release with notes built from the merged pull requests.
+
+### After the first release
+
+Plan, build and release each later version with the same three requests. The requests below cover the rest of the work.
+
+- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you approve.
+- "Triage the new issues." The agent recommends what to do with each issue that someone else opened, and carries out what you decide.
+- "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label. The next time you ask it to build the ready issues, it builds those issues too.
+- "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it, but doesn't merge it until you ask. You approved the ready issues while planning, so their pull requests merge on their own, but you haven't approved this one. Add "and merge it" to your request, or ask later.
+- "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
 
 ## Limits
 
