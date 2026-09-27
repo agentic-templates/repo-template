@@ -32,7 +32,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
    scripts/configure-github
    ```
 
-3. Set up the project in its first pull request. You can ask your agent, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." If you already have text about the project, add it to your request or point the agent to it, and do the same when you plan a release. The list:
+3. Set up the project in its first pull request. You can ask your agent, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." If you already have text about the project, add it to your request or point the agent to it. The list:
 
    - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the language version in its version file, such as `.python-version`, and commit the lockfile for the project's packages. Add a step to `.github/workflows/ci.yml` that installs the language and the packages.
@@ -45,7 +45,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 
 These are the requests you give your agent. `AGENTS.md` tells it what each one involves.
 
-1. "Plan release v0.1.0: photo-sorter finds duplicate photos in a folder and moves the extra copies to the trash." The agent creates the milestone v0.1.0 and splits the work into issues, each small enough for one pull request. It creates the issues in the order they should be built. When one issue depends on another, the agent marks the first as blocked by the second. Read the issues and correct them before the build starts.
+1. "Plan release v0.1.0: photo-sorter finds duplicate photos in a folder and moves the extra copies to the trash." If you have text about the project, add it to this request or point the agent to it. The agent creates the milestone v0.1.0 and splits the work into issues, each small enough for one pull request. It creates the issues in the order they should be built. When one issue depends on another, the agent marks the first as blocked by the second. Read the issues and correct them before the build starts.
 2. "Build milestone v0.1.0." The agent works through the issues one at a time. For each issue, it opens a pull request and merges it once the checks pass. You can read every merged pull request afterwards, because each one records what changed and why. If the agent can't build an issue, it comments on the issue and adds the `needs-decision` label. It skips the issues that depend on that one and builds the rest. Once you have answered, ask it to build the milestone again.
 3. "Publish release v0.1.0." The agent checks that every issue in the milestone is closed and that CI passed on main. Then it publishes a GitHub release with notes built from the merged pull requests.
 
