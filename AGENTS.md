@@ -108,7 +108,7 @@ A change is done when all of these are true:
 
 - It meets every item in the issue's "Done when" list, and it adds nothing the issue didn't ask for.
 - `scripts/check` passes on your machine and in CI.
-- New behavior has tests. A bug fix has a test that fails without the fix.
+- New behavior in the code has tests, and a fix to the code has a test that fails without the fix.
 - The docs match the change: README, AGENTS.md, help text and comments.
 - Nothing is left behind: no dead code, debug output, commented-out code, or TODO without an issue number.
 - A new or rewritten README or docs page has had a fresh-reader review, as `docs/writing.md` describes.
