@@ -1,8 +1,20 @@
 # How to work in this repository
 
-This repository is repo-template, a starting point for new projects.
-
 These rules apply to every coding agent and every person who changes the repository. In them, the owner is the person who has admin access to the repository and decides what happens to it. If a rule conflicts with what the owner asks for, point out the conflict and ask before you break the rule.
+
+## What this project is
+
+repo-template gives a new GitHub project the rules, checks and settings that let people and coding agents plan, build and release it the same way.
+
+Out of scope:
+
+- Files and settings for one language or framework. Each project adds its own during setup.
+- Instruction files for one coding agent.
+
+Decisions that every change keeps. The owner changes a decision through an issue, like any other change:
+
+- The checks that run on every pull request stay fast. Slow tests run before a release.
+- Nothing in the template publishes the owner's email address.
 
 ## Where things are
 
@@ -10,6 +22,7 @@ These rules apply to every coding agent and every person who changes the reposit
 - `AGENTS.md`: these rules.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
 - `docs/code.md`: how to write code.
+- `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan a release.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release note settings, and the contributing and security pages.
@@ -24,12 +37,13 @@ The project has no slow tests yet. When it has some, list their command here. CI
 
 The `gh` commands in these rules need gh 2.98 or later. If `gh --version` shows an older version, stop and tell the owner.
 
-## Write text and code
+## Read the guides
 
-Read both guides before you write or review anything in a session:
+Read the writing and code guides before you write or review anything in a session. Read the planning guide before you triage ideas or plan a release.
 
 - [docs/writing.md](docs/writing.md) covers all text: docs, issues, pull requests, commit messages, comments and error messages.
 - [docs/code.md](docs/code.md) covers all code.
+- [docs/planning.md](docs/planning.md) covers triage, big ideas, research issues, the definition of ready and planning a release.
 
 ## Labels
 
@@ -115,15 +129,7 @@ A change is done when all of these are true:
 
 ## Plan a release
 
-A release is a milestone of issues. Plan the whole release before anyone builds it, so that an agent can build it in one run.
-
-1. Agree on the goal with the owner: what a user can do after the release that they can't do now.
-2. Choose the version, such as `v0.2.0`. It also names the milestone, and the commands below show it as `<version>`. Versions follow semantic versioning: raise the patch number for a release with only fixes, the minor number for new features, and the major number for a change that breaks existing use. Before version 1.0, a breaking change raises the minor number instead.
-3. Create the milestone. `gh` fills in `{owner}` and `{repo}`:
-   `gh api repos/{owner}/{repo}/milestones -f title=<version> -f description="<goal>"`
-4. Split the goal into issues. Each issue fits in one pull request and leaves main working when it merges. Its body has the three headings from "Make a change". Write it for a builder who has read nothing but the issue and the code.
-5. Create the issues in the order they should be built, because the builder takes the lowest-numbered issue first. Use `gh issue create --milestone <version> --label <type>`. If an issue needs another issue's change first, add `--blocked-by <other issue>`.
-6. Ask the owner to review the milestone before anyone builds it.
+Follow the steps in [docs/planning.md](docs/planning.md). A release is a milestone of issues that meet the definition of ready there.
 
 ## Build a milestone
 
@@ -167,6 +173,6 @@ The repository holds the product and the rules for building it. Everything in it
 
 ## Change these rules
 
-- Inside the repository, instructions for agents live in AGENTS.md files and the two guides in `docs/`. Put a writing or code rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`.
+- Inside the repository, instructions for agents live in AGENTS.md files and the three guides in `docs/`. Put a writing or code rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`.
 - Don't create a `CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the owner. Personal instructions in `~/.claude/CLAUDE.md` are fine, because that folder isn't above the repository.
 - Add a rule only when the same mistake keeps happening and no check or setting can prevent it. Keep the rules that explain what a check expects. Remove a rule once it no longer applies.

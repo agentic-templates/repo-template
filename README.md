@@ -9,6 +9,7 @@ The template works with any language. Agents get their instructions from one fil
 - `AGENTS.md`: the rules for agents and people. They say how to make a change, and how to plan, build and publish a release.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
 - `docs/code.md`: how to write code in any language, from design to tests and pinned versions.
+- `docs/planning.md`: how an agent turns a spec, a list of ideas or a single idea into issues that are ready to build, with you deciding what gets built.
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, and turns on security alerts.
 - `.github/`: CI, issue forms, a pull request template, weekly Dependabot updates, and the contributing and security pages.
@@ -33,7 +34,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 
 3. Set up the project in its first pull request. You can ask your agent, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." The list:
 
-   - In `AGENTS.md`, replace the first paragraph with one sentence about the project. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
+   - In `AGENTS.md`, rewrite "What this project is" for the project: its goal, what's out of scope and the decisions every change keeps. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the language version in its version file, such as `.python-version`, and commit the lockfile for the project's packages. Add a step to `.github/workflows/ci.yml` that installs the language and the packages.
    - Add the formatter, linter and fast tests to `scripts/check`. If the project has slow tests, such as end-to-end tests, list their command under "Commands" in `AGENTS.md`.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
