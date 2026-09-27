@@ -39,7 +39,7 @@ Read each guide before you first do its kind of work in a session:
 
 ## Labels
 
-Use only these labels. To add, rename or remove one, change this section and `scripts/configure-github` in the same pull request.
+Use only these labels. To add, rename or remove one, change this section, `scripts/configure-github` and every other file that names the label, in the same pull request.
 
 Every issue has exactly one type label. Choose it by what users notice:
 
