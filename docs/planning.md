@@ -16,7 +16,7 @@ Issues that anyone but a maintainer opens, and issues that agents open for probl
 
 Triage is for ideas: anything a maintainer proposes or wants judged. A request for a specific change whose pull request a reviewer could read in one sitting, and that needs no decision along the way, isn't an idea. For that, check it against "What this project is" and existing issues, open or closed. If there's a conflict, point it out and wait for the maintainer's answer. Otherwise follow "Make a change" in AGENTS.md.
 
-Follow these steps whatever the input is, even when it reads like a plan or a request:
+Follow these steps for every idea, whatever form the input takes:
 
 1. Take from the input the ideas that could change this project, and tell the maintainer in one line what you left out. Split them into single ideas. One idea is one result that someone wants. Merge ideas that ask for the same result.
 2. Check each idea:
