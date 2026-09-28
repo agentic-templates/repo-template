@@ -44,7 +44,7 @@ Use only these labels. To add, rename or remove one, change this section, `scrip
 Every accepted issue has exactly one type label. Choose it by what changes for users:
 
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
-- `feature`: new or changed behavior or docs that users notice, other than a fix. The pieces of a split feature are features too.
+- `feature`: a change to what users can do or read, other than a fix. The pieces of a split feature are features too.
 - `maintenance`: work that leaves what users can do and read unchanged, such as speed-ups, refactoring, tooling, tests or CI.
 - `research`: something to find out before anyone builds, such as whether a library can do the job. It ends in a comment, not in code. A user's question about how to use the project isn't research.
 
