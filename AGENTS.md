@@ -154,10 +154,10 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
 
 When a maintainer asks you to publish a release:
 
-1. Check that the CI runs on the latest commit on main passed, and wait for any that are still running. `gh run list --branch main` lists the runs, newest first. If one failed, stop and tell the maintainer.
-2. Choose the version. `gh release list --limit 1` shows the latest release. After `git fetch`, `git log --format=%s <latest release>..origin/main` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
+1. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. If one failed, stop and tell the maintainer. Keep using that SHA even if more pull requests merge while you wait.
+2. Choose the version. `gh release list --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
 3. Publish the release with notes built from the merged pull requests:
-   `gh release create <version> --target main --generate-notes`
+   `gh release create <version> --target <sha> --generate-notes`
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake takes a new release.
 
