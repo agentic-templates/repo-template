@@ -16,7 +16,7 @@ if [[ "$visibility" != "public" ]]; then
   exit 1
 fi
 
-echo "Merging: squash only, with the pull request title as the commit subject, and auto-merge allowed"
+echo "Merging: squash only, with the pull request title as the commit subject, auto-merge allowed, and the branch deleted after the merge"
 gh api --method PATCH "repos/$repo" --silent \
   -F allow_squash_merge=true \
   -F allow_merge_commit=false \
@@ -24,8 +24,10 @@ gh api --method PATCH "repos/$repo" --silent \
   -f squash_merge_commit_title=PR_TITLE \
   -f squash_merge_commit_message=BLANK \
   -F delete_branch_on_merge=true \
-  -F allow_auto_merge=true \
-  -F has_wiki=false
+  -F allow_auto_merge=true
+
+echo "Wiki: off, because the docs live in the repository and change through pull requests"
+gh api --method PATCH "repos/$repo" --silent -F has_wiki=false
 
 echo "Security: Dependabot alerts and fixes, private vulnerability reports, secret scanning"
 gh api --method PUT "repos/$repo/vulnerability-alerts" --silent
