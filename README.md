@@ -13,7 +13,7 @@ The template works with any language. Agents get their instructions from one fil
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts.
 - `.github/`: CI, a check of pull request titles, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests. It also stops Claude Code's file tools and shell commands such as `cat` from reading `.env` files. A script that opens a `.env` file itself can still read it.
+- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests. It also stops Claude Code's file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't name it, such as `grep -r`.
 
 ## Start a project
 
