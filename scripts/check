@@ -34,7 +34,7 @@ if has actionlint https://github.com/rhysd/actionlint/blob/main/docs/install.md;
   actionlint
 fi
 
-# Add the project's formatter check, linter and fast tests here.
+# Add the project's formatter check, linter and tests here.
 
 if [[ -n "$skipped" ]]; then
   echo "The checks that ran passed. These were skipped, and CI runs them: $skipped."

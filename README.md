@@ -36,7 +36,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 
    - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the version of each main technology, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install the technologies and packages.
-   - Add the formatter, linter and fast tests to `scripts/check`. If the project has slow tests, such as end-to-end tests, list their command under "Commands" in `AGENTS.md`.
+   - Add the formatter, linter and tests to `scripts/check`.
    - If the project's output is visual, such as a web page or a 3D scene, list a command under "Commands" in `AGENTS.md` that gives agents something to look at. It has to work without anyone at the screen, but it may keep running, as a development server does. The run command is enough if its entry says what to open, such as the page's address. Otherwise, add one, such as a script that renders the scene to an image. Rendered images go outside the repository, such as in a temporary folder.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - Set the year and the copyright holder in `LICENSE`.
