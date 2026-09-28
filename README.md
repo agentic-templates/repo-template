@@ -63,9 +63,9 @@ Helpers use the same model and effort as your agent. To choose another model, na
 
 Plan, build and release each later version with the same three requests. The requests below cover the rest of the work.
 
-- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept, and those issues wait until you want them built.
+- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept. Those issues wait in the backlog until you approve them for building.
 - "Triage the new issues." The agent recommends what to do with each new issue that you didn't ask for, such as a bug report from a user, and carries out what you decide.
-- "Make #14 ready to build.", for an issue you accepted at triage. The agent checks the issue, fixes what's missing and asks you to approve it. Your next "Build the ready issues" builds it.
+- "Make #14 ready to build.", for an issue you accepted at triage. The agent rewrites the issue until it meets the definition of ready in `docs/planning.md`, then asks you to approve it. Your next "Build the ready issues" builds it.
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
 - "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
