@@ -8,9 +8,10 @@ on:
 permissions:
   contents: read
 
-# A new push to a pull request cancels the older run. Runs on main always finish.
+# A new push to a pull request cancels the older run.
+# Each push to main gets its own group, so GitHub never cancels a waiting run on main.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ case(github.event_name == 'pull_request', github.ref, github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

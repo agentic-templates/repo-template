@@ -19,7 +19,13 @@ has() {
 }
 
 if has shellcheck https://github.com/koalaman/shellcheck#installing; then
-  shellcheck scripts/check scripts/configure-github
+  shebang='^#!(/bin/|/usr/bin/env )(sh|bash)([[:space:]]|$)'
+  # -f skips the submodules and deleted files that git ls-files also lists.
+  git ls-files -z | while IFS= read -r -d '' file; do
+    if [[ -f $file ]] && IFS= read -r first_line < "$file" && [[ $first_line =~ $shebang ]]; then
+      printf '%s\0' "$file"
+    fi
+  done | xargs -0 shellcheck -x
 fi
 
 if has actionlint https://github.com/rhysd/actionlint/blob/main/docs/install.md; then
