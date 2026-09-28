@@ -6,7 +6,7 @@ These rules apply to every coding agent and every person who changes the reposit
 
 repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
 
-When a request pulls against this direction, say so, and ask the maintainer whether to change the request or the direction. A change of direction updates this section in the same pull request.
+When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction. A change of direction updates this section in the same pull request.
 
 ## Where things are
 
@@ -17,7 +17,7 @@ When a request pulls against this direction, say so, and ask the maintainer whet
 - `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan the next work.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
-- `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release note settings, and the contributing and security pages.
+- `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
 - `.claude/settings.json`: settings that stop Claude Code from adding attribution to commits and pull requests. They also stop its file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't name it, such as `grep -r`.
 
 ## Commands
@@ -44,7 +44,7 @@ Use only these labels. To add, rename or remove one, change this section, `scrip
 Every accepted issue has exactly one type label. Choose it by what changes for users:
 
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
-- `feature`: a change to what users can do or read, other than a fix. The pieces of a split feature are features too.
+- `feature`: a change to what users can do or read, other than a fix. The sub-issues of a split feature are features too.
 - `maintenance`: work that leaves what users can do and read unchanged, such as speed-ups, refactoring, tooling, tests or CI.
 - `research`: something to find out before anyone builds, such as whether a library can do the job. It ends in a comment, not in code. A user's question about how to use the project isn't research.
 
@@ -65,13 +65,13 @@ Pull requests get their labels without anyone's help. A workflow gives each one 
 Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
 
 1. Start from an issue. Search for one with `gh issue list --state all --search "<words>"`, and if there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. Outside a build run, if a maintainer asks you to work on an issue, remove `needs-triage` from it, because the request accepts the issue. Remove `ready` too, so that no build run takes it. If it's assigned, tell the maintainer before you start, because a build run may be working on it. If you stop before its pull request merges, tell the maintainer that the issue no longer has `ready`.
-2. Create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue. If `gh issue develop --list <issue>` lists a branch, check out that branch instead, or the most recently updated one if it lists more than one.
+2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
 4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it and the repository is public. If it isn't, stop and tell the maintainer.
 5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
-8. Merge only when a maintainer has asked you to, either for this pull request or by asking you to build the ready issues. Merge with `gh pr merge --squash`. Before you do, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 7.
+8. Merge only when a maintainer has asked you to, either for this pull request or by asking you to build the ready issues. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 7. Otherwise, merge with `gh pr merge --squash`.
 
 ## Commits
 
@@ -98,7 +98,7 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
 
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject, because it becomes the commit subject on main. CI checks its format.
-- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. If a test covers the change but you didn't run it, such as a slow test, say so and say why.
+- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
 ## Definition of done
@@ -131,7 +131,7 @@ When a maintainer asks you to build the ready issues, work through them without 
 
 If the maintainer asks for helpers, such as "with up to 3 helpers", and you can start agents that each work in their own clone or worktree, build several issues at once. Take and assign each issue as step 4 describes, then give it to a helper, up to the number the maintainer asked for. A helper uses the same model and effort as you, unless the maintainer names another model or an agent they set up for helpers. The helper builds that one issue as the rest of step 4 and step 5 describe, and tells you its pull request's number or why it stopped. If a helper fails without saying why, remove the assignment from its issue, so that another helper can try it. If that helper fails too, also add `needs-decision`, and comment on the issue that two helpers failed. You do the other steps yourself, for every pull request of the run.
 
-1. Remove your assignment from each ready issue that's assigned to you and has no open pull request. For each open Dependabot pull request whose checks have passed, turn on auto-merge with `gh pr merge <number> --auto --squash`. `gh pr list --app dependabot` lists them.
+1. Remove your assignment from each ready issue that's assigned to you and has no open pull request. For each open Dependabot pull request whose checks haven't failed, turn on auto-merge with `gh pr merge <number> --auto --squash`. `gh pr list --app dependabot` lists them.
 2. Check each open pull request that has auto-merge turned on. Never touch a pull request from a fork.
    - For one that closes a ready issue, if its `mergeStateStatus` is `BEHIND`, update it with `gh pr update-branch <number>`. If it's `DIRTY` or its checks failed, and you can still message the helper that built it, ask that helper to fix it. Leave the pull request alone until the helper reports, and count the helper toward the number the maintainer asked for. Otherwise, resolve the conflicts with main, or fix the checks as step 5 of "Make a change" describes. If you find it `BLOCKED` twice in a row after all its reported checks have passed, it can't merge, so give its issue back as step 5 below describes.
    - For one of Dependabot's, if it's `BEHIND`, ask Dependabot to update it with `gh pr comment <number> --body "@dependabot rebase"`. If it's `DIRTY` or its checks failed, turn off its auto-merge with `gh pr merge <number> --disable-auto`, and leave it for the maintainer. Never fix or close Dependabot's pull requests.
@@ -142,7 +142,7 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
    - For any other issue, make the change as "Make a change" describes, up to opening the pull request. Once the change meets the definition of done, apart from CI, turn on auto-merge with `gh pr merge <number> --auto --squash`.
 
    Then go back to step 2.
-5. Give an issue back to the maintainer when you can't finish it, for example because it's unclear, against one of these rules or too big for one pull request, or because its pull request can't merge and you can't fix that. Comment on the issue with what you need, and remove your assignment with `gh issue edit <issue> --remove-assignee @me`. Add `needs-breakdown` if it's too big, and `needs-decision` otherwise, unless an issue about a problem outside it now blocks it. If it has a pull request, close it with `gh pr close <number>`, and keep its branch.
+5. Give an issue back to the maintainer when you can't finish it, for example because it's unclear, against one of these rules or too big for one pull request, or because its pull request can't merge and you can't fix that. Comment on the issue with what you need, and remove your assignment with `gh issue edit <issue> --remove-assignee @me`. If it's too big, add `needs-breakdown`. Otherwise, if an issue about a problem outside it now blocks it, add no status label, because it waits for that issue. Otherwise, add `needs-decision`. If it has a pull request, close it with `gh pr close <number>`, and keep its branch.
 6. When no issue is left that you can start, wait for your helpers, if you have any, and for the checks of the pull requests from step 2 that close ready issues, with `gh pr checks <number> --watch`. Then go back to step 2. Once none of them is open and no issue is left that you can start, report to the maintainer:
    - the pull requests that merged
    - the issues that have the `needs-decision` label

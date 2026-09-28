@@ -37,10 +37,13 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
    - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the version of each main technology, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install the technologies and packages.
    - Add the formatter, linter and tests to `scripts/check`.
-   - If the project's output is visual, such as a web page or a 3D scene, list a command under "Commands" in `AGENTS.md` that gives agents something to look at. It has to work without anyone at the screen, but it may keep running, as a development server does. The run command is enough if its entry says what to open, such as the page's address. Otherwise, add one, such as a script that renders the scene to an image. Rendered images go outside the repository, such as in a temporary folder.
+   - If the project's output is visual, such as a web page or a 3D scene, list a command under "Commands" in `AGENTS.md` that saves a picture of it, such as a screenshot of the page or a render of the scene. Agents look at the picture to check their changes, so the command has to run without anyone at the screen. Save the pictures outside the repository, such as in a temporary folder.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
+   - If the project publishes a package or deploys, add a workflow that does it when a release is published.
    - Set the year and the copyright holder in `LICENSE`.
    - Last, replace this README with one for the project, as `docs/writing.md` describes.
+
+4. Before you go on to the example below, review the setup's pull request and ask the agent to merge it. The agent merges it only when you ask.
 
 ## Example: from idea to first release
 
@@ -56,11 +59,11 @@ Ask for helpers: "Build the ready issues, with up to 3 helpers." A helper is ano
 
 Helpers use the same model and effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus." In Claude Code, you can also choose their effort. Write a subagent file in `~/.claude/agents/`, as the [subagent docs](https://code.claude.com/docs/en/sub-agents) describe. In it, set a `name`, such as `photo-helper`, and the `effort` you want, and a `model` if you want another one. Then ask for it by name: "Build the ready issues, with up to 3 helpers using photo-helper."
 
-### After the first release
+### Other requests
 
 Plan, build and release each later version with the same three requests. The requests below cover the rest of the work.
 
-- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you approve.
+- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept. They wait in the backlog until you approve them for building.
 - "Triage the new issues." The agent recommends what to do with each new issue that you didn't ask for, such as a bug report from a user, and carries out what you decide.
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
@@ -68,8 +71,9 @@ Plan, build and release each later version with the same three requests. The req
 
 ## Limits
 
-- The template works only with GitHub. Its settings script works only on public repositories, because GitHub offers private vulnerability reporting only for them. On a free plan, a private repository also can't protect main or merge pull requests on its own.
-- A build run merges its pull requests, and Dependabot's, once their checks pass, without anyone reviewing them. The checks catch only what the tests and linters cover.
+- The template works only with GitHub. Its settings script works only on public repositories, because it turns on private vulnerability reporting, which GitHub offers only for them. On a free plan, a private repository also can't protect main, and its pull requests can't merge on their own.
+- A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
+- A build of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's updates the same way. The checks catch only what the tests and linters cover.
 - Run one build of the ready issues per repository at a time, because two builds can take the same issue. To build faster, ask for helpers rather than start another session. Helpers need an agent that can launch other agents.
 
 ## License

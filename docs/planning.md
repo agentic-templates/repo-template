@@ -66,7 +66,7 @@ If the issue came from an account that isn't a maintainer's, and the verdict is 
 ## Break down a big idea
 
 - A big idea is one parent issue. Its "What should change" states the result the maintainer wants, and its "Done when" says how to tell that the result is reached.
-- It waits in the backlog with `needs-breakdown`. Split it when the work that needs it is planned, not earlier, because the work before it changes what the pieces should be.
+- It waits in the backlog with `needs-breakdown`. Split it when the work that needs it is planned, not earlier, because the work before it changes what the sub-issues should be.
 - Split it into sub-issues that each fit in one pull request and leave main working. Create each one with `gh issue create --parent <parent>`, then remove `needs-breakdown` from the parent.
 - Give the parent the `ready` label along with its sub-issues, so that a build run checks its "Done when" once they're all closed.
 
