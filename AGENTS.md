@@ -41,11 +41,11 @@ Read each guide before you first do its kind of work in a session:
 
 Use only these labels. To add, rename or remove one, change this section, `scripts/configure-github` and every other file that names the label, in the same pull request.
 
-Every accepted issue has exactly one type label. Choose it by what users notice:
+Every accepted issue has exactly one type label. Choose it by what changes for users:
 
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
 - `feature`: new or changed behavior or docs that users notice, other than a fix. The pieces of a split feature are features too.
-- `maintenance`: work that users don't notice, such as refactoring, tooling, tests or CI.
+- `maintenance`: work that leaves what users can do and read unchanged, such as speed-ups, refactoring, tooling, tests or CI.
 - `research`: something to find out before anyone builds, such as whether a library can do the job. It ends in a comment, not in code. A user's question about how to use the project isn't research.
 
 A status label says what an issue is waiting for. An issue that's ready to build has none:
