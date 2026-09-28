@@ -1,6 +1,6 @@
 # repo-template
 
-Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. The pull request needs no approval, so it can merge as soon as the automated checks pass. This way, you can plan the work as issues and have agents build them in long runs, such as overnight.
+Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. Instead of reviewing each pull request, you approve the issues before agents build them. Their pull requests then merge as soon as the automated checks pass.
 
 The template works with any language. Agents get their instructions from one file, `AGENTS.md`, which Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read on their own. Gemini CLI and Aider read it only after you point their settings at it.
 
@@ -63,15 +63,16 @@ Helpers use the same model and effort as your agent. To choose another model, na
 
 Plan, build and release each later version with the same three requests. The requests below cover the rest of the work.
 
-- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept. They wait in the backlog until you approve them for building.
+- "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept, and those issues wait until you want them built.
 - "Triage the new issues." The agent recommends what to do with each new issue that you didn't ask for, such as a bug report from a user, and carries out what you decide.
+- "Make #14 ready to build.", for an issue you accepted at triage. The agent checks the issue, fixes what's missing and asks you to approve it. Your next "Build the ready issues" builds it.
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
 - "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
 
 ## Limits
 
-- The template works only with GitHub. Its settings script works only on public repositories, because it turns on private vulnerability reporting, which GitHub offers only for them. On a free plan, a private repository also can't protect main, and its pull requests can't merge on their own.
+- The template works only with GitHub. Its settings script works only on public repositories, because it turns on a GitHub security setting that only public repositories have. On a free plan, a private repository also can't protect main, and its pull requests can't merge on their own.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
 - A build of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's updates the same way. The checks catch only what the tests and linters cover.
 - Run one build of the ready issues per repository at a time, because two builds can take the same issue. To build faster, ask for helpers rather than start another session. Helpers need an agent that can launch other agents.
