@@ -1,6 +1,6 @@
 # repo-template
 
-Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request, and the pull request merges once the automated checks pass, without anyone having to approve it. This way, you can plan the work as issues and have agents build them in long runs, such as overnight.
+Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. The pull request needs no approval, so it can merge as soon as the automated checks pass. This way, you can plan the work as issues and have agents build them in long runs, such as overnight.
 
 The template works with any language. Agents get their instructions from one file, `AGENTS.md`, which Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read on their own. Gemini CLI and Aider read it only after you point their settings at it.
 
@@ -13,7 +13,7 @@ The template works with any language. Agents get their instructions from one fil
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts.
 - `.github/`: CI, a check of pull request titles, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests, and keeps its file tools and shell commands such as `cat` away from `.env` files.
+- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests, and keeps its file tools and shell commands such as `cat` away from `.env` files, but not a script that opens them itself.
 
 ## Start a project
 
@@ -37,6 +37,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
    - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the version of each main technology, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install the technologies and packages.
    - Add the formatter, linter and fast tests to `scripts/check`. If the project has slow tests, such as end-to-end tests, list their command under "Commands" in `AGENTS.md`.
+   - If the project's output is visual, such as a web page or a 3D scene, list a command under "Commands" in `AGENTS.md` that gives agents something to look at. It has to work without anyone at the screen, but it may keep running, as a development server does. The run command is enough if its entry says what to open, such as the page's address. Otherwise, add one, such as a script that renders the scene to an image. Rendered images go outside the repository, such as in a temporary folder.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - Set the year and the copyright holder in `LICENSE`.
    - Last, replace this README with one for the project, as `docs/writing.md` describes.
@@ -55,7 +56,7 @@ Plan, build and release each later version with the same three requests. The req
 
 - "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you approve.
 - "Triage the new issues." The agent recommends what to do with each issue that someone else opened, and carries out what you decide.
-- "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label. The next time you ask it to build the ready issues, it builds those issues too.
+- "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label. The next time you ask it to build the ready issues, it also builds the answered issues that have `ready`.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
 - "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
 

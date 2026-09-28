@@ -3,7 +3,8 @@
 .env.*
 !.env.example
 
-# Personal Claude Code settings
+# Personal Claude Code settings and worktrees
 .claude/settings.local.json
+.claude/worktrees/
 
 .DS_Store
