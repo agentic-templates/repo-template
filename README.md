@@ -19,7 +19,7 @@ The template works with any language. Agents get their instructions from one fil
 
 You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't always read `AGENTS.md`.
 
-1. Create a public repository from the template, and clone it. The settings script works only on public repositories.
+1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan, as "Limits" explains.
 
    ```bash
    gh repo create photo-sorter --public --template jtmpl/repo-template --clone
@@ -72,7 +72,8 @@ Plan, build and release each later version with the same three requests. The req
 
 ## Limits
 
-- The template works only with GitHub. Its settings script works only on public repositories, because it turns on a GitHub security setting that only public repositories have. On a free plan, a private repository also can't protect main, and its pull requests can't merge on their own.
+- The template works only with GitHub. On GitHub Free, use a public repository. A private repository there can't protect main, and its pull requests can't merge on their own.
+- On a private repository, the settings script skips private vulnerability reporting and secret scanning. GitHub offers the first only for public repositories, and the second only with a paid add-on. After you make the repository public, run the script again to turn both on.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
 - A build of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's updates the same way. The checks catch only what the tests and linters cover.
 - Run one build of the ready issues per repository at a time, because two builds can take the same issue. To build faster, ask for helpers rather than start another session. Helpers need an agent that can launch other agents.
