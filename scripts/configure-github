@@ -2,6 +2,7 @@
 # Applies this repository's settings on GitHub. GitHub doesn't copy settings
 # from a template, so run this once after you create a repository from it.
 # Running it again is safe. It resets every setting below, and deletes any label it doesn't list.
+# On a private repository it skips two security settings, so run it again after you make the repository public.
 set -euo pipefail
 
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
@@ -11,10 +12,6 @@ if [[ "$permission" != "ADMIN" ]]; then
   exit 1
 fi
 visibility=$(gh repo view --json visibility --jq '.visibility | ascii_downcase')
-if [[ "$visibility" != "public" ]]; then
-  echo "error: $repo is $visibility, and this script works only on public repositories, because GitHub offers some of its settings only for them. Nothing was changed. Make the repository public and run this script again, or apply the settings you need by hand." >&2
-  exit 1
-fi
 
 echo "Merging: squash only, with the pull request title as the commit subject, auto-merge allowed, and the branch deleted after the merge"
 gh api --method PATCH "repos/$repo" --silent \
@@ -29,11 +26,15 @@ gh api --method PATCH "repos/$repo" --silent \
 echo "Wiki: off, because the docs live in the repository and change through pull requests"
 gh api --method PATCH "repos/$repo" --silent -F has_wiki=false
 
-echo "Security: Dependabot alerts and fixes, private vulnerability reports, secret scanning"
+echo "Security: Dependabot alerts and fixes"
 gh api --method PUT "repos/$repo/vulnerability-alerts" --silent
 gh api --method PUT "repos/$repo/automated-security-fixes" --silent
-gh api --method PUT "repos/$repo/private-vulnerability-reporting" --silent
-gh api --method PATCH "repos/$repo" --silent --input - <<'JSON'
+# GitHub offers private vulnerability reporting only for public repositories,
+# and secret scanning on a private repository needs a paid add-on.
+if [[ "$visibility" == "public" ]]; then
+  echo "Security: private vulnerability reports and secret scanning"
+  gh api --method PUT "repos/$repo/private-vulnerability-reporting" --silent
+  gh api --method PATCH "repos/$repo" --silent --input - <<'JSON'
 {
   "security_and_analysis": {
     "secret_scanning": {"status": "enabled"},
@@ -41,6 +42,9 @@ gh api --method PATCH "repos/$repo" --silent --input - <<'JSON'
   }
 }
 JSON
+else
+  echo "Security: $repo is $visibility, so private vulnerability reports and secret scanning stay off. Run this script again after you make it public."
+fi
 
 echo "Labels: the set that AGENTS.md describes"
 labels=$(gh label list --repo "$repo" --limit 200 --json name --jq '.[].name')
