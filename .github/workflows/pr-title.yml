@@ -21,7 +21,7 @@ jobs:
           if [[ "$TITLE" =~ $pattern ]]; then
             exit 0
           fi
-          echo "::error::The title \"$TITLE\" doesn't start with a commit type. Write it as \"<type>: <what changed>\", for example \"fix: keep photos on network drives in place\". The types are ${types//|/, }."
+          echo "::error::The title \"$TITLE\" doesn't start with a commit type. Write it as \"<type>: <what changed>\". The types are ${types//|/, }."
           exit 1
 
   # Release notes group pull requests by this label, as .github/release.yml sets out.

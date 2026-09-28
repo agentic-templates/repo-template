@@ -21,7 +21,5 @@ body:
     attributes:
       label: Done when
       description: Results that show the change is complete, one per line.
-      placeholder: |
-        - Running `photo-sorter scan ~/Pictures` lists each group of duplicate photos.
     validations:
       required: true
