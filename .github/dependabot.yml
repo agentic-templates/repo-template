@@ -12,7 +12,7 @@ updates:
       github-actions:
         patterns: ["*"]
     commit-message:
-      prefix: chore
+      prefix: build
       include: scope
     # Without this, Dependabot adds a label for each package manager once there's more than one.
     labels: [dependencies]
