@@ -53,13 +53,15 @@ Add its recommendation and its main concerns to the triage table. The critic inf
 
 Triage every issue that has `needs-triage` or no type label before you plan the next work, or sooner when the maintainer asks. Use the same checks and verdicts, and carry out what the maintainer decides:
 
-- **Accept:** remove `needs-triage` and give the issue its type label, plus `needs-breakdown` if it's too big. If the author didn't use the three headings, rewrite the body under them, using only what the author wrote and what the maintainer decided.
+- **Accept:** remove `needs-triage` and give the issue its type label, plus `needs-breakdown` if it's too big.
 - **Research first:** give the issue its type label, and replace `needs-triage` with `needs-decision`. Create a research issue for the question, and mark this issue as blocked by it.
 - **Needs a decision:** give the issue its type label, and replace `needs-triage` with `needs-decision`.
 - **Too vague:** comment with the question that's missing, and leave `needs-triage`. If nobody answers within two weeks, comment that the issue is closing for lack of detail, and close it as not planned.
 - **Duplicate:** close it with `gh issue close <issue> --duplicate-of <other issue>`.
 - **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, turn the issue into a `bug` about the docs instead.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`, so anyone who proposes the idea again finds the reason.
+
+If the issue came from an account that isn't a maintainer's, and the verdict is **Accept**, **Research first**, **Needs a decision** or a `bug` about the docs, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a one-line comment that points its author to the new issue.
 
 ## Break down a big idea
 
@@ -89,7 +91,7 @@ An issue can get the `ready` label when all of these are true:
 
 Two kinds of issue meet a shorter list. A research issue is ready when its question and what depends on the answer are clear, and it has its type label and no status label. A parent gets `ready` along with its sub-issues, and only its sub-issues need to meet the full list.
 
-Every issue that gets `ready`, including research issues and parents, must be one that a maintainer opened, so that nobody else can edit it after approval. For an issue that someone else opened, open a new one in your own words, and close the original with `gh issue close <issue> --duplicate-of <new issue>`.
+Every issue that gets `ready`, including research issues and parents, must come from a maintainer's account, so that nobody else can edit it after approval. If an issue came from an account that isn't a maintainer's, replace it with a new one, as "Triage issues that others open" describes.
 
 ## Plan the next work
 
