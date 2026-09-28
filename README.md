@@ -1,6 +1,6 @@
 # repo-template
 
-Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request, and the pull request merges once the automated checks pass, without anyone having to approve it. This way, you can plan the work as issues and have agents build them in long runs, such as overnight.
+Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. The pull request needs no approval, so it can merge as soon as the automated checks pass. This way, you can plan the work as issues and have agents build them in long runs, such as overnight.
 
 The template works with any language. Agents get their instructions from one file, `AGENTS.md`, which Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read on their own. Gemini CLI and Aider read it only after you point their settings at it.
 
