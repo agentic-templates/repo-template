@@ -92,7 +92,6 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
   - `revert`: undoes an earlier commit
   - `chore`: anything else
 - A scope is optional, as in `fix(cli): ...`. Add `!` before the colon when the change breaks existing use.
-- Add a body only to explain why, when the subject and the diff don't show it.
 - Don't add a `Co-Authored-By` trailer or any other attribution to commits or pull requests.
 
 ## Pull requests
