@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs every check that CI runs. Run it before you push.
+# Runs the checks that CI runs on the code. Run it before you push.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

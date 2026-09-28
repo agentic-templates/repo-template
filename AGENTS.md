@@ -6,7 +6,7 @@ These rules apply to every coding agent and every person who changes the reposit
 
 repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
 
-When a request pulls against this direction, say so, and ask the maintainer whether to change the request or the direction. A change of direction updates this section in the same pull request.
+When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction. A change of direction updates this section in the same pull request.
 
 ## Where things are
 
@@ -17,7 +17,7 @@ When a request pulls against this direction, say so, and ask the maintainer whet
 - `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan the next work.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
-- `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release note settings, and the contributing and security pages.
+- `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
 - `.claude/settings.json`: settings that stop Claude Code from adding attribution to commits and pull requests. They also stop its file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't name it, such as `grep -r`.
 
 ## Commands
@@ -44,7 +44,7 @@ Use only these labels. To add, rename or remove one, change this section, `scrip
 Every accepted issue has exactly one type label. Choose it by what changes for users:
 
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
-- `feature`: a change to what users can do or read, other than a fix. The pieces of a split feature are features too.
+- `feature`: a change to what users can do or read, other than a fix. The sub-issues of a split feature are features too.
 - `maintenance`: work that leaves what users can do and read unchanged, such as speed-ups, refactoring, tooling, tests or CI.
 - `research`: something to find out before anyone builds, such as whether a library can do the job. It ends in a comment, not in code. A user's question about how to use the project isn't research.
 
@@ -98,7 +98,7 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
 
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject, because it becomes the commit subject on main. CI checks its format.
-- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. If a test covers the change but you didn't run it, such as a slow test, say so and say why.
+- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
 ## Definition of done
