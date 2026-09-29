@@ -33,7 +33,7 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 
 ## Fail with a clear error
 
-- Check input where it enters the program: command-line arguments, files and network responses. Trust values that come from inside the program.
+- Check input where it enters the program: command-line arguments, files and network traffic. Trust values that come from inside the program.
 - Catch an error only where you can recover from it or add useful context. Never hide an error.
 - Write error messages as [docs/writing.md](writing.md#write-error-messages) describes. Each one says what failed and what the person who sees it can do about it.
 
