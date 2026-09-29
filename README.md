@@ -41,7 +41,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - If the project publishes a package or deploys, add a workflow that does it when a release is published.
    - Set the year and the copyright holder in `LICENSE`.
-   - Last, replace this README with one for the project, as `docs/writing.md` describes.
+   - Last, replace this README with one for the project, as `docs/writing.md` describes. Until users can do something with the project, the new README says what the project is for and how to set it up, and that it can't do anything yet.
 
 4. Before you go on to the example below, review the setup's pull request and ask the agent to merge it. The agent merges it only when you ask.
 
@@ -68,16 +68,16 @@ Plan, build and release each later version with the same three requests. The req
 - "Make #14 ready to build.", for an issue you accepted at triage or one that has `needs-breakdown`. The agent rewrites the issue, or splits a big one into smaller issues, until it meets the definition of ready in `docs/planning.md`, then asks you to approve it. Your next "Build the ready issues" builds it.
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
-- "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
+- "Review pull request #12." The agent compares the change with its issue and comments with what should change. If the pull request comes from someone without write access to the repository, the agent doesn't run its code on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
 
 ## Limits
 
 - The template works only with GitHub. On GitHub Free, use a public repository. A private repository there can't protect main, and its pull requests can't merge on their own.
-- On a private repository, the settings script skips private vulnerability reporting and secret scanning. GitHub offers the first only for public repositories, and the second only with a paid add-on. After you make the repository public, run the script again to turn both on.
+- On a private repository, `scripts/configure-github` skips private vulnerability reporting and secret scanning. GitHub offers the first only for public repositories, and the second only with a paid add-on. After you make the repository public, run the script again to turn both on.
 - `.claude/settings.json` doesn't stop every read of a `.env` file. A script can still read one, and so can a command that doesn't mention the file by name, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
-- A build of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests and linters cover.
-- Run one build of the ready issues per repository at a time, because two builds can take the same issue. To build faster, ask for helpers rather than start a second build in another conversation. Helpers need an agent that can launch other agents.
+- A build run of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests and linters cover.
+- Start one build run per repository at a time, because two build runs can take the same issue. To build faster, ask for helpers rather than start a second build run in another conversation. Helpers need an agent that can launch other agents.
 
 ## License
 
