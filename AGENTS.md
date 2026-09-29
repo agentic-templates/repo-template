@@ -112,7 +112,7 @@ A change is done when all of these are true:
 - New behavior in the code has tests, and a fix to the code has a test that fails without the fix.
 - The docs match the change: README, AGENTS.md, help text and comments.
 - Nothing is left behind: no dead code, debug output, commented-out code, or TODO without an issue number.
-- A new or rewritten README or docs page has had a fresh-reader review, as `docs/writing.md` describes.
+- A page that `docs/writing.md` says needs a fresh-reader review has had one.
 - The pull request links its issue and says how the change was checked.
 
 ## Review a pull request

@@ -74,12 +74,12 @@ An error message says what failed and what the reader can do about it. When a li
 - Write for a reader who hasn't seen your conversation, notes or session. Don't refer to any of them.
 - An issue says what should change and why. It lists how to tell that the change is done.
 - A pull request is the lasting record of a change. Write it for a developer who joins the project later, not only for today's reviewer. Say what changed and why. Don't list the changed files, because the diff shows them.
-- Say how you checked the change: the checks you ran and what they showed. That includes the review of a new or rewritten page described under "Review a new or rewritten page with a fresh reader". Name any check from AGENTS.md that you skipped, and say why.
+- Say how you checked the change: the checks you ran and what they showed. That includes the review described under "Review a changed page with a fresh reader". Name any check from AGENTS.md that you skipped, and say why.
 - A commit message follows the rules in [AGENTS.md](../AGENTS.md#commits).
 
-## Review a new or rewritten page with a fresh reader
+## Review a changed page with a fresh reader
 
-A new README or docs page, or one where you rewrote most of the text, gets a review by a reader who has seen only that page. Run the review before you open the pull request:
+A README or docs page where you added or rewrote text gets a review by a reader who has seen only that page. Run the review before you open the pull request:
 
 1. Start a new agent with no other context. Put the page's text in the prompt. Tell the agent not to open any files, so that it doesn't read the repository. If you don't use agents, ask a person who is new to the project and hasn't seen the page.
 2. Give the reader this prompt: "You are <the page's reader, for example a developer who has never seen this project>. Read this page once, the way that reader would. Quote each sentence you had to read twice, and say what made you stop."
