@@ -151,6 +151,7 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
    - the ready issues that are still open, and what each one waits for
    - the issues you opened on your own, for problems you noticed
    - the security vulnerabilities you noticed
+   - the open code scanning alerts, which `gh api "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists
    - the Dependabot pull requests you didn't merge
    - whether the latest CI run on main passed, failed or is still running
    - anything a maintainer needs to run, such as `scripts/configure-github`
