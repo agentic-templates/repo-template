@@ -61,7 +61,7 @@ Triage every issue that has `needs-triage` or no type label before you plan the 
 - **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`, so anyone who proposes the idea again finds the reason.
 
-If the issue came from an account that isn't a maintainer's, and the verdict is **Accept**, **Research first** or **Needs a decision**, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a one-line comment that points its author to the new issue.
+If the issue came from an account that isn't a maintainer's, and the verdict is **Accept**, **Research first** or **Needs a decision**, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
 
 ## Break down a big idea
 
