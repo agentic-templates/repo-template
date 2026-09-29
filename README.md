@@ -73,10 +73,10 @@ Plan, build and release each later version with the same three requests. The req
 ## Limits
 
 - The template works only with GitHub. On GitHub Free, use a public repository. A private repository there can't protect main, and its pull requests can't merge on their own.
-- On a private repository, `scripts/configure-github` skips private vulnerability reporting, secret scanning and code scanning. GitHub offers the first only for public repositories, and the other two only with paid add-ons. After you make the repository public, run the script again to turn all three on.
+- On a private repository, `scripts/configure-github` skips private vulnerability reporting, secret scanning and code scanning, and CI skips the check of new dependencies. GitHub offers the first only for public repositories, and the others only with paid add-ons. After you make the repository public, run the script again. CI starts checking new dependencies by itself.
 - `.claude/settings.json` doesn't stop every read of a `.env` file. A script can still read one, and so can a command that doesn't mention the file by name, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
-- A build run of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests and linters cover. Code scanning reports security problems in the code, but it doesn't stop a merge.
+- A build run of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests, the linters and the check of new dependencies cover. Code scanning reports security problems in the code, but it doesn't stop a merge.
 - Start one build run per repository at a time, because two build runs can take the same issue. To build faster, ask for helpers rather than start a second build run in another conversation. Helpers need an agent that can launch other agents.
 
 ## License
