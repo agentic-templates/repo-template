@@ -23,7 +23,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 ## Commands
 
 - `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
-- `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes.
+- `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes or the repository becomes public.
 
 The checks on a pull request should finish within ten minutes, because every merge waits for them. Slower tests of the whole product run after each merge to main instead, as `docs/code.md` describes. The project has none yet. When it has some, list the command that runs them here.
 
@@ -67,7 +67,7 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
 1. Start from an issue. Search for one with `gh issue list --state all --search "<words>"`, and if there is none, open one with `gh issue create`. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. Outside a build run, if a maintainer asks you to work on an issue, remove `needs-triage` from it, because the request accepts the issue. Remove `ready` too, so that no build run takes it. If it's assigned, tell the maintainer before you start, because a build run may be working on it. If you stop before its pull request merges, tell the maintainer that the issue no longer has `ready`.
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
-4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it and the repository is public. If it isn't, stop and tell the maintainer.
+4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it, and the repository is public or can become public. If it isn't, stop and tell the maintainer.
 5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
@@ -165,7 +165,7 @@ The repository's settings lock the tag and files of a published release, so fixi
 
 ## Keep the repository clean
 
-The repository holds the product and the rules for building it. Everything in it, and in its issues and pull requests, is public.
+The repository holds the product and the rules for building it. Everything in it, and in its issues and pull requests, is public or can become public.
 
 - Put plans in issues, the reason for a change in its pull request, and review comments on the pull request.
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.

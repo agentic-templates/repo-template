@@ -35,7 +35,7 @@ Follow these steps for every idea, whatever form the input takes:
 
    When two verdicts fit, recommend the one that settles more. For example, drop an idea that doesn't fit rather than asking what it means.
 4. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
-5. Carry out only the verdicts the maintainer approved. Write each new issue in your own words. Issues are public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
+5. Carry out only the verdicts the maintainer approved. Write each new issue in your own words. Issues are public or can become public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
 
 Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak. A request like "Let's add this" for anything bigger than one pull request is still an idea, so give the verdict before you create anything.
 
