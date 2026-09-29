@@ -123,6 +123,10 @@ A change is done when all of these are true:
 - Don't ask for changes that a formatter would make, or for work outside the issue.
 - Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
 
+## Review the code for security problems
+
+When a maintainer asks you to review the code for security problems, review the whole repository, unless they name a part of it or a range of changes, such as the changes since the last release. For a range, also read the code that the changes call and the code that calls them, because a change can expose a problem in code that it didn't touch. Start where input from outside enters the program, such as command-line arguments, files and network traffic, where the program decides who may do what, and where it uses secrets or runs other programs. Include the workflows in `.github/`. Report each problem as "Keep the repository clean" describes, with how serious it is and the fix you recommend. Say which parts you reviewed, so that the maintainer knows what's left. Change nothing until the maintainer asks for a fix.
+
 ## Plan the next work
 
 When a maintainer asks you to plan the next work, follow the steps in [docs/planning.md](docs/planning.md).
