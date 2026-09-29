@@ -58,7 +58,7 @@ The `ready` label marks the issues that a maintainer wants built. An agent adds 
 
 Triage is a maintainer's decision. An agent carries it out when a maintainer says so, as `docs/planning.md` describes.
 
-Pull requests get their labels without anyone's help. A workflow gives each one the type label that matches its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Release notes group pull requests by these labels. Dependabot's pull requests get `dependencies` instead. A maintainer labels a pull request from a fork by hand.
+A workflow gives each pull request the type label that matches its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Release notes group pull requests by these labels. Dependabot's pull requests get `dependencies` instead. On a pull request from a fork, GitHub gives the workflow a read-only token, which lets it read the repository but not change anything in it. So add the label by hand before you merge the pull request.
 
 ## Make a change
 
