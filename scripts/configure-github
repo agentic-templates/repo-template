@@ -93,7 +93,7 @@ gh api --method PUT "repos/$repo/actions/permissions" --silent \
   -F sha_pinning_required=true
 
 echo "Main: every change arrives through a pull request that passes CI"
-# A pull request is the record of a change and CI is the gate, so no approval is required.
+# A pull request records each change, and CI decides whether it merges, so no approval is required.
 # GitHub adds an approval for pull requests that an app opens, such as Dependabot's,
 # unless require_extra_approval_for_unattributed_changes is false.
 # The required checks are job names in .github/workflows. 15368 is the ID of GitHub Actions,

@@ -13,11 +13,11 @@ The template works with any language. Agents get their instructions from `AGENTS
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts.
 - `.github/`: CI, a check of pull request titles, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests. It also stops Claude Code's file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't mention the file by name, such as `grep -r`.
+- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests. It also stops Claude Code's file tools and shell commands such as `cat` from reading `.env` files.
 
 ## Start a project
 
-You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't read `AGENTS.md` in every setup.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't read `AGENTS.md` in every setup.
 
 1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan, as "Limits" explains.
 
@@ -57,15 +57,15 @@ These are examples of the requests you give your agent. Use your own words. You 
 
 Ask for helpers: "Build the ready issues, with up to 3 helpers." A helper is another agent that your agent launches to build one issue in its own copy of the repository. With this request, no more than 3 helpers run at once. If your agent can't launch other agents, it builds the issues one at a time.
 
-Helpers use the same model and effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus." In Claude Code, you can also choose their effort. Write a subagent file in `~/.claude/agents/`, as the [subagent docs](https://code.claude.com/docs/en/sub-agents) describe. In it, set a `name`, such as `photo-helper`, and the `effort` you want, and a `model` if you want another one. Then ask for it by name: "Build the ready issues, with up to 3 helpers using photo-helper."
+Helpers use the same model and effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus." In Claude Code, you can also choose their effort. Write a subagent file in `~/.claude/agents/`, as the [subagent docs](https://code.claude.com/docs/en/sub-agents) describe. In it, set a `name`, such as `build-helper`, and a `description`, such as "Builds one ready issue". Also set the `effort` you want, and a `model` if you want another one. Then ask for it by name: "Build the ready issues, with up to 3 helpers using build-helper."
 
-### Other requests
+### Requests for everyday work
 
 Plan, build and release each later version with the same three requests. The requests below cover the rest of the work.
 
 - "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept. Those issues wait in the backlog until you approve them for building.
 - "Triage the new issues." The agent recommends what to do with each issue that's waiting for triage, such as a bug report from a user, and carries out what you decide.
-- "Make #14 ready to build.", for an issue you accepted at triage. The agent rewrites the issue until it meets the definition of ready in `docs/planning.md`, then asks you to approve it. Your next "Build the ready issues" builds it.
+- "Make #14 ready to build.", for an issue you accepted at triage or one that has `needs-breakdown`. The agent rewrites the issue, or splits a big one into smaller issues, until it meets the definition of ready in `docs/planning.md`, then asks you to approve it. Your next "Build the ready issues" builds it.
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
 - "Review pull request #12." The agent compares the change with its issue and comments with what should change. It doesn't run code from someone else's pull request on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
@@ -74,6 +74,7 @@ Plan, build and release each later version with the same three requests. The req
 
 - The template works only with GitHub. On GitHub Free, use a public repository. A private repository there can't protect main, and its pull requests can't merge on their own.
 - On a private repository, the settings script skips private vulnerability reporting and secret scanning. GitHub offers the first only for public repositories, and the second only with a paid add-on. After you make the repository public, run the script again to turn both on.
+- `.claude/settings.json` doesn't stop every read of a `.env` file. A script can still read one, and so can a command that doesn't mention the file by name, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
 - A build of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests and linters cover.
 - Run one build of the ready issues per repository at a time, because two builds can take the same issue. To build faster, ask for helpers rather than start a second build in another conversation. Helpers need an agent that can launch other agents.
