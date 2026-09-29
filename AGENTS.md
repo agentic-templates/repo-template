@@ -169,7 +169,10 @@ When a maintainer asks you to publish a release:
 3. Choose the version. `gh release list --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
 4. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target <sha> --generate-notes`
-5. Tell the maintainer about each security advisory or private report that isn't published or closed, so that they can publish the ones that this release fixes. `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state.
+
+   If the project attaches files to its releases, such as binaries, add `--draft` and attach the files before you publish the draft. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them.
+5. On a public repository, tell the maintainer about each security advisory or private report that isn't published or closed. If `gh repo view --json viewerPermission` shows `ADMIN`, `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state. Without admin access, that list leaves out the unpublished ones, so tell the maintainer that an admin needs to check the advisories on the repository's Security and quality tab.
+6. Once users can install the release, an admin can publish the advisories that it fixes. Tell the maintainer that each advisory first needs this release's version as the fixed one, and the versions before it as the affected ones. If the project publishes a package, the advisory also needs the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it. Once an advisory is published, add a line to the release notes that links it.
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake takes a new release.
 
