@@ -41,7 +41,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - If the project publishes a package or deploys, add a workflow that does it when a release is published.
    - Set the year and the copyright holder in `LICENSE`.
-   - Last, replace this README with one for the project, as `docs/writing.md` describes.
+   - Last, replace this README with one for the project, as `docs/writing.md` describes. Until users can do something with the project, the new README says what the project is for and how to set it up, and that it can't do anything yet.
 
 4. Before you go on to the example below, review the setup's pull request and ask the agent to merge it. The agent merges it only when you ask.
 
