@@ -176,6 +176,6 @@ The repository holds the product and the rules for building it. Everything in it
 
 ## Change these rules
 
-- Inside the repository, instructions for agents live in AGENTS.md files and the three guides in `docs/`. Put a writing or code rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`.
+- Inside the repository, instructions for agents live in AGENTS.md files and the three guides in `docs/`. Put a writing, code or planning rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`.
 - Don't create a `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the maintainer. Personal instructions in `~/.claude/CLAUDE.md` are fine, because Claude Code reads them alongside AGENTS.md.
 - Add a rule only when the same mistake keeps happening and no check or setting can prevent it. Keep the rules that explain what a check expects. Remove a rule once it no longer applies.
