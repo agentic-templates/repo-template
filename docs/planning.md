@@ -34,7 +34,7 @@ Follow these steps for every idea, whatever form the input takes:
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
 
    When two verdicts fit, recommend the one that settles more. For example, drop an idea that doesn't fit rather than asking what it means.
-4. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
+4. First ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
 5. Carry out only the verdicts the maintainer approved. Write each new issue in your own words. Issues are public or can become public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
 
 Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak.
@@ -43,7 +43,7 @@ If the maintainer's answers change the project's direction, open a pull request 
 
 ### Ask a fresh critic
 
-Before you show the table, get a second opinion on any idea that's big or that you're unsure about. The critic mustn't see the maintainer's enthusiasm, so start a new agent without your conversation. Give it the "What this project is" section from AGENTS.md, the idea in plain words, and this prompt:
+The critic mustn't see the maintainer's enthusiasm, so start a new agent without your conversation. Give it the "What this project is" section from AGENTS.md, the idea in plain words, and this prompt:
 
 "Give the strongest case for building this idea and the strongest case against it. List what's unclear. Then recommend one: build it, reshape it, or drop it. If you recommend reshaping it, say how. Say which concerns, if they were answered, would change your recommendation."
 
