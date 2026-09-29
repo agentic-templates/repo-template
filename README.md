@@ -8,7 +8,7 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 - `AGENTS.md`: the rules for agents and people. They say how to make a change, plan the work, build it and publish a release.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
-- `docs/code.md`: how to write code in any language, from design to tests and pinned versions.
+- `docs/code.md`: how to write code in any language, from design to tests, pinned versions and the credentials for publishing.
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, and how you decide which ones get built. The ideas can come from any text you share or point the agent to.
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts and code scanning.

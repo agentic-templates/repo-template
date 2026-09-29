@@ -52,3 +52,9 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 - Pin each GitHub Action to a full commit SHA, with its version in a comment. The repository's settings stop any workflow that uses an action without a commit SHA.
 - Add a dependency only when it saves more work than it costs to review, update and secure. Prefer the standard library.
 - Update versions in pull requests of their own. Dependabot opens most of them. If your change needs a newer version of a package, treat the update as a problem outside your issue, as step 5 of "Make a change" in AGENTS.md describes. Adding a package is the one exception: the lockfile changes that come with it, including updates to other packages, stay in the pull request that adds it.
+
+## Protect the credentials that publish and deploy
+
+- Give the job that publishes a package or deploys the project its own GitHub environment, such as `release`. Ask the maintainer to let only release tags use the environment. On a public repository, also ask them to make it need their approval, so that nothing is published until they approve the run. Tell them to leave "Prevent self-reviews" off, because the agent publishes releases under their account, and that setting would stop them from approving their own release.
+- Where the registry or host accepts GitHub's OpenID Connect login, such as PyPI's trusted publishing, use it, so that the job needs no stored secret. Tell the maintainer the exact steps to set it up on the registry or host, because only they can sign in there.
+- Otherwise, store the token that the job needs as a secret of its environment, not of the repository, so that only jobs in that environment can read it.
