@@ -53,9 +53,6 @@ labels=$(gh label list --repo "$repo" --limit 200 --json name --jq '.[].name')
 if grep -qxF enhancement <<<"$labels" && ! grep -qxF feature <<<"$labels"; then
   gh label edit enhancement --repo "$repo" --name feature >/dev/null
 fi
-if grep -qxF question <<<"$labels" && ! grep -qxF needs-decision <<<"$labels"; then
-  gh label edit question --repo "$repo" --name needs-decision >/dev/null
-fi
 # --force updates the color and description of a label that already exists.
 wanted=""
 while IFS='|' read -r name color description; do
