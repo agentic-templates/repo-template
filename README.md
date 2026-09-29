@@ -17,7 +17,7 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 ## Start a project
 
-You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't read `AGENTS.md` in every setup.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't read `AGENTS.md` in every setup.
 
 1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan, as "Limits" explains.
 
