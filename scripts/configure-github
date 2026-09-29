@@ -142,4 +142,5 @@ else
   gh api --method POST "repos/$repo/rulesets" --silent --input - <<<"$ruleset"
 fi
 
+echo "Turn on Dependabot malware alerts yourself at https://github.com/$repo/settings/security_analysis, because GitHub gives scripts no way to turn them on."
 echo "Done. Review the settings at https://github.com/$repo/settings"
