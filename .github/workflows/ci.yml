@@ -29,12 +29,14 @@ jobs:
 
       # To update a tool, change its version and its checksum. GitHub lists the
       # SHA-256 checksum of every file on the tool's release page.
-      - name: Install shellcheck and actionlint
+      - name: Install shellcheck, actionlint and zizmor
         env:
           SHELLCHECK_VERSION: 0.11.0
           SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
           ACTIONLINT_VERSION: 1.7.12
           ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          ZIZMOR_VERSION: 1.30.1
+          ZIZMOR_SHA256: e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a
         run: |
           bin="$RUNNER_TEMP/bin"
           mkdir -p "$bin"
@@ -48,8 +50,15 @@ jobs:
           echo "$ACTIONLINT_SHA256  actionlint.tar.gz" | sha256sum --check
           tar -xzf actionlint.tar.gz -C "$bin" actionlint
 
+          curl -fsSLo zizmor.tar.gz "https://github.com/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "$ZIZMOR_SHA256  zizmor.tar.gz" | sha256sum --check
+          tar -xzf zizmor.tar.gz -C "$bin" zizmor
+
           echo "$bin" >> "$GITHUB_PATH"
 
       # Install the project's toolchain here, from its pinned version file.
 
+      # zizmor uses the job's read-only token to check the actions in the workflows against GitHub's advisories.
       - run: scripts/check
+        env:
+          ZIZMOR_GITHUB_TOKEN: ${{ github.token }}

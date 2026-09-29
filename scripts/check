@@ -34,6 +34,12 @@ if has actionlint https://github.com/rhysd/actionlint/blob/main/docs/install.md;
   actionlint
 fi
 
+if has zizmor https://docs.zizmor.sh/installation/; then
+  # zizmor checks actions against GitHub's advisories only when it has a GitHub token,
+  # such as GH_TOKEN. CI gives it one.
+  zizmor .
+fi
+
 # Add the project's formatter check, linter and tests here.
 
 if [[ -n "$skipped" ]]; then
