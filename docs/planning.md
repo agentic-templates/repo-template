@@ -14,7 +14,7 @@ Issues that anyone but a maintainer opens, and issues that agents open for probl
 
 ## Triage new ideas
 
-Triage is for ideas: anything a maintainer proposes or wants judged. A request for a specific change whose pull request a reviewer could read in one sitting, and that needs no decision along the way, isn't an idea. For that, check it against "What this project is" and existing issues, open or closed. If there's a conflict, point it out and wait for the maintainer's answer. Otherwise follow "Make a change" in AGENTS.md.
+Triage is for ideas: anything a maintainer proposes or wants judged. "Make a change" in AGENTS.md says which requests skip triage.
 
 Follow these steps for every idea, whatever form the input takes:
 
