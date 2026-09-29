@@ -8,7 +8,7 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 - `AGENTS.md`: the rules for agents and people. They say how to make a change, plan the work, build it and publish a release.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
-- `docs/code.md`: how to write code in any language, from design to tests, pinned versions and the credentials for publishing.
+- `docs/code.md`: how to write code in any language, covering design, tests, pinned versions and the credentials for publishing.
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, and how you decide which ones get built. The ideas can come from any text you share or point the agent to.
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts and code scanning.
@@ -17,9 +17,9 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 ## Start a project
 
-You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't read `AGENTS.md` in every setup.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't always read `AGENTS.md`.
 
-1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan, as "Limits" explains.
+1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan for the settings in step 2, as "Limits" explains.
 
    ```bash
    gh repo create photo-sorter --public --template jtmpl/repo-template --clone
@@ -47,7 +47,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
 
 ## Example: from idea to first release
 
-These are examples of the requests you give your agent. Use your own words. You can start each one in a new conversation, because the agent finds the state of the work in the repository's files, issues and pull requests. `AGENTS.md` tells it what each one involves.
+These are examples of the requests you give your agent. Use your own words. You can start each one in a new conversation, because the agent finds the state of the work in the repository's files, issues and pull requests. `AGENTS.md` tells it what each request involves.
 
 1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have notes, a spec or other text about the project, include it in this request or point the agent to it. Do this even if you gave it to an agent before, because an agent in a new conversation can't see earlier ones. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues, and correct them on GitHub or ask the agent to. Tell the agent which ones you approve, and it adds the `ready` label. That label lets agents build those issues and merge their pull requests without checking with you.
 2. "Build the ready issues." The agent works through them, lowest number first, and skips an issue until the changes it depends on have merged. For each issue, it opens a pull request that merges on its own once the checks pass, and it starts the next issue without waiting for those checks. It also merges Dependabot's patch and minor updates once their checks pass, and leaves major updates for you. If the agent can't finish an issue, it comments on the issue with what it needs from you. If it needs your decision, it also adds the `needs-decision` label. If the issue is too big for one pull request, it adds `needs-breakdown` instead. The agent closes the issue's pull request, if there is one, so that unfinished work can't merge. The work itself stays on the issue's branch. The agent goes on to build the issues that don't depend on that one. When it's done, it reports what merged and what's waiting for you. To answer its questions, ask your agent "Which issues need my decision?" and tell it your answers. It writes your answers into the issues, so your next "Build the ready issues" can continue those issues. You can read every merged pull request afterwards, because each one records what changed and why.
@@ -74,7 +74,7 @@ Plan, build and release each later version with the same three requests. The req
 ## Limits
 
 - The template works only with GitHub. On GitHub Free, use a public repository. A private repository there can't protect main, and its pull requests can't merge on their own.
-- On a private repository, `scripts/configure-github` skips private vulnerability reporting, secret scanning and code scanning, and CI skips the check of new dependencies. GitHub offers the first only for public repositories, and the others only with paid add-ons. After you make the repository public, run the script again. CI starts checking new dependencies by itself.
+- On a private repository, `scripts/configure-github` skips secret scanning and code scanning, and CI skips the check of new dependencies, because these need paid add-ons. The script also skips private vulnerability reporting, which GitHub offers only for public repositories. After you make the repository public, run the script again. CI starts checking new dependencies by itself.
 - `.claude/settings.json` doesn't stop every read of a `.env` file. A script can still read one, and so can a command that doesn't mention the file by name, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
 - A build run of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests, the linters and the check of new dependencies cover. Code scanning reports security problems in the code, but it doesn't stop a merge.
