@@ -22,14 +22,14 @@ Some code has to be complex, and some complexity is a choice. Either way, keep t
 
 - Complexity is required when a simpler version would fail a requirement. Examples are a parser, a matching method that must reach the accuracy an issue asks for, and the fix for a reported bug. Name the requirement in a comment.
 - Complexity is a choice when a simpler version already meets the requirements and the complex one does better, such as running faster, using less memory or giving more accurate results. Make that choice only where a measurement shows the need. Say in a comment what the code gains and where the measurement is, such as a benchmark name or an issue.
-- Keep the tests that show the complexity is worth it. For speed or memory, keep a plain version in the test code, such as the code before you optimized it, and check that both give the same results. For accuracy, keep the test cases that measure it, so that a later change can't make the results worse without anyone noticing.
+- Keep tests that check the complex code's results. For speed or memory, keep a plain version in the test code, such as the code before you optimized it, and check that both give the same results. For accuracy, keep the test cases that measure it, so that a later change can't make the results worse without anyone noticing.
 
 ## Comment only what the code can't show
 
 - A comment gives a reason, a hidden constraint or a surprise. It doesn't repeat what the code says.
 - Make the code clearer before you add a comment. A better name or a smaller function often makes the comment unnecessary.
 
-For example, in a tool that moves duplicate photos to the trash, this comment gives a reason that the code can't show: "The trash cannot hold files from a network drive, so those copies are listed and left in place."
+For example, in a tool that moves duplicate photos to the trash, this comment gives a reason that the code can't show: "The trash cannot hold files from a network drive, so this lists those copies and leaves them in place."
 
 ## Fail with a clear error
 

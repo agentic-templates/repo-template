@@ -37,7 +37,7 @@ Follow these steps for every idea, whatever form the input takes:
 4. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
 5. Carry out only the verdicts the maintainer approved. Write each new issue in your own words. Issues are public or can become public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
 
-Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak. A request like "Let's add this" for anything bigger than one pull request is still an idea, so give the verdict before you create anything.
+Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak.
 
 If the maintainer's answers change the project's direction, open a pull request that updates "What this project is", as "Make a change" in AGENTS.md describes. Then redo the verdicts that the change affects, before you carry any of them out.
 
@@ -61,7 +61,7 @@ Triage every issue that has `needs-triage` or no type label before you plan the 
 - **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`, so anyone who proposes the idea again finds the reason.
 
-If the issue came from an account that isn't a maintainer's, and the verdict is **Accept**, **Research first** or **Needs a decision**, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a one-line comment that points its author to the new issue.
+If the issue came from an account that isn't a maintainer's, and the verdict is **Accept**, **Research first** or **Needs a decision**, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
 
 ## Break down a big idea
 

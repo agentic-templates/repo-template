@@ -94,7 +94,7 @@ gh api --method PUT "repos/$repo/actions/permissions" --silent \
 
 echo "Main: every change arrives through a pull request that passes CI"
 # A pull request records each change, and CI decides whether it merges, so no approval is required.
-# GitHub adds an approval for pull requests that an app opens, such as Dependabot's,
+# GitHub requires an extra approval for pull requests that an app opens, such as Dependabot's,
 # unless require_extra_approval_for_unattributed_changes is false.
 # The required checks are job names in .github/workflows. 15368 is the ID of GitHub Actions,
 # so only a workflow can report them. A pull request must include the latest main before it merges,
