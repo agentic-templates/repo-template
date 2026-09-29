@@ -27,6 +27,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # On a public repository, fail a pull request that adds a dependency with a known vulnerability.
+      # A private repository needs a paid add-on for this, so it skips the step.
+      - name: Check new dependencies for known vulnerabilities
+        if: github.event_name == 'pull_request' && github.event.repository.visibility == 'public'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+
       # To update a tool, change its version and its checksum. GitHub lists the
       # SHA-256 checksum of every file on the tool's release page.
       - name: Install shellcheck and actionlint
