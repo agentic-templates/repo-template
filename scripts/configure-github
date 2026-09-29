@@ -42,7 +42,9 @@ if [[ "$visibility" == "public" ]]; then
   }
 }
 JSON
-  gh api --method PATCH "repos/$repo/code-scanning/default-setup" --silent -f state=configured
+  if [[ "$(gh api "repos/$repo/code-scanning/default-setup" --jq .state)" != "configured" ]]; then
+    gh api --method PATCH "repos/$repo/code-scanning/default-setup" --silent -f state=configured
+  fi
 else
   echo "Security: $repo is $visibility, so private vulnerability reports, secret scanning and code scanning stay off. Run this script again after you make it public."
 fi
