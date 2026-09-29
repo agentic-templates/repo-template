@@ -71,7 +71,7 @@ Every change goes through an issue, a branch and a pull request. Dependabot's pu
 5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
-8. Merge only when a maintainer has asked you to, either for this pull request or by asking you to build the ready issues. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 7. Otherwise, merge with `gh pr merge --squash`.
+8. Merge only when a maintainer has asked you to. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 7. Otherwise, merge with `gh pr merge --squash`.
 
 ## Commits
 
