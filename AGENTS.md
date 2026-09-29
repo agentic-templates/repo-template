@@ -70,7 +70,7 @@ If a maintainer asks for something bigger than one pull request, or that needs a
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
 4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it, and the repository is public or can become public. If it isn't, stop and tell the maintainer.
-5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
+5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. For a security vulnerability, follow "Keep the repository clean" instead. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
 8. Merge only when a maintainer has asked you to. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 7. Otherwise, merge with `gh pr merge --squash`.
@@ -150,6 +150,7 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
    - the issues that have the `needs-decision` label
    - the ready issues that are still open, and what each one waits for
    - the issues you opened on your own, for problems you noticed
+   - the security vulnerabilities you noticed
    - the Dependabot pull requests you didn't merge
    - whether the latest CI run on main passed, failed or is still running
    - anything a maintainer needs to run, such as `scripts/configure-github`
@@ -172,6 +173,7 @@ The repository holds the product and the rules for building it. Everything in it
 - Put plans in issues, the reason for a change in its pull request, and review comments on the pull request.
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
 - Never read, print or commit secrets. Keep them in `.env`, which git ignores, and list each variable in `.env.example` with a placeholder value.
+- Don't describe a security vulnerability in an issue, a pull request or a commit before a release fixes it. Tell the maintainer about it instead. On a public repository, also record it in a draft security advisory, which stays private until a maintainer publishes it: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. The issue and pull request for its fix say what the change does, not how to exploit the vulnerability.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commits, issues and pull requests.
 
 ## Change these rules
