@@ -59,7 +59,7 @@ Ask for helpers: "Build the ready issues, with up to 3 helpers." A helper is ano
 
 Helpers use the same model and effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus." In Claude Code, you can also choose their effort. Write a subagent file in `~/.claude/agents/`, as the [subagent docs](https://code.claude.com/docs/en/sub-agents) describe. In it, set a `name`, such as `build-helper`, and a `description`, such as "Builds one ready issue". Also set the `effort` you want, and a `model` if you want another one. Then ask for it by name: "Build the ready issues, with up to 3 helpers using build-helper."
 
-### Other requests
+### Requests for everyday work
 
 Plan, build and release each later version with the same three requests. The requests below cover the rest of the work.
 
