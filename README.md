@@ -2,7 +2,7 @@
 
 Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. Instead of reviewing each pull request, you approve the issues before agents build them. Their pull requests then merge as soon as the automated checks pass.
 
-The template works with any language. Agents get their instructions from one file, `AGENTS.md`, which Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read on their own. Gemini CLI and Aider read it only after you point their settings at it.
+The template works with any language. Agents get their instructions from `AGENTS.md` and the guides it links to in `docs/`. Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read `AGENTS.md` on their own. Gemini CLI and Aider read it only after you point their settings at it.
 
 ## What you get
 
@@ -13,11 +13,11 @@ The template works with any language. Agents get their instructions from one fil
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts.
 - `.github/`: CI, a check of pull request titles, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests. It also stops Claude Code's file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't name it, such as `grep -r`.
+- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests. It also stops Claude Code's file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't mention the file by name, such as `grep -r`.
 
 ## Start a project
 
-You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't always read `AGENTS.md`.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't read `AGENTS.md` in every setup.
 
 1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan, as "Limits" explains.
 
@@ -35,7 +35,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 3. Have your agent set up the project. Like every change, the setup goes through a pull request. You can ask, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." If you already have text about the project, add it to your request or point the agent to it. The agent asks you about anything on the list below that your request doesn't settle, such as which languages, frameworks or database to use. The list:
 
    - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
-   - Pin the version of each main technology, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install the technologies and packages.
+   - Pin the version of each language, framework and database that the project uses, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install them and the packages.
    - Add the formatter, linter and tests to `scripts/check`.
    - If the project's output is visual, such as a web page or a 3D scene, list a command under "Commands" in `AGENTS.md` that saves a picture of it, such as a screenshot of the page or a render of the scene. Agents look at the picture to check their changes, so the command has to run without anyone at the screen. Save the pictures outside the repository, such as in a temporary folder.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
@@ -47,10 +47,10 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. If you us
 
 ## Example: from idea to first release
 
-These are the requests you give your agent, in your own words. You can start each one in a new conversation, because the agent finds the state of the work in the repository's files, issues and pull requests. `AGENTS.md` tells it what each one involves.
+These are examples of the requests you give your agent. Use your own words. You can start each one in a new conversation, because the agent finds the state of the work in the repository's files, issues and pull requests. `AGENTS.md` tells it what each one involves.
 
 1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have notes, a spec or other text about the project, include it in this request or point the agent to it. Do this even if you gave it to an agent before, because an agent in a new conversation can't see earlier ones. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues, and correct them on GitHub or ask the agent to. Tell the agent which ones you approve, and it adds the `ready` label. That label lets agents build those issues and merge their pull requests without checking with you.
-2. "Build the ready issues." The agent works through them, lowest number first, and skips an issue until the changes it depends on have merged. For each issue, it opens a pull request that merges on its own once the checks pass, and it starts the next issue without waiting for those checks. It also merges Dependabot's patch and minor updates once their checks pass, and leaves major updates for you. If the agent can't finish an issue, it comments on the issue with what it needs from you. If it needs a decision, it also adds the `needs-decision` label. The agent closes the issue's pull request, if there is one, so that unfinished work can't merge. The work itself stays on the issue's branch. The agent goes on to build the issues that don't depend on that one. When it's done, it reports what merged and what's waiting for you. To answer its questions, ask your agent "Which issues need my decision?" and tell it your answers. It writes your answers into the issues, so your next "Build the ready issues" can continue those issues. You can read every merged pull request afterwards, because each one records what changed and why.
+2. "Build the ready issues." The agent works through them, lowest number first, and skips an issue until the changes it depends on have merged. For each issue, it opens a pull request that merges on its own once the checks pass, and it starts the next issue without waiting for those checks. It also merges Dependabot's patch and minor updates once their checks pass, and leaves major updates for you. If the agent can't finish an issue, it comments on the issue with what it needs from you. If it needs your decision, it also adds the `needs-decision` label. If the issue is too big for one pull request, it adds `needs-breakdown` instead. The agent closes the issue's pull request, if there is one, so that unfinished work can't merge. The work itself stays on the issue's branch. The agent goes on to build the issues that don't depend on that one. When it's done, it reports what merged and what's waiting for you. To answer its questions, ask your agent "Which issues need my decision?" and tell it your answers. It writes your answers into the issues, so your next "Build the ready issues" can continue those issues. You can read every merged pull request afterwards, because each one records what changed and why.
 3. "Publish a release." The agent checks that CI passed on main. It picks the next version number from the changes merged since the last release, following semantic versioning. The first release is v0.1.0. Then the agent publishes a GitHub release with notes built from the merged pull requests.
 
 ### Build several issues at once
@@ -64,7 +64,7 @@ Helpers use the same model and effort as your agent. To choose another model, na
 Plan, build and release each later version with the same three requests. The requests below cover the rest of the work.
 
 - "Triage these ideas:", followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept. Those issues wait in the backlog until you approve them for building.
-- "Triage the new issues." The agent recommends what to do with each new issue that you didn't ask for, such as a bug report from a user, and carries out what you decide.
+- "Triage the new issues." The agent recommends what to do with each issue that's waiting for triage, such as a bug report from a user, and carries out what you decide.
 - "Make #14 ready to build.", for an issue you accepted at triage. The agent rewrites the issue until it meets the definition of ready in `docs/planning.md`, then asks you to approve it. Your next "Build the ready issues" builds it.
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
@@ -76,7 +76,7 @@ Plan, build and release each later version with the same three requests. The req
 - On a private repository, the settings script skips private vulnerability reporting and secret scanning. GitHub offers the first only for public repositories, and the second only with a paid add-on. After you make the repository public, run the script again to turn both on.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
 - A build of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests and linters cover.
-- Run one build of the ready issues per repository at a time, because two builds can take the same issue. To build faster, ask for helpers rather than start another session. Helpers need an agent that can launch other agents.
+- Run one build of the ready issues per repository at a time, because two builds can take the same issue. To build faster, ask for helpers rather than start a second build in another conversation. Helpers need an agent that can launch other agents.
 
 ## License
 

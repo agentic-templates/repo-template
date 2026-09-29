@@ -18,7 +18,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: settings that stop Claude Code from adding attribution to commits and pull requests. They also stop its file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't name it, such as `grep -r`.
+- `.claude/settings.json`: settings that stop Claude Code from adding attribution to commits and pull requests. They also stop its file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't mention the file by name, such as `grep -r`.
 
 ## Commands
 
