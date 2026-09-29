@@ -2,7 +2,7 @@
 # Applies this repository's settings on GitHub. GitHub doesn't copy settings
 # from a template, so run this once after you create a repository from it.
 # Running it again is safe. It resets every setting below, and deletes any label it doesn't list.
-# On a private repository it skips two security settings, so run it again after you make the repository public.
+# On a private repository it skips three security settings, so run it again after you make the repository public.
 set -euo pipefail
 
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
@@ -30,9 +30,9 @@ echo "Security: Dependabot alerts and fixes"
 gh api --method PUT "repos/$repo/vulnerability-alerts" --silent
 gh api --method PUT "repos/$repo/automated-security-fixes" --silent
 # GitHub offers private vulnerability reporting only for public repositories,
-# and secret scanning on a private repository needs a paid add-on.
+# and secret scanning and code scanning on a private repository need paid add-ons.
 if [[ "$visibility" == "public" ]]; then
-  echo "Security: private vulnerability reports and secret scanning"
+  echo "Security: private vulnerability reports, secret scanning and code scanning"
   gh api --method PUT "repos/$repo/private-vulnerability-reporting" --silent
   gh api --method PATCH "repos/$repo" --silent --input - <<'JSON'
 {
@@ -42,8 +42,11 @@ if [[ "$visibility" == "public" ]]; then
   }
 }
 JSON
+  if [[ "$(gh api "repos/$repo/code-scanning/default-setup" --jq .state)" != "configured" ]]; then
+    gh api --method PATCH "repos/$repo/code-scanning/default-setup" --silent -f state=configured
+  fi
 else
-  echo "Security: $repo is $visibility, so private vulnerability reports and secret scanning stay off. Run this script again after you make it public."
+  echo "Security: $repo is $visibility, so private vulnerability reports, secret scanning and code scanning stay off. Run this script again after you make it public."
 fi
 
 echo "Labels: the set that AGENTS.md describes"
@@ -139,4 +142,5 @@ else
   gh api --method POST "repos/$repo/rulesets" --silent --input - <<<"$ruleset"
 fi
 
+echo "Turn on Dependabot malware alerts yourself at https://github.com/$repo/settings/security_analysis, because GitHub gives scripts no way to turn them on."
 echo "Done. Review the settings at https://github.com/$repo/settings"

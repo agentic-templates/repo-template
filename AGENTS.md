@@ -22,7 +22,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 ## Commands
 
-- `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title.
+- `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title. On a public repository, CI also fails a pull request that adds a dependency with a known vulnerability.
 - `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes or the repository becomes public.
 
 The checks on a pull request should finish within ten minutes, because every merge waits for them. Slower tests of the whole product run after each merge to main instead, as `docs/code.md` describes. The project has none yet. When it has some, list the command that runs them here.
@@ -70,7 +70,7 @@ If a maintainer asks for something bigger than one pull request, or that needs a
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
 4. Before you commit, check that `git config user.email` is a GitHub noreply address, because every commit records it, and the repository is public or can become public. If it isn't, stop and tell the maintainer.
-5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
+5. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. For a security vulnerability, follow "Keep the repository clean" instead. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 6. Push the branch and open a pull request with `gh pr create`.
 7. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 5 describes.
 8. Merge only when a maintainer has asked you to. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 7. Otherwise, merge with `gh pr merge --squash`.
@@ -123,6 +123,10 @@ A change is done when all of these are true:
 - Don't ask for changes that a formatter would make, or for work outside the issue.
 - Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
 
+## Review the code for security problems
+
+When a maintainer asks you to review the code for security problems, review the whole repository, unless they name a part of it or a range of changes, such as the changes since the last release. For a range, also read the code that the changes call and the code that calls them, because a change can expose a problem in code that it didn't touch. Start where input from outside enters the program, such as command-line arguments, files and network traffic, where the program decides who may do what, and where it uses secrets or runs other programs. Include the workflows in `.github/`. Report each problem as "Keep the repository clean" describes, with how serious it is and the fix you recommend. Say which parts you reviewed, so that the maintainer knows what's left. Change nothing until the maintainer asks for a fix.
+
 ## Plan the next work
 
 When a maintainer asks you to plan the next work, follow the steps in [docs/planning.md](docs/planning.md).
@@ -150,6 +154,8 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
    - the issues that have the `needs-decision` label
    - the ready issues that are still open, and what each one waits for
    - the issues you opened on your own, for problems you noticed
+   - the security vulnerabilities you noticed
+   - the open code scanning alerts, which `gh api "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists
    - the Dependabot pull requests you didn't merge
    - whether the latest CI run on main passed, failed or is still running
    - anything a maintainer needs to run, such as `scripts/configure-github`
@@ -158,10 +164,11 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
 
 When a maintainer asks you to publish a release:
 
-1. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs, because they look for new versions and don't test the code. If one failed, stop and tell the maintainer. Keep using that SHA even if more pull requests merge while you wait.
+1. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs, because they look for new versions and don't test the code. If one failed, stop and tell the maintainer. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists. Keep using that SHA even if more pull requests merge while you wait.
 2. Choose the version. `gh release list --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
 3. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target <sha> --generate-notes`
+4. Tell the maintainer about each security advisory or private report that isn't published or closed, so that they can publish the ones that this release fixes. `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state.
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake takes a new release.
 
@@ -172,6 +179,7 @@ The repository holds the product and the rules for building it. Everything in it
 - Put plans in issues, the reason for a change in its pull request, and review comments on the pull request.
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
 - Never read, print or commit secrets. Keep them in `.env`, which git ignores, and list each variable in `.env.example` with a placeholder value.
+- Don't describe a security vulnerability in an issue, a pull request or a commit before a release fixes it. Tell the maintainer about it instead. On a public repository, also record it privately, where it stays until a maintainer publishes it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`. The issue and pull request for its fix say what the change does, not how to exploit the vulnerability.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commits, issues and pull requests.
 
 ## Change these rules
