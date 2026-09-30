@@ -8,7 +8,7 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 - `AGENTS.md`: the rules for agents and people. They say how to make a change, plan the work, build it and publish a release.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
-- `docs/code.md`: how to write code in any language, from design to tests, pinned versions and the credentials for publishing.
+- `docs/code.md`: how to write code in any language, covering design, tests, pinned versions and keeping publishing credentials safe.
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, and how you decide which ones get built. The ideas can come from any text you share or point the agent to.
 - `scripts/check`: one command that runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template. It allows only squash merges, makes every change to main go through a pull request that passes CI, lets a pull request merge on its own once its checks pass, and turns on security alerts and code scanning.
@@ -17,9 +17,9 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 ## Start a project
 
-You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't read `AGENTS.md` in every setup.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't always read `AGENTS.md`.
 
-1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan, as "Limits" explains.
+1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan to protect main and to let pull requests merge on their own, as "Limits" explains.
 
    ```bash
    gh repo create photo-sorter --public --template jtmpl/repo-template --clone
@@ -47,11 +47,11 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
 
 ## Example: from idea to first release
 
-These are examples of the requests you give your agent. Use your own words. You can start each one in a new conversation, because the agent finds the state of the work in the repository's files, issues and pull requests. `AGENTS.md` tells it what each one involves.
+These are examples of the requests you give your agent. Use your own words. You can start each one in a new conversation, because the agent finds the state of the work in the repository's files, issues and pull requests. `AGENTS.md` tells it what each request involves.
 
 1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have notes, a spec or other text about the project, include it in this request or point the agent to it. Do this even if you gave it to an agent before, because an agent in a new conversation can't see earlier ones. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues, and correct them on GitHub or ask the agent to. Tell the agent which ones you approve, and it adds the `ready` label. That label lets agents build those issues and merge their pull requests without checking with you.
 2. "Build the ready issues." The agent works through them, lowest number first, and skips an issue until the changes it depends on have merged. For each issue, it opens a pull request that merges on its own once the checks pass, and it starts the next issue without waiting for those checks. It also merges Dependabot's patch and minor updates once their checks pass, and leaves major updates for you. If the agent can't finish an issue, it comments on the issue with what it needs from you. If it needs your decision, it also adds the `needs-decision` label. If the issue is too big for one pull request, it adds `needs-breakdown` instead. The agent closes the issue's pull request, if there is one, so that unfinished work can't merge. The work itself stays on the issue's branch. The agent goes on to build the issues that don't depend on that one. When it's done, it reports what merged and what's waiting for you. To answer its questions, ask your agent "Which issues need my decision?" and tell it your answers. It writes your answers into the issues, so your next "Build the ready issues" can continue those issues. You can read every merged pull request afterwards, because each one records what changed and why.
-3. "Publish a release." The agent checks that CI passed on main and that code scanning has no open alert of high or critical severity. It picks the next version number from the changes merged since the last release, following semantic versioning. The first release is v0.1.0. Then the agent publishes a GitHub release with notes built from the merged pull requests. Last, it lists the security advisories that are still private, so that you can publish the ones that the release fixes. To see which ones those are, ask the agent to check each one against the code.
+3. "Publish a release." The agent checks that CI passed on main and that code scanning has no open alert of high or critical severity. It picks the next version number from the changes merged since the last release, following semantic versioning. The first release is v0.1.0. Then the agent publishes a GitHub release with notes built from the merged pull requests. Last, it lists any security advisories that aren't published yet. An advisory is GitHub's record of a security problem, which stays private until you publish it. "Fix security problems" below says what to do with one.
 
 ### Build several issues at once
 
@@ -69,12 +69,21 @@ Plan, build and release each later version with the same three requests. The req
 - "Which issues need my decision?" The agent lists the issues that have `needs-decision`, with the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - "Fix the typo in the README's first sentence.", or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only if you ask, so add "and merge it" to your request, or ask later.
 - "Review pull request #12." The agent compares the change with its issue and comments with what should change. If the pull request comes from someone without write access to the repository, the agent doesn't run its code on your machine, where that code could reach your credentials. CI runs it on GitHub's machines instead.
-- "Review the code for security problems." The agent reviews the whole repository, unless you name a part or a range of changes. For example, before a release, ask it to review the changes since the last release. It tells you what it finds and which parts it reviewed. It doesn't open issues for the problems, because issues are public. On a public repository, it records each one privately as a security advisory instead. To fix one, ask for the fix like any other change.
+- "Review the code for security problems." The agent reviews the whole repository, unless you name a part or a range of changes. For example, before a release, ask it to review the changes since the last release. It tells you what it finds and which parts it reviewed. "Fix security problems" below says what happens next.
+
+### Fix security problems
+
+The agent doesn't describe a security problem in an issue or a pull request until a release fixes it, because those are public or can become public. On a public repository, it records the problem privately as a security advisory. When someone reports a problem privately, as `.github/SECURITY.md` asks, GitHub creates an advisory for it too.
+
+1. Ask the agent to fix the problem. On a public repository, it builds the fix in the advisory's private copy of the repository. On a private repository, it makes the fix through an issue and a pull request that describe the change, not the problem.
+2. Ask for a release. If a fix is waiting in a private copy, the agent asks whether to include it. If the problem is of high or critical severity or already public, ask for the release right away. If someone reported the problem, ask for the release within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long.
+3. When you include a fix from a private copy, the agent merges it and publishes the release as soon as the checks pass. Merging makes the fix public. Releasing right away gives attackers who read the fix as little time as possible before users can update.
+4. After the release, the agent lists the advisories that aren't published yet, and names the ones whose fix from a private copy is in the release. Check them in a new conversation about the advisories alone, not at the end of the release, where it's tempting to publish them without a close look. Go through each named advisory's fix with the agent, because a fix can still be incomplete. For each of the others, ask whether its problem is still in the release, because a change outside a private copy can fix one too. Publish only the ones you're sure are fixed, because publishing an advisory for a problem that's still open shows attackers where to look.
 
 ## Limits
 
 - The template works only with GitHub. On GitHub Free, use a public repository. A private repository there can't protect main, and its pull requests can't merge on their own.
-- On a private repository, `scripts/configure-github` skips private vulnerability reporting, secret scanning and code scanning, and CI skips the check of new dependencies. GitHub offers the first only for public repositories, and the others only with paid add-ons. After you make the repository public, run the script again. CI starts checking new dependencies by itself.
+- On a private repository, `scripts/configure-github` skips secret scanning and code scanning, and CI skips its check for known vulnerabilities in new dependencies, because GitHub charges extra for these on private repositories. The script also skips private vulnerability reporting, which GitHub offers only for public repositories. After you make the repository public, run the script again. CI starts checking new dependencies by itself.
 - `.claude/settings.json` doesn't stop every read of a `.env` file. A script can still read one, and so can a command that doesn't mention the file by name, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes. GitHub copies the files once, when it creates the repository.
 - A build run of the ready issues merges its pull requests once their checks pass, without anyone reviewing them. It merges Dependabot's patch and minor updates the same way. The checks catch only what the tests, the linters and the check of new dependencies cover. Code scanning reports security problems in the code, but it doesn't stop a merge.
