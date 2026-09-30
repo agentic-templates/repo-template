@@ -17,7 +17,7 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 ## Start a project
 
-You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't always read `AGENTS.md`. Commits record the email address that git is set up with. To keep your own address private, copy the noreply address from your GitHub email settings, and set git to use it.
+You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scripts in `scripts/` need bash, which macOS and Linux include. On Windows, use Git Bash or WSL. If you use Claude Code, update it to version 2.1.281 or later, because earlier versions don't always read `AGENTS.md`. If you want to keep your email address out of the project's commits, set git's `user.email` to the noreply address listed in your GitHub email settings.
 
 1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan to protect main and to let pull requests merge on their own, as "Limits" explains.
 
