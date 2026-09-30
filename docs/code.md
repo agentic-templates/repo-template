@@ -51,7 +51,7 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 - Record the exact version of every tool and package that the project installs. The language's version goes in its version file, such as `.python-version`. Packages go in a committed lockfile. A tool that the lockfile doesn't cover gets its version and checksum in the file that installs it, as `.github/workflows/ci.yml` does for shellcheck.
 - Pin each GitHub Action to a full commit SHA, with its version in a comment. The repository's settings stop any workflow that uses an action without a commit SHA.
 - Add a dependency only when it saves more work than it costs to review, update and secure. Prefer the standard library.
-- Update versions in pull requests of their own. Dependabot opens most of them. If your change needs a newer version of a package, treat the update as a problem outside your issue, as step 5 of "Make a change" in AGENTS.md describes. Adding a package is the one exception: the lockfile changes that come with it, including updates to other packages, stay in the pull request that adds it.
+- Update versions in pull requests of their own. Dependabot opens most of them. If your change needs a newer version of a package, treat the update as a problem outside your issue, as step 4 of "Make a change" in AGENTS.md describes. Adding a package is the one exception: the lockfile changes that come with it, including updates to other packages, stay in the pull request that adds it.
 
 ## Protect the credentials that publish and deploy
 
