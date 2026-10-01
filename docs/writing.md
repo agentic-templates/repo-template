@@ -17,6 +17,7 @@ This guide covers everything written for the project: docs, issues, pull request
 - Don't use metaphors or marketing words such as "seamless", "powerful" or "blazing fast".
 - Cut filler such as "simply", "just", "basically" and "note that".
 - Replace a vague judgment with the fact behind it. Write "sorts 10,000 photos in 2 seconds", not "fast".
+- When you give one example, pick the case that applies to most readers, because readers take it for the main one.
 
 For example, in a README for people who use a photo app:
 
@@ -81,6 +82,6 @@ An error message says what failed and what the reader can do about it. When a li
 
 A README or docs page where you added or rewrote text gets a review by a reader who has seen only that page. Run the review before you open the pull request:
 
-1. Start a new agent with no other context. Put the page's text in the prompt. Tell the agent not to open any files, so that it doesn't read the repository. If you don't use agents, ask a person who is new to the project and hasn't seen the page.
+1. Start a new agent with no other context. Put the page's text in the prompt. Tell the agent not to open any files, so that it doesn't read the repository.
 2. Give the reader this prompt: "You are <the page's reader, for example a developer who has never seen this project>. Read this page once, the way that reader would. Quote each sentence you had to read twice, and say what made you stop."
-3. Rewrite each quoted sentence that you agree is unclear. Then repeat the review with another fresh reader until they quote nothing that you would change.
+3. If a quoted sentence is in the text you added or rewrote, and you agree that it's unclear, rewrite it. For quoted sentences elsewhere on the page that you agree are unclear, open an issue, as step 4 of "Make a change" in AGENTS.md describes. Then repeat the review with another fresh reader, until they quote nothing in the text you added or rewrote that you would change.
