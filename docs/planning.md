@@ -6,7 +6,7 @@ Issues that anyone but a maintainer opens, and issues that agents open for probl
 
 ## How an idea becomes buildable
 
-1. **Input.** A maintainer shares or points to any text. It stays outside the repository and its issues.
+1. **Input.** A maintainer shares or points to any text. The text itself stays out of the repository and its issues.
 2. **Triage.** The agent splits the input into single ideas, checks each one against the project and recommends what to do with it. The maintainer decides.
 3. **Backlog.** Each accepted idea becomes one open issue without the `ready` label. A big idea stays one issue, with `needs-breakdown`.
 4. **Planning.** When a maintainer plans the next work, the agent picks the issues that its goal needs, splits the big ones and rewrites each one until it meets the definition of ready. Once the maintainer approves them, they get the `ready` label.
@@ -33,21 +33,21 @@ Follow these steps for every idea, whatever form the input takes:
    - **Duplicate:** an issue already covers it. Add anything new to that issue as a comment. If that issue was closed as not planned, tell the maintainer, who decides whether to reopen it.
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
 
-   When two verdicts fit, recommend the one that settles more. For example, drop an idea that doesn't fit rather than asking what it means.
-4. First ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
+   When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, drop an idea that doesn't fit the project, rather than asking what it means.
+4. Before you show the maintainer anything, ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
 5. Carry out only the verdicts the maintainer approved. Write each new issue in your own words. Issues are public or can become public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
 
 Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak.
 
-If the maintainer's answers change the project's direction, open a pull request that updates "What this project is", as "Make a change" in AGENTS.md describes. Then redo the verdicts that the change affects, before you carry any of them out.
+If the maintainer's answers change the project's direction, open a pull request that updates "What this project is", as "Make a change" in AGENTS.md describes. Then, before you carry out any verdict, redo the ones that the change affects.
 
 ### Ask a fresh critic
 
 The critic mustn't see the maintainer's enthusiasm, so start a new agent without your conversation. Give it the "What this project is" section from AGENTS.md, the idea in plain words, and this prompt:
 
-"Give the strongest case for building this idea and the strongest case against it. List what's unclear. Then recommend one: build it, reshape it, or drop it. If you recommend reshaping it, say how. Say which concerns, if they were answered, would change your recommendation."
+"Give the strongest case for building this idea and the strongest case against it. List what's unclear. Then recommend one: build it, revise it, or drop it. If you recommend revising it, say how. Say which concerns, if they were answered, would change your recommendation."
 
-Add its recommendation and its main concerns to the triage table. The critic informs the maintainer's decision and doesn't make it. Only a maintainer reshapes an idea, and a new critic looks at it only after they have.
+Add its recommendation and its main concerns to the triage table. The critic informs the maintainer's decision and doesn't make it. Only a maintainer revises an idea. Ask a new critic about it only after the maintainer has revised it.
 
 ## Triage issues that others open
 
@@ -61,14 +61,14 @@ Triage every issue that has `needs-triage` or no type label before you plan the 
 - **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`, so anyone who proposes the idea again finds the reason.
 
-If the issue came from an account that isn't a maintainer's, and the verdict is **Accept**, **Research first** or **Needs a decision**, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
+An issue from an account that isn't a maintainer's can never get `ready`, as "Definition of ready" describes. So if the verdict for such an issue is **Accept**, **Research first** or **Needs a decision**, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
 
 ## Break down a big idea
 
 - A big idea is one parent issue. Its "What should change" states the result the maintainer wants, and its "Done when" says how to tell that the result is reached.
-- It waits in the backlog with `needs-breakdown`. Split it when the work that needs it is planned, not earlier, because the work before it changes what the sub-issues should be.
+- It waits in the backlog with `needs-breakdown`. Split it only when you make it ready to build, because the right sub-issues depend on what's in the code by then.
 - Split it into sub-issues that each fit in one pull request and leave main working. Create each one with `gh issue create --parent <parent>`, then remove `needs-breakdown` from the parent.
-- Give the parent the `ready` label along with its sub-issues, so that a build run checks its "Done when" once they're all closed.
+- Give the parent the `ready` label along with its sub-issues. A build run skips the parent until all its sub-issues are closed, and then checks the parent's "Done when".
 
 ## Write a research issue
 
