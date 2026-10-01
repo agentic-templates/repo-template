@@ -180,8 +180,8 @@ The repository's settings lock the tag and files of a published release, so fixi
 When a maintainer asks you to check the security advisories, check them against the latest release:
 
 1. List the advisories that aren't published or closed, as step 5 of "Publish a release" describes. Without admin access, you can't see them, so tell the maintainer that the check needs an admin's access.
-2. For each unpublished advisory, check whether its problem is still in the release. If the advisory's private fork holds a fix, check whether the release includes that fix, and check the fix closely, because a fix can be incomplete.
-3. For each advisory, tell the maintainer whether you're sure the release fixes it, and how you checked.
+2. For each advisory on that list, check whether its problem is still in the release. If the advisory's private fork holds a fix, check whether the release includes that fix, and check the fix closely, because a fix can be incomplete.
+3. For each advisory on the list, tell the maintainer whether you're sure the release fixes it, and how you checked.
 4. Publish an advisory only when the maintainer asks you to. Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
 5. Once an advisory is published, add a line to the release notes that links it.
 
