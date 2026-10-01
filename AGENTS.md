@@ -6,7 +6,7 @@ These rules apply to every coding agent and every person who changes the reposit
 
 repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
 
-When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction. A change of direction updates this section in the same pull request.
+When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction. If they change the direction, update this section in the pull request for that request.
 
 ## Where things are
 
@@ -39,7 +39,7 @@ Read each guide before you first do its kind of work in a session:
 
 ## Labels
 
-Use only these labels. To add, rename or remove one, change this section, `scripts/configure-github` and every other file that names the label, in the same pull request.
+Use only the labels that this section names. To add, rename or remove one, change this section, `scripts/configure-github` and every other file that names the label, in the same pull request.
 
 Every accepted issue has exactly one type label. Choose it by what changes for users:
 
@@ -48,11 +48,11 @@ Every accepted issue has exactly one type label. Choose it by what changes for u
 - `maintenance`: work that leaves what users can do and read unchanged, such as speed-ups, refactoring, tooling, tests or CI.
 - `research`: something to find out before anyone builds, such as whether a library can do the job. It ends in a comment, not in code. A user's question about how to use the project isn't research.
 
-A status label says what an issue is waiting for. An issue that's ready to build has none:
+A status label says what an issue is waiting for, so an issue that's ready to build has none. The status labels are:
 
 - `needs-triage`: no maintainer has accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning.
 - `needs-breakdown`: accepted, but too big for one pull request. Planning splits it into sub-issues, as `docs/planning.md` describes.
-- `needs-decision`: waiting for a maintainer to answer a question or make a decision. When you add it, write the question in the issue. Remove it once the issue's body says what the maintainer decided, because the agent that builds it reads the body.
+- `needs-decision`: waiting for a maintainer to answer a question or make a decision. When you add it, write the question in the issue. When the maintainer decides, write the decision into the issue's body, because the agent that builds it reads the body. Then remove the label.
 
 The `ready` label marks the issues that a maintainer wants built. An agent adds it once an issue meets the definition of ready in `docs/planning.md` and a maintainer has approved the issue. On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work. An accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it.
 
@@ -64,12 +64,12 @@ A workflow gives each pull request the type label that matches its title: `featu
 
 Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
 
-If a maintainer asks for something bigger than one pull request, or that needs a decision along the way, it's an idea: triage it first, as `docs/planning.md` describes.
+If a maintainer asks for something bigger than one pull request, or that needs a decision along the way, triage it first, as `docs/planning.md` describes.
 
-1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out and wait for the maintainer's answer. If none does, or the maintainer still wants the change, open one with `gh issue create`. If a closed issue asked for the change, mention it in the new one. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. Outside a build run, if a maintainer asks you to work on an issue, remove `needs-triage` from it, because the request accepts the issue. Remove `ready` too, so that no build run takes it. If it had `ready` and is assigned, a build run may be working on it. Add `ready` back, and ask the maintainer whether a build run is still going. If one is, leave the issue to that build run. If not, remove `ready` again and start. If you stop before its pull request merges, tell the maintainer that the issue no longer has `ready`.
+1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If none does, or the maintainer still wants the change, open one with `gh issue create`. If a closed issue asked for the change, mention it in the new one. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. Outside a build run of the ready issues, if a maintainer asks you to work on an issue, remove `needs-triage` from it, because the request accepts the issue. Remove `ready` too, so that no build run takes it. If it had `ready` and is assigned, a build run may have taken it before you removed the label. Add `ready` back, and ask the maintainer whether a build run is still going. If one is, leave the issue to that build run. If not, remove `ready` again and start. If it had `ready` and you stop before its pull request merges, tell the maintainer that it no longer has `ready`.
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
-4. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. For a security vulnerability that isn't public yet, follow "Keep a security vulnerability private" instead. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
+4. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. For a security vulnerability that isn't public yet, don't open an issue. Follow "Keep a security vulnerability private" instead.
 5. Push the branch and open a pull request with `gh pr create`.
 6. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 4 describes.
 7. Merge only when a maintainer has asked you to. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 6. Otherwise, merge with `gh pr merge --squash`.
@@ -84,7 +84,7 @@ If a maintainer asks for something bigger than one pull request, or that needs a
 - Use one of these types:
   - `feat`: new behavior
   - `fix`: a bug fix
-  - `docs`: docs that only developers read. A change to docs that users read is a `feat` or a `fix`.
+  - `docs`: docs that only the people who work on the project read. A change to docs that users read is a `feat` or a `fix`.
   - `test`: tests only
   - `refactor`: a code change that keeps behavior the same
   - `perf`: a change that makes the code faster or use less memory
