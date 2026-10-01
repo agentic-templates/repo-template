@@ -171,7 +171,7 @@ When a maintainer asks you to publish a release:
 
    If the project attaches files to its releases, such as binaries, add `--draft` and attach the files before you publish the draft. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them.
 5. On a public repository, tell the maintainer about each security advisory or private report that isn't published or closed. If `gh repo view --json viewerPermission` shows `ADMIN`, `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state. Without admin access, that list leaves out the unpublished ones, so tell the maintainer that an admin needs to check the advisories on the repository's "Security and quality" tab.
-6. Once users can install the release, tell the maintainer to ask an agent in a new session to check the security advisories, so that an agent that didn't take part in the release checks the fixes.
+6. Once users can install the release, tell the maintainer to ask an agent in a new session to check the security advisories, so that checking them doesn't share a context with publishing the release.
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release. The release notes stay editable.
 
