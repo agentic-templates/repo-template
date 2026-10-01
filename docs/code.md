@@ -43,7 +43,7 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 - Pair every bug fix with a test that fails without the fix.
 - Name each test for the behavior and the condition, such as "leaves photos on a network drive in place".
 - Keep tests independent of the network, the clock and the order in which they run.
-- When the checks on pull requests take longer than the time that "Commands" in AGENTS.md allows, first make them faster without removing any test, such as by caching or by running tests in parallel. If they're still too slow, move only the slow tests that check the product as a whole, such as end-to-end tests, into a separate command, such as a script. Have CI run that command after each merge to main, and list it under "Commands", so that CI and people run the same tests.
+- When the checks on pull requests take longer than the time limit under "Commands" in AGENTS.md, first make them faster without removing any test, such as by caching or by running tests in parallel. If they're still too slow, move only the slow tests that check the product as a whole, such as end-to-end tests, into a separate command, such as a script. Have CI run that command after each merge to main, and list it under "Commands", so that CI and people run the same tests.
 
 ## Pin versions
 
@@ -56,6 +56,6 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 ## Protect the credentials that publish and deploy
 
 - Build in a job that can only read the repository. Give the credentials, or a token that can write, only to a separate job that uploads what the build made, so that code from the build's dependencies can't reach them.
-- Run the job that publishes a package to a registry or deploys the project in its own GitHub environment, such as `release`. Ask the maintainer to let only release tags use the environment. On a public repository, also ask them to make it need their approval, so that nothing is published until they approve the run. Tell them to leave "Prevent self-reviews" off, because the agent publishes releases under their account, and that setting would stop them from approving their own release.
+- Use a separate GitHub environment, such as `release`, for the job that publishes a package to a registry or deploys the project. Ask the maintainer to let only release tags use the environment. On a public repository, also ask them to make it need their approval, so that nothing is published until they approve the run. Tell them to leave "Prevent self-reviews" off, because the agent publishes releases under their account, and that setting would stop them from approving their own release.
 - Where the registry or host accepts GitHub's OpenID Connect login, such as PyPI's trusted publishing, use it, so that the job needs no stored secret. Tell the maintainer the exact steps to set it up on the registry or host, because only they can sign in there.
 - Otherwise, store the token that the job needs as a secret of its environment, not of the repository, so that only jobs in that environment can read it.
