@@ -33,7 +33,7 @@ Follow these steps for every idea, whatever form the input takes:
    - **Duplicate:** an issue already covers it. Add anything new to that issue as a comment. If that issue was closed as not planned, tell the maintainer, who decides whether to reopen it.
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
 
-   When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, drop an idea that doesn't fit the project, rather than asking what it means.
+   When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, if an idea wouldn't fit the project whatever it means, recommend **Drop**, not **Too vague**.
 4. Before you show the maintainer your verdicts, ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
 5. Carry out only the verdicts the maintainer approved. Write each new issue in your own words. Issues are public or can become public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
 
