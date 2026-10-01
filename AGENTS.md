@@ -163,7 +163,7 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
 
 When a maintainer asks you to publish a release:
 
-1. If a security advisory's private fork holds a fix that isn't released yet, ask the maintainer whether this release should include it. If so, merge it first, as steps 2 and 3 in "Keep a security vulnerability private" describe. Once it's merged, repeat step 2 below, so that the SHA you release includes the fix.
+1. If a security advisory's private fork holds a fix that isn't released yet, ask the maintainer whether this release should include it. If so, merge it first, as steps 2 and 3 in "Keep a security vulnerability private" describe. Once it's merged, go on to step 2, so that the SHA you release includes the fix.
 2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs, because they look for new versions and don't test the code. If one failed, stop and tell the maintainer. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which `gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists. Do the same if Dependabot has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"` lists. Keep using that SHA even if more pull requests merge while you wait.
 3. Choose the version. `gh release list --exclude-drafts --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
 4. Publish the release with notes built from the merged pull requests:
@@ -171,7 +171,7 @@ When a maintainer asks you to publish a release:
 
    If the project attaches files to its releases, such as binaries, add `--draft` and attach the files before you publish the draft. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them.
 5. On a public repository, tell the maintainer about each security advisory or private report that isn't published or closed. If `gh repo view --json viewerPermission` shows `ADMIN`, `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state. Without admin access, that list leaves out the unpublished ones, so tell the maintainer that an admin needs to check the advisories on the repository's "Security and quality" tab.
-6. Once users can install the release, tell the maintainer to check the security advisories in a new conversation.
+6. Once users can install the release, tell the maintainer to ask an agent in a new session to check the security advisories.
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release. The release notes stay editable.
 
@@ -182,8 +182,8 @@ When a maintainer asks you to check the security advisories, check them against 
 1. List the advisories that aren't published, as step 5 of "Publish a release" describes.
 2. For each unpublished advisory, check whether its problem is still in the release. If the advisory's private fork holds a fix, check whether the release includes that fix, and check the fix closely, because a fix can be incomplete.
 3. Tell the maintainer which advisories you're sure the release fixes, and how you checked each one.
-4. Before you publish an advisory, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
-5. Publish an advisory only when the maintainer asks you to. Then add a line to the release notes that links it.
+4. Publish an advisory only when the maintainer asks you to. Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
+5. Once an advisory is published, add a line to the release notes that links it.
 
 ## Keep the repository clean
 
