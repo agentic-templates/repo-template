@@ -69,7 +69,7 @@ If a maintainer asks for something bigger than one pull request, or that needs a
 1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out and wait for the maintainer's answer. If none does, or the maintainer still wants the change, open one with `gh issue create`. If a closed issue asked for the change, mention it in the new one. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. Outside a build run, if a maintainer asks you to work on an issue, remove `needs-triage` from it, because the request accepts the issue. Remove `ready` too, so that no build run takes it. If it had `ready` and is assigned, a build run may be working on it. Add `ready` back, and ask the maintainer whether a build run is still going. If one is, leave the issue to that build run. If not, remove `ready` again and start. If you stop before its pull request merges, tell the maintainer that the issue no longer has `ready`.
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where they differ, the one closest to the file wins.
-4. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. For a security vulnerability that isn't public yet, follow "Keep the repository clean" instead. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
+4. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. For a security vulnerability that isn't public yet, follow "Keep a security vulnerability private" instead. If your change can't pass without that fix, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`. Then tell the maintainer.
 5. Push the branch and open a pull request with `gh pr create`.
 6. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 4 describes.
 7. Merge only when a maintainer has asked you to. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 6. Otherwise, merge with `gh pr merge --squash`.
@@ -124,7 +124,7 @@ A change is done when all of these are true:
 
 ## Review the code for security problems
 
-When a maintainer asks you to review the code for security problems, review the whole repository, unless they name a part of it or a range of changes, such as the changes since the last release. For a range, also read the code that the changes call and the code that calls them, because a change can expose a problem in code that it didn't touch. Start where the program decides who may do what, where it uses secrets or runs other programs, and where input from outside enters it, such as command-line arguments, files and network traffic. Include the workflows in `.github/`. Report each problem as "Keep the repository clean" describes, with how serious it is and the fix you recommend. Say which parts you reviewed, so that the maintainer knows what's left. Change nothing until the maintainer asks for a fix.
+When a maintainer asks you to review the code for security problems, review the whole repository, unless they name a part of it or a range of changes, such as the changes since the last release. For a range, also read the code that the changes call and the code that calls them, because a change can expose a problem in code that it didn't touch. Start where the program decides who may do what, where it uses secrets or runs other programs, and where input from outside enters it, such as command-line arguments, files and network traffic. Include the workflows in `.github/`. Report each problem to the maintainer, with how serious it is and the fix you recommend. For a vulnerability that isn't public yet, also follow "Keep a security vulnerability private". Say which parts you reviewed, so that the maintainer knows what's left. Change nothing until the maintainer asks for a fix.
 
 ## Plan the next work
 
@@ -154,7 +154,7 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
    - the ready issues that are still open, and what each one waits for
    - the issues you opened on your own, for problems you noticed
    - the security vulnerabilities you noticed
-   - the open code scanning alerts, which `gh api "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists
+   - the open code scanning alerts, which `gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists
    - the Dependabot pull requests you didn't merge
    - whether the latest CI run on main passed, failed or is still running
    - anything a maintainer needs to run, such as `scripts/configure-github`
@@ -163,17 +163,27 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
 
 When a maintainer asks you to publish a release:
 
-1. If a security advisory's private fork holds a fix that isn't released yet, ask the maintainer whether this release should include it. If so, merge it first, as steps 2 and 3 in "Keep the repository clean" describe.
-2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs, because they look for new versions and don't test the code. If one failed, stop and tell the maintainer. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists. Keep using that SHA even if more pull requests merge while you wait.
-3. Choose the version. `gh release list --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
+1. If a security advisory's private fork holds a fix that isn't released yet, ask the maintainer whether this release should include it. If so, merge it first, as steps 2 and 3 in "Keep a security vulnerability private" describe. Once it's merged, go on to step 2 below, so that the SHA you release includes the fix.
+2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs, because they look for new versions and don't test the code. If one failed, stop and tell the maintainer. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which `gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists. Do the same if Dependabot has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"` lists. Keep using that SHA even if more pull requests merge while you wait.
+3. Choose the version. `gh release list --exclude-drafts --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, the release notes would be empty, so tell the maintainer. If a title has `!` before its colon, raise the major version, or the minor one before version 1.0. Otherwise raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
 4. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target <sha> --generate-notes`
 
    If the project attaches files to its releases, such as binaries, add `--draft` and attach the files before you publish the draft. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them.
-5. On a public repository, tell the maintainer about each security advisory or private report that isn't published or closed. If `gh repo view --json viewerPermission` shows `ADMIN`, `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state. Without admin access, that list leaves out the unpublished ones, so tell the maintainer that an admin needs to check the advisories on the repository's Security and quality tab.
-6. Once users can install the release, an admin can publish the advisories that it fixes. Name the advisories whose fix this release includes from their private fork. Don't say that the release fixes them. Tell the maintainer to check the advisories in a conversation about them alone: the named ones closely, because a fix can be incomplete, and each of the others for whether its problem is still in this release. Tell the maintainer that each advisory first needs this release's version as the fixed one, and the versions before it as the affected ones. If the project publishes a package, the advisory also needs the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it. Once an advisory is published, add a line to the release notes that links it.
+5. On a public repository, tell the maintainer about each security advisory or private report that isn't published or closed. If `gh repo view --json viewerPermission` shows `ADMIN`, `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state. Without admin access, that list leaves out the unpublished ones, so tell the maintainer that an admin needs to check the advisories on the repository's "Security and quality" tab.
+6. If step 5 found any advisories, then once users can install the release, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
-The repository's settings lock the tag and files of a published release, so fixing a mistake takes a new release.
+The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release. The release notes stay editable.
+
+## Check the security advisories
+
+When a maintainer asks you to check the security advisories, check them against the latest release:
+
+1. List the advisories that aren't published or closed, as step 5 of "Publish a release" describes. Without admin access, you can't see them, so tell the maintainer that the check needs an admin's access.
+2. For each advisory on that list, check whether its problem is still in the release. If the advisory's private fork holds a fix, check whether the release includes that fix, and check the fix closely, because a fix can be incomplete.
+3. For each advisory on the list, tell the maintainer whether you're sure the release fixes it, and how you checked.
+4. Publish an advisory only when the maintainer asks you to. Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
+5. Once an advisory is published, add a line to the release notes that links it.
 
 ## Keep the repository clean
 
@@ -182,12 +192,16 @@ The repository holds the product and the rules for building it. Everything in it
 - Put plans in issues, the reason for a change in its pull request, and review comments on the pull request.
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
 - Never read, print or commit secrets. Keep them in `.env`, which git ignores, and list each variable in `.env.example` with a placeholder value.
-- If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer about it instead. On a public repository, also record it privately, where it stays until a maintainer publishes it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`. The issue and pull request for its fix say what the change does, not how to exploit the vulnerability. On a public repository, fix it this way:
-  1. Build the fix in the advisory's temporary private fork, which an admin can create with `gh api --method POST repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks`.
-  2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
-  3. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it.
-  4. Publish the release in the same session.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commit messages, issues and pull requests.
+
+## Keep a security vulnerability private
+
+If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer about it instead. On a public repository, also record it privately, where it stays until a maintainer publishes it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`. The issue and pull request for its fix say what the change does, not how to exploit the vulnerability. On a public repository, fix it this way:
+
+1. Build the fix in the advisory's temporary private fork, which an admin can create with `gh api --method POST repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks`.
+2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
+3. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it.
+4. Publish the release in the same session.
 
 ## Change these rules
 
