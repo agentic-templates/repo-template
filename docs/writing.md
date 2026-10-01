@@ -16,8 +16,8 @@ This guide covers everything written for the project: docs, issues, pull request
 - Use one term for one thing, everywhere. Don't switch to a synonym for variety.
 - Don't use metaphors or marketing words such as "seamless", "powerful" or "blazing fast".
 - Cut filler such as "simply", "just", "basically" and "note that".
-- Replace a vague judgment with the fact behind it. Write "sorts 10,000 photos in 2 seconds", not "fast".
 - When you give one example, pick the case that applies to most readers, because readers take it for the main one.
+- Replace a vague judgment with the fact behind it. Write "sorts 10,000 photos in 2 seconds", not "fast".
 
 For example, in a README for people who use a photo app:
 
@@ -84,4 +84,4 @@ A README or docs page where you added or rewrote text gets a review by a reader 
 
 1. Start a new agent with no other context. Put the page's text in the prompt. Tell the agent not to open any files, so that it doesn't read the repository.
 2. Give the reader this prompt: "You are <the page's reader, for example a developer who has never seen this project>. Read this page once, the way that reader would. Quote each sentence you had to read twice, and say what made you stop."
-3. If a quoted sentence is in the text you added or rewrote, and you agree that it's unclear, rewrite it. For quoted sentences elsewhere on the page that you agree are unclear, open an issue, as step 4 of "Make a change" in AGENTS.md describes. Then repeat the review with another fresh reader, until they quote nothing in the text you added or rewrote that you would change.
+3. If a quoted sentence is in the text you added or rewrote, and you agree that it's unclear, rewrite it. For quoted sentences elsewhere on the page that you agree are unclear, open an issue, as step 4 of "Make a change" in AGENTS.md describes. After you rewrite a sentence, repeat the review with another fresh reader. Stop when a reader quotes no sentence that you would change in the text you added or rewrote.
