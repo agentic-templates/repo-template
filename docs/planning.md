@@ -6,7 +6,7 @@ Issues that anyone but a maintainer opens, and issues that agents open for probl
 
 ## How an idea becomes buildable
 
-1. **Input.** A maintainer shares or points to any text. The text itself isn't copied into the repository or its issues.
+1. **Input.** A maintainer shares or points to any text. The text itself isn't copied into the repository or into any issue.
 2. **Triage.** The agent splits the input into single ideas, checks each one against the project and recommends what to do with it. The maintainer decides.
 3. **Backlog.** Each accepted idea becomes one open issue without the `ready` label. A big idea stays one issue, with `needs-breakdown`.
 4. **Planning.** When a maintainer plans the next work, the agent picks the issues that its goal needs, splits the big ones and rewrites each one until it meets the definition of ready. Once the maintainer approves them, they get the `ready` label.
@@ -47,7 +47,7 @@ The critic mustn't see the maintainer's enthusiasm, so start a new agent without
 
 "Give the strongest case for building this idea and the strongest case against it. List what's unclear. Then recommend one: build it, revise it, or drop it. If you recommend revising it, say how. Say which concerns, if they were answered, would change your recommendation."
 
-Add its recommendation and its main concerns to the triage table. The critic informs the maintainer's decision and doesn't make it. Only a maintainer revises an idea. Don't ask a new critic about it until the maintainer has revised it.
+Add its recommendation and its main concerns to the triage table. The critic informs the maintainer's decision and doesn't make it. Only a maintainer revises an idea. Don't ask another critic about it until the maintainer has revised it.
 
 ## Triage issues that others open
 
@@ -61,7 +61,7 @@ Triage every issue that has `needs-triage` or no type label before you plan the 
 - **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`, so anyone who proposes the idea again finds the reason.
 
-An issue from an account that isn't a maintainer's can never get `ready`, as "Definition of ready" describes. So if the verdict for such an issue is **Accept**, **Research first** or **Needs a decision**, carry it out on a new issue instead. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
+An issue from an account that isn't a maintainer's can never get `ready`, as "Definition of ready" describes. So if the verdict for such an issue is **Accept**, **Research first** or **Needs a decision**, carry out the verdict on a new issue instead of the original. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
 
 ## Break down a big idea
 
