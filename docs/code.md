@@ -10,6 +10,10 @@ Write code that a reader understands the first time they read it. If a rule here
 - Follow the conventions the code already uses for naming style, file layout and error handling, even where this guide would choose differently. To change a convention, open an issue for it, and change it everywhere in a pull request of its own.
 - Keep each decision the code makes, such as a limit or how a total is rounded, in one place, so that changing it takes one edit. Before you write code that makes a decision, check whether other code already makes it, and use that code if it does. But two pieces of code or two values can look alike and still be separate decisions. Keep those apart. For example, if the limit on a description and the limit on a category name are both 50 characters, don't use one constant for both, because either limit can change without the other.
 - Keep the code that calculates a result apart from the code that reads input or writes output. Pass every value that can differ from one run to the next, such as today's date, to the calculating code as an argument. The calculating code reads nothing but its arguments, and does nothing but return its result. Files, the network, the screen, the clock, random numbers and environment variables all count as input or output, so the calculating code leaves them to the code that calls it. For example, the function that totals this month's expenses takes the expenses and today's date as arguments and returns the total. The code that calls it reads the expense file and the clock, and prints the result. A test can then pass in any date and check what comes back.
+- Fix the cause of a problem, not only the place where it shows up. For example, if listing expenses crashes on an expense without a category, change the code that reads expenses so that it gives that expense the category "none". Don't catch the crash in the code that prints the list.
+- If the code you need to change is hard to change as it is, refactor it first, in a commit of its own. Refactor only the code your change touches, and leave it at least as easy to read as before.
+- A refactoring must pass every test as the test stands. Don't change what a test checks to make it pass. If no test runs the code, write one before you refactor. If a test fails after the refactoring, change the refactoring until the test passes. If you can't, undo the part of the refactoring that fails the test, and open an issue that asks whether that test checks something the product needs. Then finish your change without that part of the refactoring. If your change would be hard to read without it, mark the issue you're working on as blocked by the new issue instead.
+- If fixing the cause, together with any refactoring that the fix needs, would make the pull request too big to review in one sitting, open an issue for the larger work. Mark the issue you're working on as blocked by it and tell the maintainer, as step 4 of "Make a change" in AGENTS.md describes.
 
 ## Write functions a reader can follow
 
@@ -35,8 +39,8 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 
 ## Fail with a clear error
 
-- Check input where it enters the program: command-line arguments, files and network traffic. Trust values that come from inside the program.
-- Catch an error only where you can recover from it or add useful context. Never hide an error.
+- Check input where it enters the program: command-line arguments, files, network traffic and, in a library, the arguments to its public functions. Trust values that come from inside the program.
+- Catch an error only where you can recover from it or add useful context. Never hide an error, such as by returning an empty list when the expense file can't be read.
 - Write error messages as [docs/writing.md](writing.md#write-error-messages) describes. Each one says what failed and what the person who sees it can do about it.
 
 ## Test behavior
