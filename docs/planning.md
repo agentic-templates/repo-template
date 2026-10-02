@@ -2,19 +2,19 @@
 
 This guide turns ideas into issues that an agent can build. An idea can come from any text that a maintainer shares or points to. The agent does the work in each step, and maintainers make the decisions.
 
-Issues that anyone but a maintainer opens, and issues that agents open for problems they notice while working, wait for a maintainer to triage them. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
+Two kinds of issue wait for a maintainer to triage them. One kind comes from someone who isn't a maintainer. The other kind is opened by an agent on its own, for a problem it noticed while working. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
 
 ## How an idea becomes buildable
 
 1. **Input.** A maintainer shares or points to any text. The text itself isn't copied into the repository or into any issue.
 2. **Triage.** The agent splits the input into single ideas, checks each one against the project and recommends what to do with it. The maintainer decides.
 3. **Backlog.** Each accepted idea becomes one open issue without the `ready` label. A big idea stays one issue, with `needs-breakdown`.
-4. **Planning.** When a maintainer plans the next work, the agent picks the issues that its goal needs, splits the big ones and rewrites each one until it meets the definition of ready. Once the maintainer approves them, they get the `ready` label.
+4. **Planning.** When a maintainer asks to plan the next work, the maintainer and the agent agree on a goal. The agent picks the issues that the goal needs, splits the big ones and rewrites each one until it meets the definition of ready. Once the maintainer approves them, they get the `ready` label.
 5. **Building.** Build runs take only issues with the `ready` label.
 
 ## Triage new ideas
 
-Triage is for ideas: anything a maintainer proposes or wants judged. "Make a change" in AGENTS.md says which requests skip triage.
+Triage is for ideas: anything a maintainer wants judged before deciding whether to build it. A request to make a change isn't an idea. The agent makes that change without triage, as "Make a change" in AGENTS.md describes, unless the change is bigger than one pull request or needs a decision along the way.
 
 Follow these steps for every idea, whatever form the input takes:
 
@@ -23,12 +23,12 @@ Follow these steps for every idea, whatever form the input takes:
    - Does it fit the direction in "What this project is" in AGENTS.md?
    - Does an open or closed issue already cover it? Search with `gh issue list --state all --search "<words>"`.
    - Can the project build it, and is it worth what it costs?
-   - Does it rely on claims about the project, such as how the code works or what users need? Check those claims against the code and AGENTS.md. List the ones that are out of date or contradict something, and ask the maintainer about them first, because the answers can change the verdicts.
+   - Does it rely on claims about the project, such as how the code works or what users need? Check those claims against the code and AGENTS.md. List the ones that are out of date or contradict something. Ask the maintainer about them right away, before step 3, because the answers can change the verdicts you recommend there.
 3. Recommend one verdict for each idea, with the reason. Each verdict says what happens once the maintainer agrees:
    - **Accept:** the idea becomes an issue in the backlog.
    - **Accept, too big:** the idea becomes one issue with `needs-breakdown`.
-   - **Research first:** someone has to find something out before anyone can judge or build it, such as whether a library can do the job. The idea becomes an issue with `needs-decision`, blocked by a new research issue for the question. The maintainer decides once the answer is in.
-   - **Needs a decision:** only a maintainer can settle it, such as which of two approaches to take. Ask the maintainer, and their answer turns it into another verdict. If they want to decide later, the idea becomes an issue with `needs-decision`, so it isn't lost.
+   - **Research first:** a maintainer can't decide whether to build the idea, or what to build, until an open question is answered. The idea becomes an issue with `needs-decision`, blocked by a new research issue for the question. The maintainer decides once the answer is in.
+   - **Needs a decision:** only a maintainer can settle it, such as which of two approaches to take. Ask the maintainer in step 4, and replace this verdict with the one that their answer leads to. If they want to decide later, the idea becomes an issue with `needs-decision`, so it isn't lost.
    - **Too vague:** it doesn't say what should change, or you can't tell why anyone would want it. If you can guess the likely reason, propose it and ask the maintainer to confirm. Otherwise give the idea back, and say what it's missing.
    - **Duplicate:** an issue already covers it. Add anything new to that issue as a comment. If that issue was closed as not planned, tell the maintainer, who decides whether to reopen it.
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
@@ -51,12 +51,12 @@ Add its recommendation and its main concerns to the triage table. The critic inf
 
 ## Triage issues that others open
 
-Triage every issue that has `needs-triage` or no type label before you plan the next work, or sooner when the maintainer asks. Use the same checks and verdicts, and carry out what the maintainer decides:
+Before you plan the next work, triage every issue that has `needs-triage` or has no type label. Triage them sooner when the maintainer asks. Check each issue as step 2 of "Triage new ideas" describes, and recommend one of the verdicts below. Then carry out what the maintainer decides:
 
 - **Accept:** remove `needs-triage` and give the issue its type label, plus `needs-breakdown` if it's too big.
 - **Research first:** give the issue its type label, and replace `needs-triage` with `needs-decision`. Create a research issue for the question, and mark this issue as blocked by it.
 - **Needs a decision:** give the issue its type label, and replace `needs-triage` with `needs-decision`.
-- **Too vague:** comment with the question that's missing, and leave `needs-triage`. If nobody answers within two weeks, comment that the issue is closing for lack of detail, and close it as not planned.
+- **Too vague:** comment with a question that asks for the missing detail, and leave `needs-triage`. If nobody answers within two weeks, comment that the issue is closing for lack of detail, and close it as not planned.
 - **Duplicate:** close it with `gh issue close <issue> --duplicate-of <other issue>`.
 - **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`, so anyone who proposes the idea again finds the reason.
@@ -79,28 +79,28 @@ A research issue answers a question that someone has to find out before anyone c
 
 ## Definition of ready
 
-An issue can get the `ready` label when all of these are true:
+Every issue that gets the `ready` label, including research issues and parents, must come from a maintainer's account. On GitHub, the author of an issue can edit it at any time, so an issue from anyone else could change after its approval. An agent works under its maintainer's GitHub account, so the issues it opens come from a maintainer's account. If an issue came from an account that isn't a maintainer's, replace it with a new one, as "Triage issues that others open" describes.
+
+An issue from a maintainer's account can get `ready` when all of these are true:
 
 - It asks for one change that fits in one pull request.
 - "Why" says who needs the change and what for.
 - Someone could check each "Done when" item by running or looking at something. Where quality matters, such as accuracy or speed, the item gives a number that a maintainer chose or approved.
-- Nothing is left to decide, except a question that a research issue blocking it will answer. The issue has no "maybe", no "to be decided" and no "A or B".
-- "What should change" says what's out of scope wherever the agent building it might do more.
+- Nothing is left to decide, except a question about how to build it that a research issue blocking it will answer. If the answer could change what the issue asks for, the issue isn't ready, and it keeps `needs-decision` until a maintainer decides. The issue has no "maybe", no "to be decided" and no "A or B".
+- "What should change" says what's out of scope, if the agent that builds the issue might otherwise do more than the issue asks for.
 - It's blocked by every issue whose change it needs first.
 - It has one type label and no status label.
 
-Two kinds of issue meet a shorter list. A research issue is ready when its question and what depends on the answer are clear, and it has its type label and no status label. A parent gets `ready` along with its sub-issues, and only its sub-issues need to meet the full list.
-
-Every issue that gets `ready`, including research issues and parents, must come from a maintainer's account, so that nobody else can edit it after approval. If an issue came from an account that isn't a maintainer's, replace it with a new one, as "Triage issues that others open" describes.
+Two kinds of issue meet a shorter list. A research issue is ready when its question and what depends on the answer are clear, and it has its type label and no status label. A parent is ready when someone could check each of its "Done when" items, it has its type label and no status label, and each of its sub-issues is ready.
 
 ## Plan the next work
 
-Planning makes the issues that a goal needs ready to build. Plan all of them before anyone builds, so that agents can build them in one run.
+Planning takes the issues that a goal needs and gets each one ready to build. Plan all of them before anyone builds, so that agents can build them in one run.
 
 1. Agree on the goal with the maintainer: what a user can do afterwards that they can't do now.
 2. Triage anything new, including open issues that need triage.
 3. Choose the backlog issues that the goal needs, and leave out the rest. Add the issues the goal still lacks, including research issues for what someone has to find out, and break down any big issue you chose.
-4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies, because a blocked issue waits until all its blockers are closed. Every blocker must be part of this plan, have the `ready` label already or be closed. Issues with no open blockers are built lowest number first, so if one change must come before another, link them.
+4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies, because a blocked issue waits until all its blockers are closed. Every blocker must be part of this plan, have the `ready` label already or be closed. A build run takes the lower-numbered issue first, but it can build several issues at once, so the numbers don't set the order. Only a link makes sure that one change comes before another.
 5. Make every issue meet the definition of ready. Then have a fresh reader check each one. Start a new agent without your conversation, let it read the code, and give it the issue with this prompt: "You're about to build this issue. You can read the code, but you know nothing else. List what you'd have to guess that could change what you build." Fix what it lists, and ask the maintainer about anything that's their decision.
 6. Ask the maintainer to review the issues.
 7. Add the `ready` label to each issue the maintainer approved, with `gh issue edit <issue> --add-label ready`.
