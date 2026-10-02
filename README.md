@@ -47,7 +47,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
    - Set the year and the copyright holder in `LICENSE`.
    - Last, replace this README with one for the project, as `docs/writing.md` describes. Until users can do something with the project, the new README says what the project is for, and that it can't do anything yet.
 
-4. Before you go on to the example below, review the setup's pull request and ask the agent to merge it. Unlike the pull requests for issues you approve, it doesn't merge on its own.
+4. Before you go on to the example below, review the setup's pull request and ask the agent to merge it. Unlike the pull requests for issues you approve, it doesn't merge on its own. Once the setup merges, your README describes your project. Read the rest of this page in [the template's README](https://github.com/jtmpl/repo-template#example-from-idea-to-first-release).
 
 ## Example: from idea to first release
 
