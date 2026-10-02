@@ -62,6 +62,37 @@ repository_as_it_is() {
 
 run_case repository_as_it_is pass
 
+# Cases for the check that finds files that make a tool skip AGENTS.md.
+
+claude_md_in_the_root() {
+  echo "Rules" > "$copy/CLAUDE.md"
+}
+
+claude_md_in_a_folder_in_lower_case() {
+  echo "Rules" > "$copy/docs/claude.md"
+}
+
+file_in_a_clinerules_folder() {
+  mkdir "$copy/.clinerules"
+  echo "Rules" > "$copy/.clinerules/style.md"
+}
+
+two_instruction_files() {
+  echo "Rules" > "$copy/.cursorrules"
+  echo "Rules" > "$copy/AGENTS.override.md"
+}
+
+root_only_name_in_a_folder() {
+  echo "Notes" > "$copy/docs/AGENT.md"
+}
+
+run_case claude_md_in_the_root fail "error: CLAUDE.md makes a tool skip AGENTS.md."
+run_case claude_md_in_a_folder_in_lower_case fail "error: docs/claude.md makes a tool skip AGENTS.md."
+run_case file_in_a_clinerules_folder fail "error: .clinerules/style.md makes a tool skip AGENTS.md."
+run_case two_instruction_files fail "error: .cursorrules makes a tool skip AGENTS.md."
+run_case two_instruction_files fail "error: AGENTS.override.md makes a tool skip AGENTS.md."
+run_case root_only_name_in_a_folder pass
+
 # Add a case for each check in scripts/check here.
 
 if ((failed_cases > 0)); then
