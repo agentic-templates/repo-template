@@ -24,6 +24,20 @@ jobs:
           echo "::error::The title \"$TITLE\" doesn't follow the format \"<type>: <what changed>\". Edit the title to match. The types are ${types//|/, }."
           exit 1
 
+      # Dependabot's pull requests have no issue, so this step skips them.
+      - name: Check that the body says which issue the pull request closes
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # These are the words that GitHub treats as closing an issue.
+          pattern='^(close[sd]?|fix(es|ed)?|resolve[sd]?):? +#[0-9]+'
+          if grep -Eiq "$pattern" <<< "$BODY"; then
+            exit 0
+          fi
+          echo "::error::The body has no line that says which issue the pull request closes. Edit the body and add a line such as \"Closes #12\", with the number of the issue."
+          exit 1
+
   # Release notes group pull requests by this label, as .github/release.yml sets out.
   # Pull requests from forks and from Dependabot get a read-only token, so this job skips them.
   # Dependabot's updates are left out of release notes, and whoever merges a fork's pull request labels it by hand.
