@@ -1,6 +1,6 @@
 # Release guide
 
-This guide holds the steps for publishing a release, checking the security advisories, and recording and fixing a security vulnerability that isn't public yet. [AGENTS.md](../AGENTS.md) says when each one applies.
+This guide holds the steps for publishing a release and checking the security advisories, the steps for recording and fixing a security vulnerability that isn't public yet, and the rules for a workflow that publishes or deploys the project. [AGENTS.md](../AGENTS.md) says when each one applies.
 
 ## Publish a release
 
@@ -19,6 +19,13 @@ When a maintainer asks you to publish a release:
 6. If you told the maintainer about any advisories in step 5, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release. The release notes stay editable.
+
+## Protect the credentials that publish and deploy
+
+- Run the build in a job that can only read the repository. Give the credentials, or a token that can write, only to a separate job that uploads what the build made, so that code from the build's dependencies can't reach those credentials.
+- In the `release` environment, run the job that publishes a package to a registry or deploys the project. On a public repository, `scripts/configure-github` sets it up so that only release tags can use it, and each run waits for the maintainer's approval.
+- Where the registry or host accepts GitHub's OpenID Connect login, such as PyPI's trusted publishing, use it, so that the job needs no stored secret. Tell the maintainer the exact steps to set it up on the registry or host, because only they can sign in there.
+- Where the registry or host doesn't accept that login, the job needs a stored token. Ask the maintainer to store it as a secret of the `release` environment, not of the repository, so that only jobs in that environment can read it.
 
 ## Check the security advisories
 
