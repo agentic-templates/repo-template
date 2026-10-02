@@ -83,7 +83,7 @@ done <<<"$current"
 echo "Releases: a published release can't be changed"
 gh api --method PUT "repos/$repo/immutable-releases" --silent
 
-# A job that publishes a package or deploys the project runs in this environment, as docs/code.md describes.
+# A job that publishes a package or deploys the project runs in this environment, as docs/releasing.md describes.
 # Its secrets reach only jobs that a release tag starts. An agent publishes releases under the maintainer's
 # account, so "Prevent self-reviews" stays off, or the maintainer couldn't approve the run.
 # On a private repository, the approval rule needs GitHub Enterprise, so the script skips the environment there.

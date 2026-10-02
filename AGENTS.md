@@ -9,10 +9,11 @@ Read each guide before you first do its kind of work in a session, even when the
 - [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
 - [docs/pages.md](docs/pages.md), before you write or change the README, AGENTS.md or a page in `docs/`.
 - [docs/code.md](docs/code.md), before you write or review code.
+- [docs/dependencies.md](docs/dependencies.md), before you add or update a tool, a package or a GitHub Action.
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
 - [docs/building.md](docs/building.md), before you build the ready issues, or build one issue as the helper of a build run.
 - [docs/reviewing.md](docs/reviewing.md), before you review a pull request or review the code for security problems.
-- [docs/releasing.md](docs/releasing.md), before you publish a release, check the security advisories, or record or fix a security vulnerability that isn't public yet.
+- [docs/releasing.md](docs/releasing.md), before you publish a release, write a workflow that publishes or deploys the project, check the security advisories, or record or fix a security vulnerability that isn't public yet.
 
 ## What this project is
 
