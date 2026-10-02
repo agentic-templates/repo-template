@@ -13,6 +13,8 @@ When a maintainer asks you to publish a release:
    `gh release create <version> --target <sha> --generate-notes`
 
    If the project attaches files to its releases, such as binaries, add `--draft`. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them to the draft. Once that run has succeeded, publish the draft.
+
+   If the release starts a workflow that waits for approval, such as one that publishes a package, tell the maintainer to approve it.
 5. On a public repository, tell the maintainer about each advisory from step 1 that isn't published or closed. Without admin access, tell the maintainer that an admin needs to check them on the repository's "Security and quality" tab.
 6. If you told the maintainer about any advisories in step 5, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
