@@ -8,6 +8,7 @@ The template works with any language. Agents get their instructions from `AGENTS
 
 - `AGENTS.md`: the rules for agents and people. They say how to make a change, plan the work, build it and publish a release.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
+- `docs/pages.md`: how to organize a page, write a README and review a changed page with a fresh reader.
 - `docs/code.md`: how to write code in any language, covering design, tests, pinned versions and keeping publishing credentials safe.
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, and how you decide which ones get built. The ideas can come from any text you share or point the agent to.
 - `docs/building.md`: how an agent builds the issues you approved, alone or with helpers, and merges their pull requests.
@@ -46,7 +47,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - If the project publishes a package or deploys, add a workflow that does it when a release is published.
    - Set the year and the copyright holder in `LICENSE`.
-   - Last, replace this README with one for the project, as `docs/writing.md` describes. Until users can do something with the project, the new README says what the project is for, and that it can't do anything yet.
+   - Last, replace this README with one for the project, as `docs/pages.md` describes. Until users can do something with the project, the new README says what the project is for, and that it can't do anything yet.
 
 4. Before you go on to the example below, review the setup's pull request and ask the agent to merge it. Unlike the pull requests for issues you approve, it doesn't merge on its own. Once the setup merges, your README describes your project. Read the rest of this page in [the template's README](https://github.com/jtmpl/repo-template#example-from-idea-to-first-release).
 
