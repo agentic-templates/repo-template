@@ -93,6 +93,29 @@ run_case two_instruction_files fail "error: .cursorrules makes a tool skip AGENT
 run_case two_instruction_files fail "error: AGENTS.override.md makes a tool skip AGENTS.md."
 run_case root_only_name_in_a_folder pass
 
+# Cases for the check that finds notes about unfinished work.
+# The two words are split here, so that the check doesn't match this file.
+todo="TO""DO"
+fixme="FIX""ME"
+
+todo_in_a_shell_script() {
+  printf '%s\n' '#!/usr/bin/env bash' 'echo "start"' "# $todo: print the total" > "$copy/scripts/unfinished"
+}
+
+fixme_in_a_text_file() {
+  echo "$fixme the rounding" > "$copy/notes.txt"
+}
+
+other_words_and_markdown() {
+  echo "todo, ${todo}S and MY_$todo are other words" > "$copy/notes.txt"
+  echo "$todo: write this page" > "$copy/docs/page.md"
+}
+
+run_case todo_in_a_shell_script fail "scripts/unfinished:3:# $todo: print the total"
+run_case todo_in_a_shell_script fail "error: the lines above hold $todo or $fixme."
+run_case fixme_in_a_text_file fail "notes.txt:1:$fixme the rounding"
+run_case other_words_and_markdown pass
+
 # Add a case for each check in scripts/check here.
 
 if ((failed_cases > 0)); then

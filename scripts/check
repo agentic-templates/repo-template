@@ -61,6 +61,16 @@ if [[ -n "$found_instruction_file" ]]; then
   exit 1
 fi
 
+# Unfinished work belongs in an issue, not in a comment, as the definition of done in AGENTS.md says.
+# The two words are split here, so that the search doesn't match its own lines.
+todo="TO""DO"
+fixme="FIX""ME"
+# -w matches the whole word, and -I skips binary files. Markdown is skipped, because the rules mention the words.
+if git grep -n -w -I -e "$todo" -e "$fixme" -- ':!*.md' >&2; then
+  echo "error: the lines above hold $todo or $fixme. Open an issue for the unfinished work instead, and remove the note." >&2
+  exit 1
+fi
+
 # Add the project's formatter check, linter, type checker and tests here.
 
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
