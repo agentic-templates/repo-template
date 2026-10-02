@@ -9,7 +9,7 @@ updates:
     cooldown:
       default-days: 7
     # Patch and minor updates share one pull request. Each major update gets its own,
-    # because build runs leave major updates for a maintainer to merge.
+    # so that a major update that fails its checks doesn't hold back the patch and minor updates.
     groups:
       github-actions:
         patterns: ["*"]
