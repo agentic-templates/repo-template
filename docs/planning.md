@@ -2,6 +2,14 @@
 
 This guide turns ideas into issues that an agent can build. The agent does the work in each step, and maintainers make the decisions.
 
+## Labels
+
+"Labels" in AGENTS.md says what each label means. These rules say how three of them are used:
+
+- `needs-triage`: the issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning.
+- `needs-decision`: when you add it, write the question in the issue. When the maintainer decides, write the decision into the issue's body, because the agent that builds it reads the body. Then remove the label.
+- `ready`: an accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it.
+
 ## How an idea becomes buildable
 
 1. **Input.** A maintainer shares or points to any text. The text itself isn't copied into the repository or into any issue.
