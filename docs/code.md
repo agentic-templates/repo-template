@@ -29,7 +29,7 @@ Some code has to be complex, and some complexity is a choice. Either way, keep t
 - A comment gives a reason, a hidden constraint or a surprise. It doesn't repeat what the code says.
 - Make the code clearer before you add a comment. A better name or a smaller function often makes the comment unnecessary.
 
-For example, in a tool that moves duplicate photos to the trash, this comment gives a reason that the code can't show: "The trash cannot hold files from a network drive, so this lists those copies and leaves them in place."
+For example, in an expense tracker, this comment gives a reason that the code can't show: "Amounts are whole cents, because a fraction such as 0.10 can't be stored exactly, and the errors add up in a total."
 
 ## Fail with a clear error
 
@@ -41,7 +41,7 @@ For example, in a tool that moves duplicate photos to the trash, this comment gi
 
 - Test what the code does through its public interface, not how it does it.
 - Pair every bug fix with a test that fails without the fix.
-- Name each test for the behavior and the condition, such as "leaves photos on a network drive in place".
+- Name each test for the behavior and the condition, such as "leaves an expense in a foreign currency out of the total".
 - Keep tests independent of the network, the clock and the order in which they run.
 - When the checks on pull requests take longer than the time limit under "Commands" in AGENTS.md, first make them faster without removing any test, such as by caching or by running tests in parallel. If they're still too slow, move only the slow tests that check the product as a whole, such as end-to-end tests, into a separate command, such as a script. Have CI run that command after each merge to main, and list it under "Commands", so that CI and people run the same tests.
 

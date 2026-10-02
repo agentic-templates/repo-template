@@ -22,17 +22,17 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
 1. Create a repository from the template, and clone it. A private repository needs a paid GitHub plan to protect main and to let pull requests merge on their own, as "Limits" explains.
 
    ```bash
-   gh repo create photo-sorter --public --template jtmpl/repo-template --clone
+   gh repo create expense-tracker --public --template jtmpl/repo-template --clone
    ```
 
 2. Apply the GitHub settings from inside the clone:
 
    ```bash
-   cd photo-sorter
+   cd expense-tracker
    scripts/configure-github
    ```
 
-3. Have your agent set up the project. Like every change, the setup goes through a pull request. You can ask, for example: "Set up this repository for photo-sorter, a command-line tool in Python that finds duplicate photos. Follow the setup list in README.md." If you already have text about the project, add it to your request or point the agent to it. The agent asks you about anything on the list below that your request doesn't settle, such as which languages, frameworks or database to use. The list:
+3. Have your agent set up the project. Like every change, the setup goes through a pull request. You can ask, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." If you already have text about the project, add it to your request or point the agent to it. The agent asks you about anything on the list below that your request doesn't settle, such as which languages, frameworks or database to use. The list:
 
    - In `AGENTS.md`, rewrite "What this project is" for the project: what it's for, and the direction that should guide its changes. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the version of each language, framework and database that the project uses, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install those versions and the packages.
@@ -49,7 +49,7 @@ You need the GitHub CLI 2.98 or later, signed in with `gh auth login`. The scrip
 
 These are examples of the requests you give your agent. Use your own words. You can start each one in a new conversation, because the agent finds the state of the work in the repository's files, issues and pull requests. `AGENTS.md` tells it what each request involves.
 
-1. "Plan the first version of photo-sorter: it finds duplicate photos in a folder and moves the extra copies to the trash." If you have notes, a spec or other text about the project, include it in this request or point the agent to it. Do this even if you gave it to an agent before, because an agent in a new conversation can't see earlier ones. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues, and correct them on GitHub or ask the agent to. Tell the agent which ones you approve, and it adds the `ready` label. That label lets agents build those issues and merge their pull requests without checking with you.
+1. "Plan the first version of expense-tracker: it adds an expense, lists the expenses and shows the total for each month." If you have notes, a spec or other text about the project, include it in this request or point the agent to it. Do this even if you gave it to an agent before, because an agent in a new conversation can't see earlier ones. The agent splits the work into issues, each small enough for one pull request. If issue #2 needs the change from #1 first, the agent marks #2 as blocked by #1. Read the issues, and correct them on GitHub or ask the agent to. Tell the agent which ones you approve, and it adds the `ready` label. That label lets agents build those issues and merge their pull requests without checking with you.
 2. "Build the ready issues." The agent works through them, lowest number first, and skips an issue until the changes it depends on have merged. For each issue, it opens a pull request that merges on its own once the checks pass, and it starts the next issue without waiting for those checks. It also merges Dependabot's patch and minor updates once their checks pass, and leaves major updates for you. If the agent can't finish an issue, it comments on the issue with what it needs from you. If it needs your decision, it also adds the `needs-decision` label. If the issue is too big for one pull request, it adds `needs-breakdown` instead. The agent closes the issue's pull request, if there is one, so that unfinished work can't merge. The work itself stays on the issue's branch. The agent goes on to build the issues that don't depend on that one. When it's done, it reports what merged and what's waiting for you. To answer its questions, ask your agent "Which issues need my decision?" and tell it your answers. It writes your answers into the issues, so your next "Build the ready issues" can continue those issues. You can read every merged pull request afterwards, because each one records what changed and why.
 3. "Publish a release." The agent checks that CI passed on main, and that neither code scanning nor Dependabot has an open alert of high or critical severity. It picks the next version number from the changes merged since the last release, following semantic versioning. The first release is v0.1.0. Then the agent publishes a GitHub release with notes built from the merged pull requests. Last, it lists any security advisories that aren't published yet. An advisory is GitHub's record of a security problem, which stays private until you publish it. "Fix security problems" below says what to do with one.
 

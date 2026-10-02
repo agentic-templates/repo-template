@@ -72,7 +72,7 @@ An issue from an account that isn't a maintainer's can never get `ready`, as "De
 
 ## Write a research issue
 
-A research issue answers a question that someone has to find out before anyone can plan or build, such as "Can this library read HEIC files?"
+A research issue answers a question that someone has to find out before anyone can plan or build, such as "Can this library read Excel files?"
 
 - Its body has three headings: "Question", "What depends on the answer" and "Done when". "Done when" asks for a comment with the answer, the evidence and a recommendation.
 - It has the `research` label. Each issue that depends on the answer is blocked by it.
