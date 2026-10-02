@@ -106,7 +106,7 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 
 A change is done when all of these are true:
 
-- It meets every item in the issue's "Done when" list, and it adds nothing the issue didn't ask for.
+- It meets every item in the issue's "Done when" list, and it adds nothing the issue didn't ask for, other than refactoring the code your change touches, as `docs/code.md` describes.
 - `scripts/check` passes on your machine and in CI.
 - New behavior in the code has tests, and a fix to the code has a test that fails without the fix.
 - The docs match the change: README, AGENTS.md, help text and comments.
