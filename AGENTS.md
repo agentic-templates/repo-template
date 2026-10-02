@@ -78,9 +78,9 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 
 - Make each commit a small working change that can be reviewed on its own.
 - Write the subject as `<type>: <what changed>` in plain words. Describe the change as a user or developer would notice it, not how it was built.
-  - Not `feat: switch dedupe to perceptual dHash with a Hamming threshold of 10`
-  - But `feat: group photos that were resized or saved in another format`
-  - For a change that only developers notice: `refactor: keep all photo comparison code in one module`
+  - Not `feat: dedupe imported rows with a SHA-256 of date, amount and description`
+  - But `feat: skip expenses that were already imported`
+  - For a change that only developers notice: `refactor: keep all import code in one module`
 - Use one of these types:
   - `feat`: new behavior
   - `fix`: a bug fix
