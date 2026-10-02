@@ -71,6 +71,72 @@ if git grep -n -w -I -e "$todo" -e "$fixme" -- ':!*.md' >&2; then
   exit 1
 fi
 
+# Instruction files stay small, as "Change these rules" in AGENTS.md describes.
+# The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
+max_lines=199
+max_bytes=24999
+max_bytes_on_one_path=31999
+advice='Move a procedure that only one kind of request needs into a guide of its own, as "Change these rules" in AGENTS.md describes.'
+too_big=""
+
+agents_files=()
+while IFS= read -r -d '' file; do
+  # -f skips the deleted files that git ls-files also lists.
+  if [[ -f $file ]]; then
+    agents_files+=("$file")
+  fi
+done < <(git ls-files -z -- AGENTS.md '*/AGENTS.md')
+
+instruction_files=()
+if ((${#agents_files[@]} > 0)); then
+  instruction_files=("${agents_files[@]}")
+fi
+if [[ -f AGENTS.md ]]; then
+  while IFS= read -r guide; do
+    if [[ -f $guide ]]; then
+      instruction_files+=("$guide")
+    fi
+  done < <(sed -n '/^## Read the guides$/,/^## /p' AGENTS.md | sed -n 's/.*](\(docs\/[^)#]*\)).*/\1/p' | sort -u)
+fi
+
+if ((${#instruction_files[@]} > 0)); then
+  for file in "${instruction_files[@]}"; do
+    lines=$(($(wc -l < "$file")))
+    bytes=$(($(wc -c < "$file")))
+    if ((lines > max_lines)); then
+      echo "error: $file has $lines lines, and the limit is $max_lines. $advice" >&2
+      too_big=yes
+    fi
+    if ((bytes > max_bytes)); then
+      echo "error: $file has $bytes bytes, and the limit is $max_bytes. $advice" >&2
+      too_big=yes
+    fi
+  done
+fi
+
+# Codex reads the AGENTS.md files from the root down to the folder it works in, up to a size limit for all of them together.
+if ((${#agents_files[@]} > 0)); then
+  for file in "${agents_files[@]}"; do
+    folder=$(dirname "$file")
+    bytes_on_path=0
+    files_on_path=0
+    for other in "${agents_files[@]}"; do
+      other_folder=$(dirname "$other")
+      if [[ $other_folder == . || $folder == "$other_folder" || $folder == "$other_folder"/* ]]; then
+        bytes_on_path=$((bytes_on_path + $(wc -c < "$other")))
+        files_on_path=$((files_on_path + 1))
+      fi
+    done
+    if ((files_on_path > 1 && bytes_on_path > max_bytes_on_one_path)); then
+      echo "error: the AGENTS.md files from the root down to $folder have $bytes_on_path bytes together, and the limit is $max_bytes_on_one_path. $advice" >&2
+      too_big=yes
+    fi
+  done
+fi
+if [[ -n "$too_big" ]]; then
+  exit 1
+fi
+
 # Add the project's formatter check, linter, type checker and tests here.
 
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
