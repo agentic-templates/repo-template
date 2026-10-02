@@ -39,8 +39,8 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 
 ## Fail with a clear error
 
-- Check input where it enters the program: command-line arguments, files and network traffic. Trust values that come from inside the program.
-- Catch an error only where you can recover from it or add useful context. Never hide an error.
+- Check input where it enters the program: command-line arguments, files, network traffic and, in a library, the arguments to its public functions. Trust values that come from inside the program.
+- Catch an error only where you can recover from it or add useful context. Never hide an error, such as by returning an empty list when the expense file can't be read.
 - Write error messages as [docs/writing.md](writing.md#write-error-messages) describes. Each one says what failed and what the person who sees it can do about it.
 
 ## Test behavior
