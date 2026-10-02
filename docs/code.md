@@ -57,6 +57,8 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 - Say in the pull request which tests you changed or deleted, and why.
 - Write code that works for every input, not only for the inputs in the tests. For example, don't return a fixed total when the amounts match the ones in a test.
 - When the checks on pull requests take longer than the time limit under "Commands" in AGENTS.md, first make them faster without removing any test, such as by caching or by running tests in parallel. If they're still too slow, move only the slow tests that check the product as a whole, such as end-to-end tests, into a separate command, such as a script. Have CI run that command after each merge to main, and list it under "Commands", so that CI and people run the same tests.
+- If the project's coverage check fails on a line that no test runs, write a test that runs the line. Mark the line as excluded from coverage only when no test can run it, such as code that runs only on another operating system, and say why in the marker.
+- List in the pull request each exclusion marker that it adds.
 
 ## Pin versions
 
