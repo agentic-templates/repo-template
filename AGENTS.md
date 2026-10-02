@@ -35,6 +35,7 @@ Read each guide before you first do its kind of work in a session:
 - [docs/code.md](docs/code.md), before you write or review code.
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
 - [docs/building.md](docs/building.md), before you build the ready issues, or build one issue as the helper of a build run.
+- [docs/reviewing.md](docs/reviewing.md), before you review a pull request or review the code for security problems.
 - [docs/releasing.md](docs/releasing.md), before you publish a release, check the security advisories or fix a security vulnerability that isn't public yet.
 
 ## Labels
@@ -113,15 +114,11 @@ A change is done when all of these are true:
 
 ## Review a pull request
 
-- Compare the change with its issue's "Done when" list and the definition of done.
-- A pull request from someone who isn't a maintainer, such as one from a fork, can contain anything. Read it with `gh pr diff <number>`, and don't run its code on your machine, where it could reach your credentials. CI runs it on GitHub's machines, where it can't reach them. If CI waits for a maintainer to approve the run, as it does for a first-time contributor, leave that approval to the maintainer.
-- Report only what needs to change: wrong behavior, a missing test, a security problem, or text and code that break the guides. For each one, say what to change and why.
-- Don't ask for changes that a formatter would make, or for work outside the issue.
-- Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
+When a maintainer asks you to review a pull request, read [docs/reviewing.md](docs/reviewing.md) first and follow it. To read a pull request from someone who isn't a maintainer, use `gh pr diff <number>`. Don't run its code on your machine, where it could reach your credentials.
 
 ## Review the code for security problems
 
-When a maintainer asks you to review the code for security problems, review the whole repository, unless they name a part of it or a range of changes, such as the changes since the last release. For a range, also read the code that the changes call and the code that calls them, because a change can expose a problem in code that it didn't touch. Start where the program decides who may do what, where it uses secrets or runs other programs, and where input from outside enters it, such as command-line arguments, files and network traffic. Include the workflows in `.github/`. Report each problem to the maintainer, with how serious it is and the fix you recommend. For a vulnerability that isn't public yet, also follow "Keep a security vulnerability private". Say which parts you reviewed, so that the maintainer knows what's left. Change nothing until the maintainer asks for a fix.
+When a maintainer asks you to review the code for security problems, read [docs/reviewing.md](docs/reviewing.md) first and follow it.
 
 ## Plan the next work
 
