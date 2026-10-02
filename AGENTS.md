@@ -22,7 +22,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 ## Commands
 
-- `scripts/check`: run it before you push. CI runs the same script and also checks the pull request title. On a public repository, CI also fails a pull request that adds a dependency with a known vulnerability.
+- `scripts/check`: run it before you push. CI runs the same script. CI also checks the pull request's title, and that the body says which issue the pull request closes. On a public repository, CI also fails a pull request that adds a dependency with a known vulnerability.
 - `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes or the repository becomes public.
 
 The checks on a pull request should finish within ten minutes, because every merge waits for them. Slower tests of the whole product run after each merge to main instead, as `docs/code.md` describes. The project has none yet. When it has some, list the command that runs them here.
@@ -99,7 +99,7 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject, because it becomes the commit subject on main. CI checks its format.
-- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it.
+- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. CI checks that the body has a line that closes an issue.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
 ## Definition of done
