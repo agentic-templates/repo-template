@@ -42,6 +42,12 @@ fi
 
 # Add the project's formatter check, linter, type checker and tests here.
 
+# scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
+# so that they don't start it again.
+if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
+  scripts/test-check
+fi
+
 if [[ -n "$skipped" ]]; then
   echo "The checks that ran passed. These were skipped, and CI runs them: $skipped."
 else

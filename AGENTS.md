@@ -16,6 +16,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `docs/code.md`: how to write code.
 - `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan the next work.
 - `scripts/check`: runs the checks that CI runs on the code.
+- `scripts/test-check`: tests `scripts/check` by running it on copies of the repository. `scripts/check` runs these tests after its other checks, and skips them when a test runs it, so that the two scripts don't call each other without end.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
 - `.claude/settings.json`: settings that stop Claude Code from adding attribution to commits and pull requests. They also stop its file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't mention the file by name, such as `grep -r`.

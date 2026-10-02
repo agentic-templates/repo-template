@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Tests scripts/check. Each case runs it on a copy of the repository. scripts/check runs this script.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+copy=""
+failed_cases=0
+case_count=0
+
+remove_copy() {
+  if [[ -n "$copy" ]]; then
+    rm -rf "$copy"
+  fi
+}
+trap remove_copy EXIT
+
+# Copies the tracked files, as they are on disk, into a new git repository at $copy.
+make_copy() {
+  remove_copy
+  copy=$(mktemp -d)
+  # -f skips the submodules and deleted files that git ls-files also lists.
+  git ls-files -z | while IFS= read -r -d '' file; do
+    if [[ -f $file ]]; then
+      mkdir -p "$copy/$(dirname "$file")"
+      cp -p "$file" "$copy/$file"
+    fi
+  done
+  git -C "$copy" init --quiet
+}
+
+# Runs one case: run_case <function> <pass or fail> [<text that the output must hold>]
+# The function gets a fresh copy at $copy, and adds the files that the case needs to it.
+# Use only checks that need no extra tool, so that a case gives the same result on every machine.
+run_case() {
+  local case_function=$1 expected=$2 expected_text=${3:-}
+  local output actual=pass
+  case_count=$((case_count + 1))
+  make_copy
+  "$case_function"
+  git -C "$copy" add --all
+  # CHECK_UNDER_TEST stops the copy's scripts/check from running this script again.
+  if ! output=$(cd "$copy" && CHECK_UNDER_TEST=1 scripts/check 2>&1); then
+    actual=fail
+  fi
+
+  if [[ $actual != "$expected" ]]; then
+    echo "error: in the case $case_function, scripts/check must $expected, but the result was: $actual. Its output:" >&2
+    printf '%s\n' "$output" >&2
+    failed_cases=$((failed_cases + 1))
+    return
+  fi
+  if [[ -n "$expected_text" && "$output" != *"$expected_text"* ]]; then
+    echo "error: in the case $case_function, the output of scripts/check must hold \"$expected_text\". Its output:" >&2
+    printf '%s\n' "$output" >&2
+    failed_cases=$((failed_cases + 1))
+  fi
+}
+
+repository_as_it_is() {
+  :
+}
+
+run_case repository_as_it_is pass
+
+# Add a case for each check in scripts/check here.
+
+if ((failed_cases > 0)); then
+  echo "error: $failed_cases of the $case_count cases in scripts/test-check failed. The errors above say which." >&2
+  exit 1
+fi
+echo "scripts/test-check passed. Cases: $case_count."
