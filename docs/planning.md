@@ -2,7 +2,7 @@
 
 This guide turns ideas into issues that an agent can build. An idea can come from any text that a maintainer shares or points to. The agent does the work in each step, and maintainers make the decisions.
 
-Two kinds of issue wait for a maintainer to triage them. One kind comes from someone who isn't a maintainer. The other kind is opened by an agent on its own, for a problem it noticed while working. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
+Two kinds of issue wait for a maintainer to triage them: issues from people who aren't maintainers, and issues an agent opens on its own for a problem it noticed. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
 
 ## How an idea becomes buildable
 
@@ -14,7 +14,7 @@ Two kinds of issue wait for a maintainer to triage them. One kind comes from som
 
 ## Triage new ideas
 
-Triage is for ideas: anything a maintainer wants judged before deciding whether to build it. A request to make a change isn't an idea. The agent makes that change without triage, as "Make a change" in AGENTS.md describes, unless the change is bigger than one pull request or needs a decision along the way.
+Triage is for ideas: anything a maintainer wants judged before deciding whether to build it. "Make a change" in AGENTS.md says which requests skip triage.
 
 Follow these steps for every idea, whatever form the input takes:
 
@@ -100,7 +100,7 @@ Planning takes the issues that a goal needs and gets each one ready to build. Pl
 1. Agree on the goal with the maintainer: what a user can do afterwards that they can't do now.
 2. Triage anything new, including open issues that need triage.
 3. Choose the backlog issues that the goal needs, and leave out the rest. Add the issues the goal still lacks, including research issues for what someone has to find out, and break down any big issue you chose.
-4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies, because a blocked issue waits until all its blockers are closed. Every blocker must be part of this plan, have the `ready` label already or be closed. A build run takes the lower-numbered issue first, but it can build several issues at once, so the numbers don't set the order. Only a link makes sure that one change comes before another.
+4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies, because a blocked issue waits until all its blockers are closed. Every blocker must be part of this plan, have the `ready` label already or be closed. A build run can build several issues at once, so only a link makes sure that one change comes before another.
 5. Make every issue meet the definition of ready. Then have a fresh reader check each one. Start a new agent without your conversation, let it read the code, and give it the issue with this prompt: "You're about to build this issue. You can read the code, but you know nothing else. List what you'd have to guess that could change what you build." Fix what it lists, and ask the maintainer about anything that's their decision.
 6. Ask the maintainer to review the issues.
 7. Add the `ready` label to each issue the maintainer approved, with `gh issue edit <issue> --add-label ready`.
