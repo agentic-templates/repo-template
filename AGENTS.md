@@ -171,7 +171,7 @@ When a maintainer asks you to publish a release:
 
    If the project attaches files to its releases, such as binaries, add `--draft` and attach the files before you publish the draft. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them.
 5. On a public repository, tell the maintainer about each security advisory or private report that isn't published or closed. If `gh repo view --json viewerPermission` shows `ADMIN`, `gh api "repos/{owner}/{repo}/security-advisories"` lists them with their state. Without admin access, that list leaves out the unpublished ones, so tell the maintainer that an admin needs to check the advisories on the repository's "Security and quality" tab.
-6. If step 5 found any advisories, then once users can install the release, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
+6. If step 5 found any advisories, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release. The release notes stay editable.
 
@@ -182,7 +182,12 @@ When a maintainer asks you to check the security advisories, check them against 
 1. List the advisories that aren't published or closed, as step 5 of "Publish a release" describes. Without admin access, you can't see them, so tell the maintainer that the check needs an admin's access.
 2. For each advisory on that list, check whether its problem is still in the release. If the advisory's private fork holds a fix, check whether the release includes that fix, and check the fix closely, because a fix can be incomplete.
 3. For each advisory on the list, tell the maintainer whether you're sure the release fixes it, and how you checked.
-4. Publish an advisory only when the maintainer asks you to. Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
+4. Publish an advisory only when the maintainer asks you to, and only once users can install the release that fixes it, because publishing shows attackers where the problem is:
+   - If users install from the GitHub release, they can install it as soon as it's published.
+   - If the project publishes a package or deploys, users can install the release once the workflow that does so has succeeded for it, which `gh run list` shows.
+   - If that workflow hasn't succeeded, or you can't tell whether users can install the release, such as when an app store makes it available later, tell the maintainer and don't publish the advisory.
+
+   Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
 5. Once an advisory is published, add a line to the release notes that links it.
 
 ## Keep the repository clean
