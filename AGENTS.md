@@ -12,7 +12,7 @@ Read each guide before you first do its kind of work in a session, even when the
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
 - [docs/building.md](docs/building.md), before you build the ready issues, or build one issue as the helper of a build run.
 - [docs/reviewing.md](docs/reviewing.md), before you review a pull request or review the code for security problems.
-- [docs/releasing.md](docs/releasing.md), before you publish a release, check the security advisories or fix a security vulnerability that isn't public yet.
+- [docs/releasing.md](docs/releasing.md), before you publish a release, check the security advisories, or record or fix a security vulnerability that isn't public yet.
 
 ## What this project is
 
@@ -25,17 +25,17 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `README.md`: what the project does, how to set it up, and an example.
 - `AGENTS.md`: these rules.
 - `scripts/check`: runs the checks that CI runs on the code.
-- `scripts/test-check`: tests `scripts/check` by running it on copies of the repository. `scripts/check` runs these tests after its other checks, and skips them when a test runs it, so that the two scripts don't call each other without end.
+- `scripts/test-check`: tests `scripts/check`. `scripts/check` runs these tests after its other checks.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: settings that stop Claude Code from adding attribution to commits and pull requests. They also stop its file tools and shell commands such as `cat` from reading `.env` files. A script can still read a `.env` file, and so can a command that doesn't mention the file by name, such as `grep -r`.
+- `.claude/settings.json`: stops Claude Code from adding attribution to commits and pull requests, and from reading `.env` files with its file tools or with commands that name the file.
 
 ## Commands
 
 - `scripts/check`: run it before you push. CI runs the same script. On a public repository, CI also fails a pull request that adds a dependency with a known vulnerability.
 - `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes or the repository becomes public.
 
-The checks on a pull request should finish within ten minutes, because every merge waits for them. Slower tests of the whole product run after each merge to main instead, as `docs/code.md` describes. The project has none yet. When it has some, list the command that runs them here.
+The checks on a pull request should finish within ten minutes, because every merge waits for them. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
 The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the maintainer before you run any `gh` command.
 
@@ -151,7 +151,7 @@ The repository holds the product and the rules for building it. Everything in it
 
 ## Keep a security vulnerability private
 
-If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. The fix still goes through an issue and a pull request, but they say only what the change does, not what the vulnerability is. Tell the maintainer about the vulnerability. On a public repository, also record it privately, where it stays until a maintainer publishes it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`. On a private repository, make the fix as "Make a change" describes. On a public repository, build the fix in private, and open its issue and pull request only when the maintainer asks for the release that includes it, as "Fix a security vulnerability on a public repository" in [docs/releasing.md](docs/releasing.md) describes.
+If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. The fix still goes through an issue and a pull request, but they say only what the change does, not what the vulnerability is. Tell the maintainer about the vulnerability. On a public repository, also record it privately, where it stays until a maintainer publishes it, as "Record a vulnerability privately" in [docs/releasing.md](docs/releasing.md) describes. On a private repository, make the fix as "Make a change" describes. On a public repository, build the fix in private, and open its issue and pull request only when the maintainer asks for the release that includes it, as "Fix a security vulnerability on a public repository" in [docs/releasing.md](docs/releasing.md) describes.
 
 ## Change these rules
 
