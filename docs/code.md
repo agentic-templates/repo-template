@@ -42,9 +42,16 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 ## Test behavior
 
 - Test what the code does through its public interface, not how it does it.
-- Pair every bug fix with a test that fails without the fix.
+- In every test, check the result against what the requirement says: a fixed expected value, or a rule that must hold for every input, such as "reading a saved expense back gives the same expense". Don't take the expected value from the code's own output, and don't compute it the way the code does, because then the test repeats the code instead of checking it. The tests may still compare optimized code with a plain version of it, because the plain version computes the result another way.
+- Test the edges of each requirement as well as a typical case: empty input, and the values on both sides of each limit, such as files of 50,000 and 50,001 rows.
+- Pair every bug fix with a test that fails without the fix. Write the test first, and run it to see it fail. Then fix the bug, and run the test again to see it pass.
 - Name each test for the behavior and the condition, such as "leaves an expense in a foreign currency out of the total".
-- Keep tests independent of the network, the clock and the order in which they run.
+- Keep tests independent of anything that can differ from one run to the next, such as the network, the clock, random numbers and the order in which the tests run. Give the code fixed values or stand-ins for those only, and never a stand-in for the project's own code.
+- Never weaken a test. You weaken a test when you change it so that it passes for code that made it fail before, while the requirement it checks stays the same. Skipping or deleting a test weakens it too. Delete a test only when your issue removes its requirement.
+- When your issue changes a requirement, change the tests for it before you change the code. Take the new expected results from the issue, and run the tests to see them fail. Then change the code until they pass. If a test for any other requirement fails, fix the code, not the test.
+- If you think a test is wrong, leave it as it is and open an issue for it. If your change can't pass until that issue is fixed, mark your issue as blocked by it, as step 4 of "Make a change" in AGENTS.md describes.
+- Say in the pull request which tests you changed or deleted, and why.
+- Write code that works for every input, not only for the inputs in the tests. For example, don't return a fixed total when the amounts match the ones in a test.
 - When the checks on pull requests take longer than the time limit under "Commands" in AGENTS.md, first make them faster without removing any test, such as by caching or by running tests in parallel. If they're still too slow, move only the slow tests that check the product as a whole, such as end-to-end tests, into a separate command, such as a script. Have CI run that command after each merge to main, and list it under "Commands", so that CI and people run the same tests.
 
 ## Pin versions
