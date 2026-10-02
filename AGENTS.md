@@ -12,11 +12,6 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 - `README.md`: what the project does, how to set it up, and an example.
 - `AGENTS.md`: these rules.
-- `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
-- `docs/code.md`: how to write code.
-- `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan the next work.
-- `docs/building.md`: how to build the ready issues, alone or with helpers.
-- `docs/releasing.md`: how to publish a release, check the security advisories and fix a security vulnerability that isn't public yet.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/test-check`: tests `scripts/check` by running it on copies of the repository. `scripts/check` runs these tests after its other checks, and skips them when a test runs it, so that the two scripts don't call each other without end.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
@@ -25,7 +20,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 ## Commands
 
-- `scripts/check`: run it before you push. CI runs the same script. CI also checks the pull request's title, and that the body says which issue the pull request closes. On a public repository, CI also fails a pull request that adds a dependency with a known vulnerability.
+- `scripts/check`: run it before you push. CI runs the same script. On a public repository, CI also fails a pull request that adds a dependency with a known vulnerability.
 - `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes or the repository becomes public.
 
 The checks on a pull request should finish within ten minutes, because every merge waits for them. Slower tests of the whole product run after each merge to main instead, as `docs/code.md` describes. The project has none yet. When it has some, list the command that runs them here.

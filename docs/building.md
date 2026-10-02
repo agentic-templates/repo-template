@@ -1,10 +1,10 @@
 # Building guide
 
-This guide holds the steps for building the ready issues. Read it when a maintainer asks you to build the ready issues, and when a build run gives you one issue as its helper.
+This guide holds the steps for building the ready issues.
 
 ## Build the ready issues
 
-When a maintainer asks you to build the ready issues, work through them without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. Don't wait for the checks: turn on auto-merge, and GitHub merges the pull request once they pass while you take the next issue. A maintainer starts a build run only when no other build run is going on the repository, so you don't need to check for another one. If an issue would make you break one of the rules in AGENTS.md, give it back, as step 5 below describes.
+When a maintainer asks you to build the ready issues, work through them without stopping to ask. The request also allows you to merge each pull request once the change is done and its checks pass. Don't wait for the checks: turn on auto-merge, and GitHub merges the pull request once they pass while you take the next issue. A maintainer starts a build run only when no other build run is going on the repository, so you don't need to check for another one.
 
 If the maintainer asks for helpers, such as "with up to 3 helpers", and you can start agents that each work in their own clone or worktree, build several issues at once. Take and assign each issue as step 4 below describes, then give it to a helper, up to the number the maintainer asked for. Put "read `docs/building.md` first" in each helper's instructions, because a helper starts in a new session, which loads AGENTS.md but no guide. A helper uses the same model and effort as you. If the maintainer names another model, or an agent that the maintainer set up for helpers, the helper uses that instead. The helper follows the rest of step 4 below for that one issue, and step 5 below if it can't finish it. It tells you its pull request's number or why it stopped, and any problems it noticed outside its issue. If a helper fails without saying why, remove the assignment from its issue, so that another helper can try it. If that helper fails too, also add `needs-decision`, and comment on the issue that two helpers failed. You do the other steps below yourself, including step 2 for the helpers' pull requests.
 
