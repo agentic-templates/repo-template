@@ -50,15 +50,11 @@ Every accepted issue has exactly one type label. Choose it by what changes for u
 
 A status label says what an issue is waiting for, so an issue that's ready to build has no status label. The status labels are:
 
-- `needs-triage`: no maintainer has accepted or rejected it yet. The issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning.
-- `needs-breakdown`: accepted, but too big for one pull request. Planning splits it into sub-issues, as `docs/planning.md` describes.
-- `needs-decision`: waiting for a maintainer to answer a question or make a decision. When you add it, write the question in the issue. When the maintainer decides, write the decision into the issue's body, because the agent that builds it reads the body. Then remove the label.
+- `needs-triage`: no maintainer has accepted or rejected it yet.
+- `needs-breakdown`: accepted, but too big for one pull request.
+- `needs-decision`: waiting for a maintainer to answer a question or make a decision.
 
-The `ready` label marks the issues that a maintainer wants built. An agent adds it once an issue meets the definition of ready in `docs/planning.md` and a maintainer has approved the issue. On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work. An accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it.
-
-Triage is a maintainer's decision, and an agent carries out what the maintainer decides, as `docs/planning.md` describes.
-
-A workflow gives each pull request the type label that matches its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Release notes group pull requests by these labels. Dependabot's pull requests get `dependencies` instead. On a pull request from a fork, GitHub gives the workflow a read-only token, which lets it read the repository but not change anything in it. So add the label by hand before you merge the pull request.
+The `ready` label marks the issues that a maintainer wants built, and isn't a status label.
 
 ## Make a change
 
@@ -100,6 +96,7 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject, because it becomes the commit subject on main. CI checks its format.
 - The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. CI checks that the body has a line that closes an issue.
+- A workflow labels each pull request from its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Dependabot's pull requests get `dependencies`. On a pull request from a fork, add the label by hand before you merge it.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
 ## Definition of done
