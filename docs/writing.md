@@ -73,7 +73,6 @@ An error message says what failed and what the reader can do about it. When a li
 ## Write issues, pull requests and commit messages
 
 - Write for a reader who hasn't seen your conversation, notes or session. Don't refer to any of them.
-- An issue says what should change and why. It lists how to tell that the change is done.
 - A pull request is the lasting record of a change. Write it for a developer who joins the project later, not only for today's reviewer. Say what changed and why. Don't list the changed files, because the diff shows them.
 - Say how you checked the change: the checks you ran and what they showed. That includes the review described under "Review a changed page with a fresh reader". Name any check from AGENTS.md that you skipped, and say why.
 - A commit message follows the rules in [AGENTS.md](../AGENTS.md#commits).

@@ -1,8 +1,6 @@
 # Planning guide
 
-This guide turns ideas into issues that an agent can build. An idea can come from any text that a maintainer shares or points to. The agent does the work in each step, and maintainers make the decisions.
-
-Two kinds of issue wait for a maintainer to triage them: issues from people who aren't maintainers, and issues an agent opens on its own for a problem it noticed. Every other issue comes from a decision a maintainer made, and no issue gets the `ready` label until a maintainer approves it.
+This guide turns ideas into issues that an agent can build. The agent does the work in each step, and maintainers make the decisions.
 
 ## How an idea becomes buildable
 
