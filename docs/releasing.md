@@ -1,6 +1,6 @@
 # Release guide
 
-This guide holds the steps for three kinds of work: publishing a release, checking the security advisories, and fixing a security vulnerability that isn't public yet. [AGENTS.md](../AGENTS.md) says when each one applies.
+This guide holds the steps for publishing a release, checking the security advisories, and recording and fixing a security vulnerability that isn't public yet. [AGENTS.md](../AGENTS.md) says when each one applies.
 
 ## Publish a release
 
@@ -35,9 +35,13 @@ When a maintainer asks you to check the security advisories, check them against 
    Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
 5. Once an advisory is published, add a line to the release notes that links it.
 
+## Record a vulnerability privately
+
+On a public repository, record a vulnerability that isn't public yet as soon as you find it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`.
+
 ## Fix a security vulnerability on a public repository
 
-"Keep a security vulnerability private" in AGENTS.md says how to record a vulnerability that isn't public yet, and what its issue and pull request may say. On a public repository, fix it this way:
+"Record a vulnerability privately" above says how to record a vulnerability that isn't public yet, and "Keep a security vulnerability private" in AGENTS.md says what the fix's issue and pull request may say. On a public repository, fix it this way:
 
 1. Build the fix in the advisory's temporary private fork, which an admin can create with `gh api --method POST repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks`.
 2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
