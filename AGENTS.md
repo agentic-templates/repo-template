@@ -15,6 +15,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
 - `docs/code.md`: how to write code.
 - `docs/planning.md`: how to turn ideas into issues that are ready to build, and how to plan the next work.
+- `docs/releasing.md`: how to publish a release, check the security advisories and fix a security vulnerability that isn't public yet.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/test-check`: tests `scripts/check` by running it on copies of the repository. `scripts/check` runs these tests after its other checks, and skips them when a test runs it, so that the two scripts don't call each other without end.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
@@ -37,6 +38,7 @@ Read each guide before you first do its kind of work in a session:
 - [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
 - [docs/code.md](docs/code.md), before you write or review code.
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
+- [docs/releasing.md](docs/releasing.md), before you publish a release, check the security advisories or fix a security vulnerability that isn't public yet.
 
 ## Labels
 
@@ -162,34 +164,11 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
 
 ## Publish a release
 
-When a maintainer asks you to publish a release:
-
-1. On a private repository, skip this step. On a public repository, find out whether a fix that isn't released yet is waiting in a security advisory's private fork. Run `gh repo view --json viewerPermission`. If it doesn't show `ADMIN`, GitHub hides the advisories that aren't published from you, so ask the maintainer whether a fix is waiting. If it shows `ADMIN`, `gh api "repos/{owner}/{repo}/security-advisories"` lists the security advisories and private reports with their state. Take the ones that aren't published or closed. In each of them, `private_fork` holds the advisory's private fork, or `null` if the advisory has none. Check whether each private fork has a branch with commits that main doesn't have. If a fix is waiting, ask the maintainer whether this release should include it. If so, merge it first, as steps 2 and 3 in "Keep a security vulnerability private" describe. Once it's merged, go on to step 2 below, so that the SHA you release includes the fix.
-2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs, because they look for new versions and don't test the code. If one failed, stop and tell the maintainer. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which `gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists. Do the same if Dependabot has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"` lists. Keep using that SHA even if more pull requests merge while you wait.
-3. Choose the version. `gh release list --exclude-drafts --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, tell the maintainer, because the release notes leave out Dependabot's updates and would be empty. If a title has `!` before its colon, raise the major version, or the minor version while the project's version is below 1.0. If no title has `!`, raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
-4. Publish the release with notes built from the merged pull requests:
-   `gh release create <version> --target <sha> --generate-notes`
-
-   If the project attaches files to its releases, such as binaries, add `--draft`, so that the release gets its files before it's published. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them. Once the workflow has finished, publish the draft.
-5. On a public repository, tell the maintainer about each security advisory or private report that isn't published or closed. They're the ones you took from the list in step 1. Without admin access, you have no such list, so tell the maintainer that an admin needs to check the advisories on the repository's "Security and quality" tab.
-6. If you told the maintainer about any advisories in step 5, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
-
-The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release. The release notes stay editable.
+When a maintainer asks you to publish a release, follow the steps in [docs/releasing.md](docs/releasing.md). The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release.
 
 ## Check the security advisories
 
-When a maintainer asks you to check the security advisories, check them against the latest release:
-
-1. List the advisories that aren't published or closed, as step 1 of "Publish a release" describes. Without admin access, you can't see them, so tell the maintainer that the check needs an admin's access.
-2. For each advisory on that list, check whether its problem is still in the release. If the advisory's private fork holds a fix, check whether the release includes that fix, and check the fix closely, because a fix can be incomplete.
-3. For each advisory on the list, tell the maintainer whether you're sure the release fixes it, and how you checked.
-4. Publish an advisory only when the maintainer asks you to, and only once users can install the release that fixes it, because publishing shows attackers where the problem is:
-   - If users install from the GitHub release, they can install it as soon as it's published.
-   - If the project publishes a package or deploys, users can install the release once the workflow that does so has succeeded for it, which `gh run list` shows.
-   - If that workflow hasn't succeeded, or you can't tell whether users can install the release, such as when an app store makes it available later, tell the maintainer and don't publish the advisory.
-
-   Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name, because GitHub alerts the projects that use a package only when the advisory names it.
-5. Once an advisory is published, add a line to the release notes that links it.
+When a maintainer asks you to check the security advisories, follow the steps in [docs/releasing.md](docs/releasing.md). Publish an advisory only when the maintainer asks you to.
 
 ## Keep the repository clean
 
@@ -202,15 +181,11 @@ The repository holds the product and the rules for building it. Everything in it
 
 ## Keep a security vulnerability private
 
-If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer about it instead. On a public repository, also record it privately, where it stays until a maintainer publishes it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`. The fix still goes through an issue and a pull request. They say what the change does, and leave out the vulnerability and how to exploit it. On a private repository, make the fix as "Make a change" describes. On a public repository, fix it this way:
-
-1. Build the fix in the advisory's temporary private fork, which an admin can create with `gh api --method POST repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks`.
-2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
-3. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it.
-4. Publish the release in the same session.
+If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer about it instead. On a public repository, also record it privately, where it stays until a maintainer publishes it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`. The fix still goes through an issue and a pull request. They say what the change does, and leave out the vulnerability and how to exploit it. On a private repository, make the fix as "Make a change" describes. On a public repository, fix it as "Fix a security vulnerability on a public repository" in [docs/releasing.md](docs/releasing.md) describes.
 
 ## Change these rules
 
-- Inside the repository, instructions for agents live in AGENTS.md files and the three guides in `docs/`. Put a writing, code or planning rule in the matching guide, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`. Some tools read such a file instead of AGENTS.md, so one file can switch off these rules for that tool. `scripts/check` fails on the file names it knows.
+- Inside the repository, instructions for agents live in AGENTS.md files and the guides in `docs/`. Put a rule in the guide that matches its subject, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`. Some tools read such a file instead of AGENTS.md, so one file can switch off these rules for that tool. `scripts/check` fails on the file names it knows.
 - Don't create a `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the maintainer. None of this applies to `~/.claude/CLAUDE.md`, which holds personal instructions, because Claude Code reads it alongside AGENTS.md.
 - Add a rule only when a maintainer asks for one. Before you add it, say whether a check, a setting or a change to an existing rule would prevent the mistake instead. Keep a rule that explains what a check expects, so that nobody has to fail the check to learn what it wants. Remove a rule once it no longer applies.
+- Keep each AGENTS.md and each guide in `docs/` under 200 lines and 25 KB. Keep the AGENTS.md files on the path from the repository's root down to any one folder under 32 KB together, because Codex stops reading them past that size. When a file grows past a limit, move a procedure that only one kind of request needs into a guide of its own.

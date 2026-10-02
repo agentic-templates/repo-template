@@ -116,6 +116,58 @@ run_case todo_in_a_shell_script fail "error: the lines above hold $todo or $fixm
 run_case fixme_in_a_text_file fail "notes.txt:1:$fixme the rounding"
 run_case other_words_and_markdown pass
 
+# Cases for the check that limits the size of instruction files.
+
+# Writes a file: write_lines <file> <lines> <bytes in each line, with its line ending>
+write_lines() {
+  local file=$1 lines=$2 bytes=$3 line
+  line=$(printf '%*s' $((bytes - 1)) '' | tr ' ' x)
+  mkdir -p "$(dirname "$file")"
+  for ((written = 0; written < lines; written++)); do
+    printf '%s\n' "$line"
+  done > "$file"
+}
+
+agents_md_of_200_lines() {
+  write_lines "$copy/src/AGENTS.md" 200 10
+}
+
+agents_md_of_199_lines() {
+  write_lines "$copy/src/AGENTS.md" 199 10
+}
+
+guide_of_25000_bytes() {
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
+guide_of_24999_bytes() {
+  write_lines "$copy/docs/writing.md" 99 250
+  printf '%s\n' "$(printf '%248s' '' | tr ' ' x)" >> "$copy/docs/writing.md"
+}
+
+long_page_that_is_no_guide() {
+  write_lines "$copy/docs/notes.md" 300 100
+}
+
+agents_md_files_of_32000_bytes_on_one_path() {
+  write_lines "$copy/AGENTS.md" 100 200
+  write_lines "$copy/src/api/AGENTS.md" 100 120
+}
+
+agents_md_files_of_32000_bytes_on_two_paths() {
+  write_lines "$copy/AGENTS.md" 100 200
+  write_lines "$copy/src/AGENTS.md" 100 60
+  write_lines "$copy/lib/AGENTS.md" 100 60
+}
+
+run_case agents_md_of_200_lines fail "error: src/AGENTS.md has 200 lines, and the limit is 199."
+run_case agents_md_of_199_lines pass
+run_case guide_of_25000_bytes fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
+run_case guide_of_24999_bytes pass
+run_case long_page_that_is_no_guide pass
+run_case agents_md_files_of_32000_bytes_on_one_path fail "error: the AGENTS.md files from the root down to src/api have 32000 bytes together, and the limit is 31999."
+run_case agents_md_files_of_32000_bytes_on_two_paths pass
+
 # Add a case for each check in scripts/check here.
 
 if ((failed_cases > 0)); then
