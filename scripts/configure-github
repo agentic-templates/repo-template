@@ -2,7 +2,7 @@
 # Applies this repository's settings on GitHub. GitHub doesn't copy settings
 # from a template, so run this once after you create a repository from it.
 # Running it again is safe. It resets every setting below, and deletes any label it doesn't list.
-# On a private repository it skips three security settings, so run it again after you make the repository public.
+# On a private repository it skips three security settings and the release environment, so run it again after you make the repository public.
 set -euo pipefail
 
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
@@ -82,6 +82,33 @@ done <<<"$current"
 
 echo "Releases: a published release can't be changed"
 gh api --method PUT "repos/$repo/immutable-releases" --silent
+
+# A job that publishes a package or deploys the project runs in this environment, as docs/code.md describes.
+# Its secrets reach only jobs that a release tag starts. An agent publishes releases under the maintainer's
+# account, so "Prevent self-reviews" stays off, or the maintainer couldn't approve the run.
+# On a private repository, the approval rule needs GitHub Enterprise, so the script skips the environment there.
+if [[ "$visibility" == "public" ]]; then
+  echo "Release environment: only release tags can use it, and each run waits for approval"
+  # Keep the reviewers that are already there, and add whoever runs this script. GitHub allows 6.
+  me=$(gh api user --jq .id)
+  reviewers=$(gh api "repos/$repo/environments?per_page=100" --jq "[.environments[] | select(.name == \"release\")
+    | .protection_rules[] | select(.type == \"required_reviewers\") | .reviewers[] | {type, id: .reviewer.id}]
+    | if any(.[]; .type == \"User\" and .id == $me) or length >= 6 then . else . + [{type: \"User\", id: $me}] end")
+  gh api --method PUT "repos/$repo/environments/release" --silent --input - <<JSON
+{
+  "prevent_self_review": false,
+  "reviewers": $reviewers,
+  "deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}
+}
+JSON
+  if [[ -z "$(gh api "repos/$repo/environments/release/deployment-branch-policies" \
+    --jq '.branch_policies[] | select(.name == "v*" and .type == "tag") | .id')" ]]; then
+    gh api --method POST "repos/$repo/environments/release/deployment-branch-policies" --silent \
+      -f name='v*' -f type=tag
+  fi
+else
+  echo "Release environment: $repo is $visibility, so the script doesn't create it. Run this script again after you make the repository public."
+fi
 
 echo "Actions: read-only token, every action pinned to a commit SHA"
 gh api --method PUT "repos/$repo/actions/permissions/workflow" --silent \
