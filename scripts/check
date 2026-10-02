@@ -40,7 +40,7 @@ if has zizmor https://docs.zizmor.sh/installation/; then
   zizmor .
 fi
 
-# Add the project's formatter check, linter and tests here.
+# Add the project's formatter check, linter, type checker and tests here.
 
 if [[ -n "$skipped" ]]; then
   echo "The checks that ran passed. These were skipped, and CI runs them: $skipped."
