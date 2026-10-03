@@ -54,7 +54,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 1. **"Plan the first version of expense-tracker: it adds an expense, lists the expenses and shows the total for each month."**
 
-   Add any notes or spec you have, because the agent can't see what you told it in earlier conversations. It splits the work into issues that each fit in one pull request, and marks each issue as blocked by the ones it needs first. Correct the issues on GitHub or ask the agent to, then tell it which ones you approve. It adds the `ready` label to them, so that agents can build and merge them without asking you.
+   Add your notes or spec, even if you gave them for the setup, because the agent can't see what you told it in earlier conversations. It splits the work into issues that each fit in one pull request, and marks each issue as blocked by the ones it needs first. Correct the issues on GitHub or ask the agent to, then tell it which ones you approve. It adds the `ready` label to them, so that agents can build and merge them without asking you.
 
 2. **"Build the ready issues."**
 
