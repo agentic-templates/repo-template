@@ -8,6 +8,7 @@ Read each guide before you first do its kind of work in a session, even when the
 
 - [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
 - [docs/pages.md](docs/pages.md), before you write or change the README, AGENTS.md or a page in `docs/`.
+- [docs/rules.md](docs/rules.md), before you change AGENTS.md, a guide or the labels.
 - [docs/code.md](docs/code.md), before you write or review code.
 - [docs/dependencies.md](docs/dependencies.md), before you add or update a tool, a package or a GitHub Action.
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
@@ -42,7 +43,7 @@ The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` bef
 
 ## Labels
 
-Use only the labels that this section names. To add, rename or remove one, change this section, `scripts/configure-github` and every other file that names the label, in the same pull request.
+Use only the labels that this section names.
 
 Every accepted issue has exactly one type label. Choose it by what changes for users:
 
@@ -146,14 +147,8 @@ The repository holds the product and the rules for building it. Everything in it
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
 - Never read, print or commit secrets. Keep them in `.env`, which git ignores, and list each variable in `.env.example` with a placeholder value.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commit messages, issues and pull requests.
+- Don't create a `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the maintainer. None of this applies to `~/.claude/CLAUDE.md`, which holds personal instructions, because Claude Code reads it alongside AGENTS.md.
 
 ## Keep a security vulnerability private
 
 If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. The fix still goes through an issue and a pull request, but they say only what the change does, not what the vulnerability is. Tell the maintainer about the vulnerability. On a public repository, also record it privately, where it stays until a maintainer publishes it, as "Record a vulnerability privately" in [docs/releasing.md](docs/releasing.md) describes. On a private repository, make the fix as "Make a change" describes. On a public repository, build the fix in private, and open its issue and pull request only when the maintainer asks for the release that includes it, as "Fix a security vulnerability on a public repository" in [docs/releasing.md](docs/releasing.md) describes.
-
-## Change these rules
-
-- Inside the repository, instructions for agents live in AGENTS.md files and the guides in `docs/`. Put a rule in the guide that matches its subject, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`. Some tools read such a file instead of AGENTS.md, so one file can switch off these rules for that tool. `scripts/check` fails on the file names it knows.
-- Don't create a `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the maintainer. None of this applies to `~/.claude/CLAUDE.md`, which holds personal instructions, because Claude Code reads it alongside AGENTS.md.
-- Add a rule only when a maintainer asks for one. Before you add it, say whether a check, a setting or a change to an existing rule would prevent the mistake instead. Keep a rule that explains what a check expects, so that nobody has to fail the check to learn what it wants. Remove a rule once it no longer applies.
-- Keep each AGENTS.md and each guide in `docs/` under 200 lines and 25 KB. Keep the AGENTS.md files on the path from the repository's root down to any one folder under 32 KB together, because Codex stops reading them past that size. When a file grows past a limit, move a procedure that only one kind of request needs into a guide of its own.

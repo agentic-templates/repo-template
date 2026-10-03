@@ -9,6 +9,7 @@ The template works with any language. Agents get their instructions from `AGENTS
 - `AGENTS.md`: the rules for agents and people. They say how to make a change, plan the work, build it and publish a release.
 - `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
 - `docs/pages.md`: how to organize a page, write a README and review a changed page with a fresh reader.
+- `docs/rules.md`: how to change AGENTS.md, the guides and the labels.
 - `docs/code.md`: how to write code in any language, covering design and tests.
 - `docs/dependencies.md`: how to choose, pin and update tools, packages and GitHub Actions.
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, and how you decide which ones get built. The ideas can come from any text you share or point the agent to.
