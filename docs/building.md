@@ -1,6 +1,6 @@
 # Building guide
 
-This guide holds the steps for building the ready issues.
+This guide holds the steps for building the ready issues, and for working on a ready issue outside a build run.
 
 ## Build the ready issues
 
@@ -30,3 +30,7 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
    - the Dependabot pull requests you didn't merge
    - whether the latest CI run on main passed, failed or is still running
    - anything a maintainer needs to run, such as `scripts/configure-github`
+
+## Work on a ready issue outside a build run
+
+When a maintainer asks you to work on an issue that has `ready` while you aren't building the ready issues, remove `ready`, so that no build run takes it. If the issue is assigned, a build run may have taken it before you removed the label. That build run drops the issue if the label is gone, as step 4 of "Build the ready issues" describes. So add `ready` back, and ask the maintainer whether a build run is still going. If one is, leave the issue to that build run. If not, remove `ready` again and start. If you stop before its pull request merges, tell the maintainer that it no longer has `ready`.
