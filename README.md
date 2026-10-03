@@ -119,7 +119,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
-- If your project is a library, the setup in step 3 of "Start a project" can add a check that finds breaking changes. In any other project, nothing checks for them, and an agent marks a pull request as a breaking change only when it notices the break. So a release can miss a breaking change and raise the version number too little.
+- If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them, and an agent marks a pull request as a breaking change only when it notices the break. So a release can miss a breaking change and raise the version number too little.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. To build faster, ask that agent for helpers. Helpers need an agent that can launch other agents.
 
 ## What you get
