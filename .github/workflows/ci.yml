@@ -33,34 +33,11 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
 
-      # To update a tool, change its version and its checksum. GitHub lists the
-      # SHA-256 checksum of every file on the tool's release page.
+      # scripts/install-check-tools holds each tool's version and checksum.
       - name: Install shellcheck, actionlint and zizmor
-        env:
-          SHELLCHECK_VERSION: 0.11.0
-          SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
-          ACTIONLINT_VERSION: 1.7.12
-          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-          ZIZMOR_VERSION: 1.30.1
-          ZIZMOR_SHA256: e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a
         run: |
-          bin="$RUNNER_TEMP/bin"
-          mkdir -p "$bin"
-          cd "$RUNNER_TEMP"
-
-          curl -fsSLo shellcheck.tar.xz "https://github.com/koalaman/shellcheck/releases/download/v$SHELLCHECK_VERSION/shellcheck-v$SHELLCHECK_VERSION.linux.x86_64.tar.xz"
-          echo "$SHELLCHECK_SHA256  shellcheck.tar.xz" | sha256sum --check
-          tar -xJf shellcheck.tar.xz -C "$bin" --strip-components=1 "shellcheck-v$SHELLCHECK_VERSION/shellcheck"
-
-          curl -fsSLo actionlint.tar.gz "https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          echo "$ACTIONLINT_SHA256  actionlint.tar.gz" | sha256sum --check
-          tar -xzf actionlint.tar.gz -C "$bin" actionlint
-
-          curl -fsSLo zizmor.tar.gz "https://github.com/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-unknown-linux-gnu.tar.gz"
-          echo "$ZIZMOR_SHA256  zizmor.tar.gz" | sha256sum --check
-          tar -xzf zizmor.tar.gz -C "$bin" zizmor
-
-          echo "$bin" >> "$GITHUB_PATH"
+          scripts/install-check-tools "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       # Install the project's toolchain here, from its pinned version file.
 
