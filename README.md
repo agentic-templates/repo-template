@@ -58,7 +58,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 2. **"Build the ready issues."**
 
-   The agent builds them lowest number first, and leaves an issue for later until the issues that block it are closed. Each pull request merges once its checks pass. The agent starts the next issue without waiting for the merge. The agent also merges Dependabot's updates once their checks pass. It leaves failing Dependabot updates open for you.
+   The agent builds them lowest number first, and leaves an issue for later until the issues that block it are closed. Each pull request merges once its checks pass. The agent also merges Dependabot's updates once their checks pass. It leaves failing Dependabot updates open for you.
 
    If the agent can't finish an issue, it closes the issue's pull request, so that unfinished work can't merge. The work stays on the issue's branch. The agent comments on the issue with what it needs, and labels it `needs-decision`. An issue that's too big for one pull request gets `needs-breakdown` instead.
 
