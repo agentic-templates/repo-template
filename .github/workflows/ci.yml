@@ -39,6 +39,10 @@ jobs:
           scripts/install-check-tools "$RUNNER_TEMP/bin"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
+      - name: Show what the install left in the folder
+        if: failure()
+        run: ls -la "$RUNNER_TEMP/bin" || echo "The folder $RUNNER_TEMP/bin doesn't exist."
+
       # Install the project's toolchain here, from its pinned version file.
 
       # zizmor uses the job's read-only token to check the actions in the workflows against GitHub's advisories.
