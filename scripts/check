@@ -40,7 +40,7 @@ if has zizmor https://docs.zizmor.sh/installation/; then
   zizmor .
 fi
 
-# Some tools read one of these files instead of AGENTS.md, as "Change these rules" in AGENTS.md describes.
+# Some tools read one of these files instead of AGENTS.md, as docs/rules.md describes.
 # The first group can be in any folder, and the second only in the repository's root.
 # The names match in any case, because some file systems ignore case.
 in_any_folder='(.*/)?(CLAUDE\.md|CLAUDE\.local\.md|AGENTS\.override\.md)'
@@ -52,7 +52,7 @@ shopt -s nocasematch
 # -e and -L skip the deleted files that it also lists.
 while IFS= read -r -d '' file; do
   if [[ $file =~ $instruction_file && (-e $file || -L $file) ]]; then
-    echo "error: $file makes a tool skip AGENTS.md. Move its rules into AGENTS.md or a guide in docs/, and delete the file, as \"Change these rules\" in AGENTS.md describes." >&2
+    echo "error: $file makes a tool skip AGENTS.md. Move its rules into AGENTS.md or a guide in docs/, and delete the file." >&2
     found_instruction_file=yes
   fi
 done < <(git ls-files -z --cached --others --exclude-standard)
@@ -71,12 +71,12 @@ if git grep -n -w -I -e "$todo" -e "$fixme" -- ':!*.md' >&2; then
   exit 1
 fi
 
-# Instruction files stay small, as "Change these rules" in AGENTS.md describes.
+# Instruction files stay small, as docs/rules.md describes.
 # The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
 max_lines=199
 max_bytes=24999
 max_bytes_on_one_path=31999
-advice='Move a procedure that only one kind of request needs into a guide of its own, as "Change these rules" in AGENTS.md describes.'
+advice='Move a procedure that only one kind of request needs into a guide of its own, as docs/rules.md describes.'
 too_big=""
 
 agents_files=()
