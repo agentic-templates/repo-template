@@ -10,7 +10,7 @@ shellcheck_sha256=8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e2271
 actionlint_version=1.7.12
 actionlint_sha256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
 zizmor_version=1.30.1
-zizmor_sha256=f65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a
+zizmor_sha256=e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a
 
 if (($# != 1)); then
   echo "error: scripts/install-check-tools takes one argument, the folder to install the tools into, and it got $#. For example: scripts/install-check-tools \"\$HOME/.local/bin\"" >&2
