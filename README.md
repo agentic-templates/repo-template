@@ -62,7 +62,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
    If the agent can't finish an issue, it closes the issue's pull request, so that unfinished work can't merge. The work stays on the issue's branch. The agent comments on the issue with what it needs, and labels it `needs-decision`. An issue that's too big for one pull request gets `needs-breakdown` instead.
 
-   At the end, the agent reports what merged and what waits for you. Tell it your decisions, and it writes them into the issues and removes `needs-decision`. When you next ask the agent to build the ready issues, it picks those issues up again from their branches.
+   At the end, the agent reports what merged and what waits for you. Tell it your decisions. It writes each one into its issue and removes `needs-decision`, so the issue is ready to build again. The next build continues the issue's work from its branch.
 
 3. **"Publish a release."**
 
@@ -102,7 +102,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 1. Ask the agent to fix the problem. On a public repository, it builds the fix in a temporary private fork that GitHub creates for the advisory. On a private repository, it uses an issue and a pull request that say what the fix changes, without describing the problem.
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
 3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and users can't update until the release is out, so the agent keeps that gap short.
-4. In a new conversation, ask "Check the security advisories." An agent checks less carefully in the conversation where it published the release. The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
+4. Start a new conversation, because an agent checks less carefully in the conversation where it published the release. In it, ask "Check the security advisories." The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
 5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. The agent records in each advisory the release that fixes the problem, and links to the advisory from the release notes.
 
 ## Limits
@@ -119,7 +119,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
-- If your project is a library, its setup can add a check that finds breaking changes. In any other project, nothing checks for them, and an agent marks a pull request as a breaking change only when it notices the break. So a release can miss a breaking change and raise the version number too little.
+- If your project is a library, the setup in step 3 of "Start a project" can add a check that finds breaking changes. In any other project, nothing checks for them, and an agent marks a pull request as a breaking change only when it notices the break. So a release can miss a breaking change and raise the version number too little.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. To build faster, ask that agent for helpers. Helpers need an agent that can launch other agents.
 
 ## What you get
