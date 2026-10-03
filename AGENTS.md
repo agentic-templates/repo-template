@@ -34,8 +34,8 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 ## Commands
 
-- `scripts/check`: run it before you push. CI runs the same script. On a public repository, CI also fails a pull request that adds a dependency with a known vulnerability.
-- `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes or the repository becomes public.
+- `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
+- `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes.
 
 The checks on a pull request should finish within ten minutes, because every merge waits for them. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
@@ -117,7 +117,7 @@ A change is done when all of these are true:
 
 ## Keep the repository clean
 
-The repository holds the product and the rules for building it. Everything in it, and in its issues and pull requests, is public or can become public.
+The repository holds the product and the rules for building it. Everything in it, and in its issues and pull requests, is public.
 
 - Put plans in issues, the reason for a change in its pull request, and review comments on the pull request.
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
@@ -127,4 +127,4 @@ The repository holds the product and the rules for building it. Everything in it
 
 ## Keep a security vulnerability private
 
-If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. The fix still goes through an issue and a pull request, but they say only what the change does, not what the vulnerability is. Tell the maintainer about the vulnerability. On a public repository, also record it privately, where it stays until a maintainer publishes it, as "Record a vulnerability privately" in [docs/releasing.md](docs/releasing.md) describes. On a private repository, make the fix as "Make a change" describes. On a public repository, build the fix in private, and open its issue and pull request only when the maintainer asks for the release that includes it, as "Fix a security vulnerability on a public repository" in [docs/releasing.md](docs/releasing.md) describes.
+If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. The fix still goes through an issue and a pull request, but they say only what the change does, not what the vulnerability is. Tell the maintainer about the vulnerability. Also record it privately, where it stays until a maintainer publishes it, as "Record a vulnerability privately" in [docs/releasing.md](docs/releasing.md) describes. Build the fix in private, and open its issue and pull request only when the maintainer asks for the release that includes it, as "Fix a security vulnerability" in [docs/releasing.md](docs/releasing.md) describes.
