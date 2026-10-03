@@ -6,7 +6,7 @@ This guide holds the steps for publishing a release and checking the security ad
 
 When a maintainer asks you to publish a release:
 
-1. On a public repository, check whether a fix that isn't released yet is waiting in a security advisory's private fork. If `gh repo view --json viewerPermission` shows `ADMIN`, list the advisories with `gh api "repos/{owner}/{repo}/security-advisories"`. For each one that isn't published or closed, check whether its `private_fork` has commits that main doesn't have. Without admin access, ask the maintainer whether a fix is waiting. If one is, ask the maintainer whether this release should include it. If so, merge it first, as steps 2 and 3 in "Fix a security vulnerability on a public repository" describe. Then go on to step 2 below, so that the SHA you release includes the fix.
+1. Check whether a fix that isn't released yet is waiting in a security advisory's private fork. If `gh repo view --json viewerPermission` shows `ADMIN`, list the advisories with `gh api "repos/{owner}/{repo}/security-advisories"`. For each one that isn't published or closed, check whether its `private_fork` has commits that main doesn't have. Without admin access, ask the maintainer whether a fix is waiting. If one is, ask the maintainer whether this release should include it. If so, merge it first, as steps 2 and 3 in "Fix a security vulnerability" describe. Then go on to step 2 below, so that the SHA you release includes the fix.
 2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs, because they look for new versions and don't test the code. If one failed, stop and tell the maintainer. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which `gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists. Do the same if Dependabot has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"` lists. Keep using that SHA even if more pull requests merge while you wait.
 3. Choose the version. `gh release list --exclude-drafts --limit 1` shows the latest release. `git log --format=%s <latest release>..<sha>` lists the titles of the pull requests merged since then. If it lists none, or only Dependabot's updates, stop and tell the maintainer, because the release notes leave out Dependabot's updates and would be empty. If a title has `!` before its colon, raise the major version, or the minor version while the project's version is below 1.0. If no title has `!`, raise the minor version if a title starts with `feat`, and the patch version if none does. A first release is `v0.1.0`. If the maintainer named a version that doesn't fit, ask which one to publish.
 4. Publish the release with notes built from the merged pull requests:
@@ -15,7 +15,7 @@ When a maintainer asks you to publish a release:
    If the project attaches files to its releases, such as binaries, add `--draft`. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them to the draft. Once that run has succeeded, publish the draft.
 
    If the release starts a workflow that waits for approval, such as one that publishes a package, tell the maintainer to approve it.
-5. On a public repository, tell the maintainer about each advisory from step 1 that isn't published or closed. Without admin access, tell the maintainer that an admin needs to check them on the repository's "Security and quality" tab.
+5. Tell the maintainer about each advisory from step 1 that isn't published or closed. Without admin access, tell the maintainer that an admin needs to check them on the repository's "Security and quality" tab.
 6. If you told the maintainer about any advisories in step 5, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
 The repository's settings lock the tag and files of a published release, so fixing a mistake in them takes a new release. The release notes stay editable.
@@ -23,7 +23,7 @@ The repository's settings lock the tag and files of a published release, so fixi
 ## Protect the credentials that publish and deploy
 
 - Run the build in a job that can only read the repository. Give the credentials, or a token that can write, only to a separate job that uploads what the build made, so that code from the build's dependencies can't reach those credentials.
-- In the `release` environment, run the job that publishes a package to a registry or deploys the project. On a public repository, `scripts/configure-github` sets it up so that only release tags can use it, and each run waits for the maintainer's approval.
+- In the `release` environment, run the job that publishes a package to a registry or deploys the project. `scripts/configure-github` sets it up so that only release tags can use it, and each run waits for the maintainer's approval.
 - Where the registry or host accepts GitHub's OpenID Connect login, such as PyPI's trusted publishing, use it, so that the job needs no stored secret. Tell the maintainer the exact steps to set it up on the registry or host, because only they can sign in there.
 - Where the registry or host doesn't accept that login, the job needs a stored token. Ask the maintainer to store it as a secret of the `release` environment, not of the repository, so that only jobs in that environment can read it.
 
@@ -44,11 +44,11 @@ When a maintainer asks you to check the security advisories, check them against 
 
 ## Record a vulnerability privately
 
-On a public repository, record a vulnerability that isn't public yet as soon as you find it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`.
+Record a vulnerability that isn't public yet as soon as you find it. With admin access, open a draft security advisory: `gh api --method POST repos/{owner}/{repo}/security-advisories -f summary="<summary>" -f description="<description>" -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -f summary="<summary>" -f description="<description>"`.
 
-## Fix a security vulnerability on a public repository
+## Fix a security vulnerability
 
-"Record a vulnerability privately" above says how to record a vulnerability that isn't public yet, and "Keep a security vulnerability private" in AGENTS.md says what the fix's issue and pull request may say. On a public repository, fix it this way:
+"Record a vulnerability privately" above says how to record a vulnerability that isn't public yet, and "Keep a security vulnerability private" in AGENTS.md says what the fix's issue and pull request may say.
 
 1. Build the fix in the advisory's temporary private fork, which an admin can create with `gh api --method POST repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks`.
 2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.

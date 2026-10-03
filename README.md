@@ -14,7 +14,7 @@ You need:
 
 Optional: to keep your email address out of the project's commits, set git's `user.email` to the noreply address in your GitHub email settings.
 
-1. Create a repository from the template, and clone it. On GitHub Free, make it public, because GitHub Free doesn't offer branch protection or auto-merge for private repositories.
+1. Create a repository from the template, and clone it. Make it public, because the template supports only public repositories.
 
    ```bash
    gh repo create expense-tracker --public --template jtmpl/repo-template --clone
@@ -97,9 +97,9 @@ For your project's later versions, use the same three requests. The requests bel
 
 ### Fix security problems
 
-Issues and pull requests are public or can become public, so the agent keeps a security problem out of them until a release fixes it. On a public repository, it records the problem in a security advisory. `.github/SECURITY.md` asks people to report problems privately, and GitHub creates an advisory for each such report.
+Issues and pull requests are public, so the agent keeps a security problem out of them until a release fixes it. It records the problem in a security advisory. `.github/SECURITY.md` asks people to report problems privately, and GitHub creates an advisory for each such report.
 
-1. Ask the agent to fix the problem. On a public repository, it builds the fix in a temporary private fork that GitHub creates for the advisory. On a private repository, it uses an issue and a pull request that say what the fix changes, without describing the problem.
+1. Ask the agent to fix the problem. It builds the fix in a temporary private fork that GitHub creates for the advisory.
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
 3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and users can't update until the release is out, so the agent keeps that gap short.
 4. Start a new conversation, because an agent checks less carefully in the conversation where it published the release. In it, ask "Check the security advisories." The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
@@ -107,14 +107,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 
 ## Limits
 
-- The template works only with GitHub. On GitHub Free, it works only with a public repository.
-- On a private repository, even on a paid plan, `scripts/configure-github` and CI skip these features:
-  - Secret scanning, code scanning and CI's check of new dependencies for known vulnerabilities, because GitHub charges extra for these on private repositories.
-  - Private vulnerability reporting, which GitHub offers only for public repositories.
-  - Your approval before each job that publishes the project. On a private repository, GitHub offers this approval only with GitHub Enterprise. The script doesn't check for Enterprise, so it skips the approval on every private repository.
-
-  After you make the repository public, run the script again to turn on what it skipped. CI turns its check of new dependencies back on by itself.
-
+- The template supports only public repositories on GitHub. `scripts/configure-github` stops on a private repository, and a repository made private after setup no longer works with the template.
 - `.claude/settings.json` stops Claude Code from reading `.env` files with its file tools or with commands that name the file, because those files hold secrets. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
