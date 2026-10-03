@@ -27,7 +27,7 @@ Optional: to keep your email address out of the project's commits, set git's `us
    scripts/configure-github
    ```
 
-3. Ask your agent to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Include any text you have about the project. If your request leaves a choice on the setup list open, such as which languages, frameworks or database to use, the agent asks you.
+3. Ask your agent to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Include any text you have about the project. The agent asks you whatever else the setup needs, such as which languages, frameworks or database to use.
 
    <details>
    <summary>The setup list, for your agent</summary>
@@ -74,7 +74,14 @@ Ask for helpers: "Build the ready issues, with up to 3 helpers." A helper is ano
 
 Helpers use the same model and reasoning effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus."
 
-In Claude Code, you can also choose their effort. Write a [subagent](https://code.claude.com/docs/en/sub-agents) file in `~/.claude/agents/`, and set its `name` field, such as `build-helper`, and its `description` and `effort` fields. Set its `model` field if you want another model. Then name it in your request: "Build the ready issues, with up to 3 helpers using build-helper."
+In Claude Code, you can also choose their effort. Write a [subagent](https://code.claude.com/docs/en/sub-agents) file in `~/.claude/agents/` with these fields:
+
+- `name`, such as `build-helper`
+- `description`
+- `effort`
+- `model`, if you want another model
+
+Then name it in your request: "Build the ready issues, with up to 3 helpers using build-helper."
 
 ### Requests for everyday work
 
@@ -95,7 +102,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 1. Ask the agent to fix the problem. On a public repository, it builds the fix in a temporary private fork that GitHub creates for the advisory. On a private repository, it uses an issue and a pull request that say what the fix changes, without describing the problem.
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
 3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and users can't update until the release is out, so the agent keeps that gap short.
-4. In a new conversation, ask "Check the security advisories." An agent checks less carefully when its conversation still holds the release work. The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
+4. In a new conversation, ask "Check the security advisories." An agent checks less carefully in the conversation where it published the release. The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
 5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. The agent records in each advisory the release that fixes the problem, and links to the advisory from the release notes.
 
 ## Limits
@@ -104,7 +111,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - On any private repository, `scripts/configure-github` and CI skip these features:
   - Secret scanning, code scanning and CI's check of new dependencies for known vulnerabilities, because GitHub charges extra for these on private repositories.
   - Private vulnerability reporting, which GitHub offers only for public repositories.
-  - The `release` environment, because on private repositories GitHub offers the environment's approval rule only with GitHub Enterprise.
+  - The `release` environment, where jobs that publish the project wait for your approval. On private repositories, GitHub offers that approval only with GitHub Enterprise.
 
   After you make the repository public, run the script again to turn on what it skipped. CI turns its check of new dependencies back on by itself.
 
