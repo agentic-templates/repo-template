@@ -111,7 +111,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - On a private repository, even on a paid plan, `scripts/configure-github` and CI skip these features:
   - Secret scanning, code scanning and CI's check of new dependencies for known vulnerabilities, because GitHub charges extra for these on private repositories.
   - Private vulnerability reporting, which GitHub offers only for public repositories.
-  - The `release` environment, where jobs that publish the project wait for your approval. On private repositories, only GitHub Enterprise offers that approval, and the script skips it there too.
+  - The `release` environment, where jobs that publish the project wait for your approval. On a private repository, that approval needs GitHub Enterprise, which the script doesn't check for.
 
   After you make the repository public, run the script again to turn on what it skipped. CI turns its check of new dependencies back on by itself.
 
