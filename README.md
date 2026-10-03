@@ -27,7 +27,7 @@ Optional: to keep your email address out of the project's commits, set git's `us
    scripts/configure-github
    ```
 
-3. Ask your agent to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Include any text you have about the project. The agent asks you about any choice on the setup list below that your request doesn't settle, such as which languages, frameworks or database to use.
+3. Ask your agent to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Include any text you have about the project. If your request leaves a choice on the setup list open, such as which languages, frameworks or database to use, the agent asks you.
 
    <details>
    <summary>The setup list, for your agent</summary>
@@ -74,7 +74,7 @@ Ask for helpers: "Build the ready issues, with up to 3 helpers." A helper is ano
 
 Helpers use the same model and reasoning effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus."
 
-In Claude Code, you can also choose their effort. Write a [subagent](https://code.claude.com/docs/en/sub-agents) file in `~/.claude/agents/` with a `name` such as `build-helper`, a `description` and an `effort`. Add a `model` if you want another model. Then name it in your request: "Build the ready issues, with up to 3 helpers using build-helper."
+In Claude Code, you can also choose their effort. Write a [subagent](https://code.claude.com/docs/en/sub-agents) file in `~/.claude/agents/`, and set its `name` field, such as `build-helper`, and its `description` and `effort` fields. Set its `model` field if you want another model. Then name it in your request: "Build the ready issues, with up to 3 helpers using build-helper."
 
 ### Requests for everyday work
 
@@ -94,8 +94,8 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 
 1. Ask the agent to fix the problem. On a public repository, it builds the fix in a temporary private fork that GitHub creates for the advisory. On a private repository, it uses an issue and a pull request that say what the fix changes, without describing the problem.
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
-3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and releasing right away leaves attackers as little time as possible before users can update.
-4. In a new conversation, ask "Check the security advisories." Starting fresh helps, because an agent does worse with the release work still in its conversation. The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
+3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and users can't update until the release is out, so the agent keeps that gap short.
+4. In a new conversation, ask "Check the security advisories." An agent checks less carefully when its conversation still holds the release work. The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
 5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. The agent records in each advisory the release that fixes the problem, and links to the advisory from the release notes.
 
 ## Limits
@@ -112,7 +112,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
-- Only a library can get a check that finds breaking changes, and only if its setup pull request added that check. In other projects, an agent marks a pull request as a breaking change only when it notices the break, and the next version number depends on that mark.
+- If your project is a library, its setup can add a check that finds breaking changes. In any other project, nothing checks for them, and an agent marks a pull request as a breaking change only when it notices the break. So a release can miss a breaking change and raise the version number too little.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. To build faster, ask that agent for helpers. Helpers need an agent that can launch other agents.
 
 ## What you get
