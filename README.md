@@ -27,7 +27,7 @@ Optional: to keep your email address out of the project's commits, set git's `us
    scripts/configure-github
    ```
 
-3. Ask your agent to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Include any text you have about the project. The agent asks you whatever else the setup needs, such as which languages, frameworks or database to use.
+3. Ask your agent to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Add any notes or spec you have about the project to your request. The agent asks you whatever else the setup needs, such as which languages, frameworks or database to use.
 
    <details>
    <summary>The setup list, for your agent</summary>
@@ -103,12 +103,12 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
 3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and users can't update until the release is out, so the agent keeps that gap short.
 4. Start a new conversation, because an agent checks less carefully in the conversation where it published the release. In it, ask "Check the security advisories." The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
-5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. The agent records in each advisory the release that fixes the problem, and links to the advisory from the release notes.
+5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. In each advisory it publishes, the agent names the release that fixes the problem, and it links to the advisory from the release notes.
 
 ## Limits
 
 - The template works only with GitHub. On GitHub Free, it works only with a public repository.
-- On any private repository, `scripts/configure-github` and CI skip these features:
+- On a private repository, even on a paid plan, `scripts/configure-github` and CI skip these features:
   - Secret scanning, code scanning and CI's check of new dependencies for known vulnerabilities, because GitHub charges extra for these on private repositories.
   - Private vulnerability reporting, which GitHub offers only for public repositories.
   - The `release` environment, where jobs that publish the project wait for your approval. On private repositories, GitHub offers that approval only with GitHub Enterprise.
