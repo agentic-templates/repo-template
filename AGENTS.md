@@ -60,6 +60,8 @@ A status label says what an issue is waiting for, so an issue that's ready to bu
 
 The `ready` label marks the issues that a maintainer wants built, and isn't a status label.
 
+Dependabot adds `dependencies` to its own pull requests.
+
 ## Make a change
 
 Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
