@@ -123,7 +123,7 @@ The repository holds the product and the rules for building it. Everything in it
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
 - Never read, print or commit secrets. Keep them in `.env`, which git ignores, and list each variable in `.env.example` with a placeholder value.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commit messages, issues and pull requests.
-- Don't create a `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one there, it reads that file and ignores AGENTS.md. If you find one, tell the maintainer. None of this applies to `~/.claude/CLAUDE.md`, which holds personal instructions, because Claude Code reads it alongside AGENTS.md.
+- Don't create a `CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one, it reads that file and ignores AGENTS.md.
 
 ## Keep a security vulnerability private
 
