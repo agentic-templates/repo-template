@@ -111,11 +111,11 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - On a private repository, even on a paid plan, `scripts/configure-github` and CI skip these features:
   - Secret scanning, code scanning and CI's check of new dependencies for known vulnerabilities, because GitHub charges extra for these on private repositories.
   - Private vulnerability reporting, which GitHub offers only for public repositories.
-  - The `release` environment, where jobs that publish the project wait for your approval. On a private repository, that approval works only on GitHub Enterprise, and the script can't tell which plan you have, so it skips the environment on every private repository.
+  - The `release` environment, so jobs that publish the project don't wait for your approval. GitHub offers that approval on a private repository only with GitHub Enterprise, and the script doesn't check your plan.
 
   After you make the repository public, run the script again to turn on what it skipped. CI turns its check of new dependencies back on by itself.
 
-- `.claude/settings.json` stops Claude Code from reading `.env` files, which hold secrets, with its file tools or with commands that name the file. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
+- `.claude/settings.json` stops Claude Code from reading `.env` files with its file tools or with commands that name the file, because those files hold secrets. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
