@@ -115,7 +115,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 
   After you make the repository public, run the script again to turn on what it skipped. CI turns its check of new dependencies back on by itself.
 
-- `.claude/settings.json` blocks only some of the ways that Claude Code could read a `.env` file. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
+- `.claude/settings.json` stops Claude Code from reading `.env` files, which hold secrets, with its file tools or with commands that name the file. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
