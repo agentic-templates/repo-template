@@ -28,6 +28,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `AGENTS.md`: these rules.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/test-check`: tests `scripts/check`. `scripts/check` runs these tests after its other checks.
+- `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it. CI runs it before `scripts/check`.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
 - `.claude/settings.json`: stops Claude Code from adding attribution to commits and pull requests, and from reading `.env` files with its file tools or with commands that name the file.
