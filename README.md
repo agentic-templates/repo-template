@@ -58,7 +58,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 2. **"Build the ready issues."**
 
-   The agent builds them lowest number first, and leaves an issue for later until the issues that block it are closed. Each pull request merges once its checks pass. The agent also merges Dependabot's updates once their checks pass. It leaves failing Dependabot updates open for you.
+   The agent builds them lowest number first, and waits to build an issue until the issues that block it are closed. Each pull request merges once its checks pass. The agent also merges Dependabot's updates once their checks pass. It leaves failing Dependabot updates open for you.
 
    If the agent can't finish an issue, it closes the issue's pull request, so that unfinished work can't merge. The work stays on the issue's branch. The agent comments on the issue with what it needs, and labels it `needs-decision`. An issue that's too big for one pull request gets `needs-breakdown` instead.
 
@@ -66,7 +66,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 3. **"Publish a release."**
 
-   The agent checks that CI passed on main, and that code scanning and Dependabot have no open alert of high or critical severity. It picks the next semantic version, starting at v0.1.0, and publishes a GitHub release with notes from the merged pull requests. If a workflow publishes a package or deploys the project, GitHub asks you to approve each of its runs. After the release, the agent lists any security advisories that aren't published yet, as the section "Fix security problems" below explains.
+   The agent checks that CI passed on main, and that code scanning and Dependabot have no open alert of high or critical severity. It picks the next semantic version, starting at v0.1.0, and publishes a GitHub release with notes from the merged pull requests. If a workflow publishes a package or deploys the project, GitHub asks you to approve each of its runs. After the release, the agent lists any security advisories that aren't published yet. An advisory is GitHub's private record of a security problem, and "Fix security problems" below says what to do with one.
 
 ### Build several issues at once
 
@@ -90,7 +90,7 @@ For your project's later versions, use the same three requests. The requests bel
 
 ### Fix security problems
 
-Issues and pull requests are public or can become public, so the agent keeps a security problem out of them until a release fixes it. On a public repository, it records the problem in a security advisory, GitHub's private record of a problem. `.github/SECURITY.md` asks people to report problems privately, and GitHub creates an advisory for each such report.
+Issues and pull requests are public or can become public, so the agent keeps a security problem out of them until a release fixes it. On a public repository, it records the problem in a security advisory. `.github/SECURITY.md` asks people to report problems privately, and GitHub creates an advisory for each such report.
 
 1. Ask the agent to fix the problem. On a public repository, it builds the fix in a temporary private fork that GitHub creates for the advisory. On a private repository, it uses an issue and a pull request that say what the fix changes, without describing the problem.
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
@@ -108,11 +108,11 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 
   After you make the repository public, run the script again to turn on what it skipped. CI turns its check of new dependencies back on by itself.
 
-- `.claude/settings.json` stops Claude Code from reading `.env` files, but not in every way. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
+- `.claude/settings.json` blocks only some of the ways that Claude Code could read a `.env` file. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
-- No automated check finds breaking changes, unless the project is a library and its setup pull request added one. Without it, an agent marks a pull request as a breaking change only when it notices one.
+- Only a library can get a check that finds breaking changes, and only if its setup pull request added that check. In other projects, an agent marks a pull request as a breaking change only when it notices the break, and the next version number depends on that mark.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. To build faster, ask that agent for helpers. Helpers need an agent that can launch other agents.
 
 ## What you get
