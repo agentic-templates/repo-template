@@ -66,7 +66,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 3. **"Publish a release."**
 
-   The agent checks that CI passed on main, and that code scanning and Dependabot have no open alert of high or critical severity. It picks the next semantic version, starting at v0.1.0, and publishes a GitHub release with notes from the merged pull requests. If a workflow publishes a package or deploys the project, GitHub asks you to approve each of its runs. After the release, the agent lists any security advisories that aren't published yet. An advisory is GitHub's private record of a security problem, and "Fix security problems" below says what to do with one.
+   The agent checks that CI passed on main, and that code scanning and Dependabot have no open alert of high or critical severity. It picks the next semantic version, starting at v0.1.0, and publishes a GitHub release with notes from the merged pull requests. If a workflow publishes a package or deploys the project, GitHub asks you to approve each of its runs. An advisory is GitHub's record of a security problem, which stays private until you publish it. After the release, the agent lists the advisories that you haven't published yet, and "Fix security problems" below says what to do with them.
 
 ### Build several issues at once
 
