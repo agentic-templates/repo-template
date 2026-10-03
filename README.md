@@ -54,7 +54,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 1. **"Plan the first version of expense-tracker: it adds an expense, lists the expenses and shows the total for each month."**
 
-   Add any notes or spec you have, because the agent can't see what you told it in earlier conversations. It splits the work into issues that each fit in one pull request, and marks each issue as blocked by the ones it needs first. Correct the issues, then tell the agent which ones you approve. It adds the `ready` label to them, so that agents can build and merge them without asking you.
+   Add any notes or spec you have, because the agent can't see what you told it in earlier conversations. It splits the work into issues that each fit in one pull request, and marks each issue as blocked by the ones it needs first. Correct the issues on GitHub or ask the agent to, then tell it which ones you approve. It adds the `ready` label to them, so that agents can build and merge them without asking you.
 
 2. **"Build the ready issues."**
 
@@ -62,7 +62,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
    If the agent can't finish an issue, it closes the issue's pull request, so that unfinished work can't merge. The work stays on the issue's branch. The agent comments on the issue with what it needs, and labels it `needs-decision`. An issue that's too big for one pull request gets `needs-breakdown` instead.
 
-   At the end, the agent reports what merged and what waits for you. Tell it your decisions. It writes each one into its issue and removes `needs-decision`, so the issue is ready to build again. The next build continues the issue's work from its branch.
+   At the end, the agent reports what merged and what waits for you. Tell it your decisions. It writes each one into its issue and removes `needs-decision`. The issue still has `ready`, so the next build continues its work from its branch.
 
 3. **"Publish a release."**
 
@@ -103,7 +103,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
 3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and users can't update until the release is out, so the agent keeps that gap short.
 4. Start a new conversation, because an agent checks less carefully in the conversation where it published the release. In it, ask "Check the security advisories." The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
-5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. In each advisory it publishes, the agent names the release that fixes the problem, and it links to the advisory from the release notes.
+5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. If a workflow publishes a package, users can install it only after you approve that run and it finishes. In each advisory it publishes, the agent names the release that fixes the problem, and it links to the advisory from the release notes.
 
 ## Limits
 
@@ -111,7 +111,7 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - On a private repository, even on a paid plan, `scripts/configure-github` and CI skip these features:
   - Secret scanning, code scanning and CI's check of new dependencies for known vulnerabilities, because GitHub charges extra for these on private repositories.
   - Private vulnerability reporting, which GitHub offers only for public repositories.
-  - The `release` environment, where jobs that publish the project wait for your approval. On a private repository, that approval needs GitHub Enterprise, which the script doesn't check for.
+  - The `release` environment, where jobs that publish the project wait for your approval. The script skips it on every private repository, because the approval works there only on GitHub Enterprise.
 
   After you make the repository public, run the script again to turn on what it skipped. CI turns its check of new dependencies back on by itself.
 
@@ -136,11 +136,6 @@ Issues and pull requests are public or can become public, so the agent keeps a s
 - `docs/releasing.md`: how an agent publishes a release, writes a workflow that publishes or deploys the project, checks the security advisories, and records and fixes a security problem that isn't public yet.
 - `scripts/check`: runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template.
-  - Pull requests merge only as squash merges.
-  - Pull requests can merge on their own once their checks pass.
-  - Every change to main goes through a pull request that passes CI.
-  - Security alerts and code scanning are on.
-  - Jobs that publish the project wait for your approval in a `release` environment.
 - `.github/`: CI, a check of each pull request's title and body, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
 - `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests, and from reading `.env` files with its file tools or with shell commands such as `cat`.
 
