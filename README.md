@@ -93,7 +93,7 @@ For your project's later versions, use the same three requests. The requests bel
 - **"Make #14 ready to build."** Use it for an issue you accepted at triage, or one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
 - **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it, and the pull request merges once its checks pass.
-- **"Review pull request #12."** The agent compares the change with its issue and comments with what should change. If the pull request comes from someone without write access, the agent doesn't run the pull request's code on your machine, where it could reach your credentials. CI runs it on GitHub's machines instead.
+- **"Review pull request #12."** The agent compares the change with its issue and comments with what should change. If the pull request comes from someone without write access, the agent doesn't check out or run the pull request's code on your machine, where it could reach your credentials. CI runs it on GitHub's machines instead.
 - **"Review the code for security problems."** The agent reviews the whole repository, unless you name a part of it or a range of changes, such as the changes since the last release. It tells you what it found and which parts it reviewed.
 
 ### Fix security problems
