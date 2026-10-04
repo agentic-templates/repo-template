@@ -132,7 +132,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `scripts/check`: runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template.
 - `.github/`: CI, a check of each pull request's title and body, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
-- `scripts/hooks/`: agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent. They stop the agent from reading files that hold secrets, such as `.env` files.
+- `scripts/hooks/`: agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent. They stop the agent from reading files that hold secrets, such as `.env` files, and from writing a file that makes a tool skip `AGENTS.md`.
 - `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read. The settings run the hooks in Claude Code, Copilot CLI and Cursor. They also stop Claude Code from adding its name to commits and pull requests, and from reading `.env` files with its file tools or with shell commands such as `cat`.
 - `.codex/hooks.json`: has Codex run the hooks.
 

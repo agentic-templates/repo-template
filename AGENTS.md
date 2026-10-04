@@ -31,6 +31,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it. CI runs it before `scripts/check`.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, such as a shell command. The folder's script `before-tool` runs each `.check` file in the folder. Each `.check` file can block the action. For example, `secret-files.check` blocks a command that reads a `.env` file. Each `.check` file has a `.test` file, which `scripts/check` runs.
+- `scripts/instruction-file-names`: the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`. `scripts/check` fails when the repository has such a file, and a hook blocks the agent from writing one.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
 - `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read. The settings run the hooks in Claude Code, Copilot CLI and Cursor. They also stop Claude Code from adding attribution to commits and pull requests, and from reading `.env` files with its file tools or with commands that name the file.
 - `.codex/hooks.json`: has Codex run the hooks.

@@ -40,12 +40,9 @@ if has zizmor https://docs.zizmor.sh/installation/; then
   zizmor .
 fi
 
-# Some tools read one of these files instead of AGENTS.md, as docs/rules.md describes.
-# The first group can be in any folder, and the second only in the repository's root.
-# The names match in any case, because some file systems ignore case.
-in_any_folder='(.*/)?(CLAUDE\.md|CLAUDE\.local\.md|AGENTS\.override\.md)'
-in_the_root='\.rules|\.cursorrules|\.windsurfrules|\.clinerules(/.*)?|\.github/copilot-instructions\.md|AGENT\.md'
-instruction_file="^($in_any_folder|$in_the_root)$"
+# Some tools read a file with one of these names instead of AGENTS.md.
+# shellcheck source=scripts/instruction-file-names
+source scripts/instruction-file-names
 found_instruction_file=""
 shopt -s nocasematch
 # git lists the tracked files, and the untracked files that it doesn't ignore.
