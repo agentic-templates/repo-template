@@ -39,7 +39,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 ## Commands
 
 - `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
-- `scripts/configure-github`: a maintainer with admin access runs it after creating the repository on GitHub, and again whenever the script changes.
+- `scripts/configure-github`: the agent that sets up the project runs it once, as the setup list in the README describes. After a change to the script merges, a maintainer with admin access runs it again.
 
 The checks on a pull request should finish within ten minutes, because every merge waits for them. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
