@@ -22,6 +22,16 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -x \"$root/scripts/hooks/session-start\" ] && exec \"$root/scripts/hooks/session-start\"; exit 0"
+          }
+        ]
+      }
     ]
   }
 }
