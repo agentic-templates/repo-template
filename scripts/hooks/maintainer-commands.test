@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Tests scripts/hooks/maintainer-commands.check through scripts/hooks/before-tool, with a sample input from each tool.
+set -euo pipefail
+# shellcheck source=scripts/hooks/testing.bash
+source "${BASH_SOURCE[0]%/*}/testing.bash"
+
+# A stand-in for gh, first on the PATH, so that the cases ask nothing of GitHub.
+# TEST_RULESETS says what it reports for the repository's rulesets: main, another, none or fail.
+# TEST_PULL_REQUEST says what it reports for pull request 7, or the current branch's: fork, same or fail.
+# It fails for any other pull request, as gh does for one that doesn't exist, and records each call in TEST_GH_CALLS.
+stand_in=$(mktemp -d)
+trap 'rm -rf "$stand_in"' EXIT
+cat >"$stand_in/gh" <<'STAND_IN'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$TEST_GH_CALLS"
+if [[ $1 == api ]]; then
+  case $TEST_RULESETS in
+    main) echo '[{"id": 1, "name": "main", "target": "branch"}]' ;;
+    another) echo '[{"id": 2, "name": "tags", "target": "tag"}]' ;;
+    none) echo '[]' ;;
+    *) exit 1 ;;
+  esac
+elif [[ $1 == pr && $2 == view ]]; then
+  if [[ $3 != -* && $3 != 7 ]]; then
+    exit 1
+  fi
+  case $TEST_PULL_REQUEST in
+    fork) echo '{"isCrossRepository": true}' ;;
+    same) echo '{"isCrossRepository": false}' ;;
+    *) exit 1 ;;
+  esac
+else
+  exit 1
+fi
+STAND_IN
+chmod +x "$stand_in/gh"
+PATH=$stand_in:$PATH
+export TEST_GH_CALLS=$stand_in/calls TEST_RULESETS TEST_PULL_REQUEST
+
+second_run="Blocked: this repository's settings were applied before, so a maintainer with admin access runs scripts/configure-github again. Go on with the other work, and list the command in your report for the maintainer, who runs it."
+merge_reason="comes from a fork, so a maintainer merges it. Go on with the other work, and list the command in your report for the maintainer, who runs it."
+checkout_reason="Read it with gh pr diff 7 instead, because a checkout brings in its hook scripts and its AGENTS.md."
+
+runs_of_the_script=(scripts/configure-github ./scripts/configure-github "bash scripts/configure-github" "env GH_DEBUG=1 scripts/configure-github")
+
+# A second run of scripts/configure-github, once the settings were applied
+TEST_RULESETS=main
+for command in "${runs_of_the_script[@]}"; do
+  expect_block Bash "$command" "$second_run"
+done
+for TEST_RULESETS in another none fail; do
+  for command in "${runs_of_the_script[@]}"; do
+    expect_allow Bash "$command"
+  done
+done
+for TEST_RULESETS in main none fail; do
+  expect_allow Bash 'cat scripts/configure-github'
+  expect_allow Bash 'shellcheck scripts/configure-github'
+done
+
+# Checking out, fetching or merging a pull request from a fork
+TEST_PULL_REQUEST=fork
+expect_block Bash 'gh pr checkout 7' "Blocked: pull request 7 comes from a fork. $checkout_reason"
+expect_block Bash 'gh pr co 7' "Blocked: pull request 7 comes from a fork. $checkout_reason"
+expect_block Bash 'gh pr checkout --branch=pr-7 7' "Blocked: pull request 7 comes from a fork. $checkout_reason"
+expect_block Bash 'gh pr checkout -R jtmpl/other 7' \
+  "Blocked: pull request 7 comes from a fork. Read it with gh pr diff 7 --repo jtmpl/other instead, because a checkout brings in its hook scripts and its AGENTS.md."
+expect_block Bash 'gh pr merge 7 --squash' "Blocked: pull request 7 $merge_reason"
+expect_block Bash 'gh pr merge --body "x" 7' "Blocked: pull request 7 $merge_reason"
+expect_block Bash 'gh pr merge --squash' "Blocked: this branch's pull request $merge_reason"
+expect_block Bash 'git fetch origin pull/7/head:pr-7' "Blocked: pull request 7 comes from a fork. $checkout_reason"
+expect_block Bash 'git fetch origin +refs/pull/7/merge' "Blocked: pull request 7 comes from a fork. $checkout_reason"
+expect_block Bash 'git -C app pull origin pull/7/head' "Blocked: pull request 7 comes from a fork. $checkout_reason"
+
+# The pull request that -R names is the one that gh is asked about.
+: >"$TEST_GH_CALLS"
+run_hook "$(sample_input claude-code Bash 'gh pr checkout -R jtmpl/other 7')"
+case_count=$((case_count + 1))
+if [[ $(<"$TEST_GH_CALLS") != "pr view 7 --repo jtmpl/other --json isCrossRepository" ]]; then
+  echo "error: for gh pr checkout -R jtmpl/other 7, the hook must ask gh about pull request 7 in jtmpl/other, but it called: $(<"$TEST_GH_CALLS")" >&2
+  failed_cases=$((failed_cases + 1))
+fi
+
+for TEST_PULL_REQUEST in same fail; do
+  for command in 'gh pr checkout 7' 'gh pr co 7' 'gh pr merge 7 --squash' 'gh pr merge --squash' 'gh pr merge --body "x" 7' \
+    'gh pr checkout -R jtmpl/other 7' 'git fetch origin pull/7/head:pr-7' 'git fetch origin +refs/pull/7/merge'; do
+    expect_allow Bash "$command"
+  done
+done
+
+# Commands that only read a pull request, a checkout that asks the person to pick one, and a fetch of no one pull request
+TEST_PULL_REQUEST=fork
+expect_allow Bash 'gh pr diff 7'
+expect_allow Bash 'gh pr view 7'
+expect_allow Bash 'gh pr checkout'
+expect_allow Bash "git fetch origin 'refs/pull/*/head'"
+
+finish_tests

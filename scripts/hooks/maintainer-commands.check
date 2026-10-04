@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# Blocks two kinds of command that a maintainer runs:
+# - running scripts/configure-github again, once the repository's settings were applied, because a build run
+#   can merge a change to the script that nobody read
+# - checking out, fetching or merging a pull request from a fork, because a checkout brings in the pull
+#   request's hook scripts and AGENTS.md, and only a maintainer decides to put a fork's code on main
+# It asks gh about the repository, and allows the command when gh fails, such as without a network.
+# shellcheck source=scripts/hooks/helpers.bash
+source "${BASH_SOURCE[0]%/*}/helpers.bash"
+
+# The flags that take a value, as gh pr checkout --help and gh pr merge --help list them.
+checkout_flags_with_value=" -b --branch --worktree -R --repo "
+merge_flags_with_value=" -A --author-email -b --body -F --body-file --match-head-commit -t --subject -R --repo "
+
+report="Go on with the other work, and list the command in your report for the maintainer, who runs it."
+
+# Blocks a checkout or fetch of a fork's pull request: block_checkout <pull request> [--repo <repository>]
+block_checkout() {
+  block "Blocked: pull request $1 comes from a fork. Read it with gh pr diff $* instead, because a checkout brings in its hook scripts and its AGENTS.md."
+}
+
+# Succeeds if the repository's settings were applied before, because scripts/configure-github creates a ruleset named main.
+settings_applied_before() {
+  local rulesets
+  rulesets=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" 2>/dev/null) || return 1
+  jq -e 'any(.[]; .name == "main")' >/dev/null <<<"$rulesets"
+}
+
+# Succeeds if a pull request comes from a fork: is_from_fork [<pull request>] [--repo <repository>]
+# Without a pull request, gh asks about the current branch's.
+is_from_fork() {
+  local answer
+  answer=$(gh pr view "$@" --json isCrossRepository 2>/dev/null) || return 1
+  [[ $(jq -r .isCrossRepository <<<"$answer") == true ]]
+}
+
+check_configure_github() {
+  local -a words=("${command_words[@]}")
+  # bash or sh, with any flags, can run the script too.
+  if [[ ${words[0]##*/} == bash || ${words[0]##*/} == sh ]]; then
+    words=("${words[@]:1}")
+    while ((${#words[@]} > 0)) && [[ ${words[0]} == -* ]]; do
+      words=("${words[@]:1}")
+    done
+  fi
+  if ((${#words[@]} == 0)); then
+    return 0
+  fi
+  if [[ ${words[0]} != scripts/configure-github && ${words[0]} != */scripts/configure-github ]]; then
+    return 0
+  fi
+  if settings_applied_before; then
+    block "Blocked: this repository's settings were applied before, so a maintainer with admin access runs scripts/configure-github again. $report"
+  fi
+}
+
+check_gh_pr() {
+  local subcommand flags_with_value argument="" i word
+  local -a repository=() view=()
+  if [[ ${command_words[0]##*/} != gh || ${command_words[1]:-} != pr ]]; then
+    return 0
+  fi
+  subcommand=${command_words[2]:-}
+  case $subcommand in
+    checkout | co) flags_with_value=$checkout_flags_with_value ;;
+    merge) flags_with_value=$merge_flags_with_value ;;
+    *) return 0 ;;
+  esac
+
+  # The pull request is the first word that isn't a flag or a flag's value.
+  for ((i = 3; i < ${#command_words[@]}; i++)); do
+    word=${command_words[i]}
+    case $word in
+      -R | --repo)
+        repository=(--repo "${command_words[i + 1]:-}")
+        i=$((i + 1))
+        ;;
+      --repo=*) repository=(--repo "${word#--repo=}") ;;
+      -*=*) ;;
+      -*)
+        if [[ $flags_with_value == *" $word "* ]]; then
+          i=$((i + 1))
+        fi
+        ;;
+      *)
+        if [[ -z $argument ]]; then
+          argument=$word
+        fi
+        ;;
+    esac
+  done
+
+  if [[ -n $argument ]]; then
+    view=("$argument")
+  elif [[ $subcommand != merge ]]; then
+    # Without a pull request, gh pr checkout asks the person to pick one.
+    return 0
+  fi
+  if ((${#repository[@]} > 0)); then
+    view+=("${repository[@]}")
+  fi
+  if ! is_from_fork ${view[@]+"${view[@]}"}; then
+    return 0
+  fi
+  if [[ $subcommand != merge ]]; then
+    block_checkout "${view[@]}"
+  elif [[ -n $argument ]]; then
+    block "Blocked: pull request $argument comes from a fork, so a maintainer merges it. $report"
+  else
+    block "Blocked: this branch's pull request comes from a fork, so a maintainer merges it. $report"
+  fi
+}
+
+check_git_fetch() {
+  local i=1 number pull_ref='^\+?(refs/)?pull/([0-9]+)/(head|merge)(:.*)?$'
+  if [[ ${command_words[0]##*/} != git ]]; then
+    return 0
+  fi
+  while [[ ${command_words[i]:-} == -C ]]; do
+    i=$((i + 2))
+  done
+  if [[ ${command_words[i]:-} != fetch && ${command_words[i]:-} != pull ]]; then
+    return 0
+  fi
+  for ((i = i + 1; i < ${#command_words[@]}; i++)); do
+    if [[ ${command_words[i]} =~ $pull_ref ]]; then
+      number=${BASH_REMATCH[2]}
+      if is_from_fork "$number"; then
+        block_checkout "$number"
+      fi
+    fi
+  done
+}
+
+check_simple_command() {
+  drop_command_prefixes "$@"
+  if ((${#command_words[@]} == 0)); then
+    return 0
+  fi
+  check_configure_github
+  check_gh_pr
+  check_git_fetch
+}
+
+read_input
+if [[ $tool_name == Bash ]]; then
+  for_each_simple_command check_simple_command "$shell_command"
+fi
