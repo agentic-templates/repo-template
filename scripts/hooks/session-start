@@ -5,6 +5,7 @@
 # - a CLAUDE.md, .claude/CLAUDE.md or CLAUDE.local.md that makes Claude Code skip AGENTS.md
 # - a gh older than the rules need
 # - a missing jq, which the hooks need
+# In a Claude Code on the web session, it also installs the tools that scripts/check runs, as CI does.
 # Copilot CLI and Cursor also run the hooks in .claude/settings.json, so the hook does nothing outside Claude Code.
 # When it fails on its own error, it exits with code 0, so that a broken hook never stops work.
 set -eEuo pipefail
@@ -120,5 +121,23 @@ fi
 # 3. A missing jq. The hooks need it to read what the tool sends them, and without it they let every action through.
 if ! command -v jq >/dev/null; then
   echo "The hooks in scripts/hooks need jq, and it isn't installed, so they let every action through. Tell the person, and that they can install it with a package manager, such as brew install jq on macOS or sudo apt install jq on Ubuntu."
+fi
+
+# 4. In a Claude Code on the web session, install shellcheck, actionlint and zizmor, so that scripts/check runs
+# every check there. The folder is under the home folder, so that the tools survive a resumed session.
+# The PATH line in CLAUDE_ENV_FILE puts the folder first for the session's later commands, so these versions win.
+if [[ ${CLAUDE_CODE_REMOTE:-} == true ]]; then
+  tools_folder=$home/.check-tools
+  if [[ ! -x $tools_folder/shellcheck || ! -x $tools_folder/actionlint || ! -x $tools_folder/zizmor ]]; then
+    # The subshell drops the trap, which would otherwise turn the install's failure into success.
+    if ! install_error=$(trap - ERR && "${BASH_SOURCE[0]%/*}/../install-check-tools" "$tools_folder" 2>&1); then
+      echo "The check tools shellcheck, actionlint and zizmor are missing, because scripts/install-check-tools failed: $install_error"
+      echo "scripts/check skips their checks, and CI still runs them."
+    fi
+  fi
+  if [[ -x $tools_folder/shellcheck && -x $tools_folder/actionlint && -x $tools_folder/zizmor && -n ${CLAUDE_ENV_FILE:-} ]]; then
+    # shellcheck disable=SC2016 # $PATH expands when Claude Code reads the file.
+    printf 'export PATH="%s:$PATH"\n' "$tools_folder" >>"$CLAUDE_ENV_FILE"
+  fi
 fi
 exit 0
