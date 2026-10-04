@@ -77,7 +77,7 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 4. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. For a security vulnerability that isn't public yet, don't open an issue that describes it. Follow "Keep a security vulnerability private" instead.
 5. Push the branch and open a pull request with `gh pr create`.
 6. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 4 describes.
-7. Merge only when a maintainer has asked you to. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 6. Otherwise, merge with `gh pr merge --squash`.
+7. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 6. Otherwise, merge with `gh pr merge --squash`.
 
 ## Commits
 
