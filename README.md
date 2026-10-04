@@ -36,6 +36,7 @@ Optional: to keep your email address out of the project's commits, set git's `us
    - In `AGENTS.md`, rewrite the section "What this project is": what the project is for, and which kinds of change belong in it. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the version of each language, framework and database that the project uses, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install those versions and the packages.
    - Add the formatter, the linter, the type checker if the language has one, and the tests to `scripts/check`.
+   - Add a hook to `.claude/settings.json` and `.codex/hooks.json` that runs the project's formatter on each file the agent edits.
    - If the language's coverage tool can mark single lines as excluded, add a coverage check to `scripts/check`. The check fails when a line never runs in a test. Where the tool measures branches, the check also fails when a branch is never taken. Lines marked as excluded don't count, but the check fails on an exclusion marker that gives no reason. Measure coverage with the tests that `scripts/check` runs, and with no others. If the tool can't mark lines as excluded, add no coverage check, because the check would always fail on code that no test can run.
    - If the project publishes a library and its language has a tool that finds breaking changes, such as cargo-semver-checks for Rust, add a check to CI that looks for a break in the library's public interface. If a pull request breaks the interface, the check fails, unless the pull request's title marks the change with `!` before the colon, as in `feat!: rename the import command`. Have the check compare the pull request with the commit on main that it branched from, not with the last release. Once a breaking change has merged, main itself differs from the last release, so a comparison with that release would fail every later pull request.
    - If the project's output is visual, such as a web page or a 3D scene, add a command that saves a picture of that output, such as a screenshot of the page or a render of the scene. List the command under "Commands" in `AGENTS.md`. Agents look at the picture to check their changes, so the command has to run without anyone at the screen. Save the pictures outside the repository, such as in a temporary folder.
@@ -108,7 +109,8 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 ## Limits
 
 - The template supports only public repositories on GitHub. `scripts/configure-github` stops on a private repository, and a repository made private after setup no longer works with the template.
-- `.claude/settings.json` stops Claude Code from reading `.env` files with its file tools or with commands that name the file, because those files hold secrets. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
+- The hooks in `scripts/hooks/` check each action of the agent before it happens, such as a command that reads a `.env` file. Claude Code, Codex, Copilot CLI and Cursor run them on your machine. Codex runs them only after you review them with `/hooks`. Until then, `codex exec`, which runs Codex without a person, skips them without a warning. The cloud agents of Copilot and Cursor don't run them, so they get only CI and the written rules.
+- A hook reads a command as text, without running it, so the same command written differently can get past it. The hook for secret files checks only the commands on its list, such as `cat`, `grep` and `cp`. Another command can still read a `.env` file, and so can a script, or a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
@@ -130,7 +132,9 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `scripts/check`: runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template.
 - `.github/`: CI, a check of each pull request's title and body, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: stops Claude Code from adding its name to commits and pull requests, and from reading `.env` files with its file tools or with shell commands such as `cat`.
+- `scripts/hooks/`: agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent. They stop the agent from reading files that hold secrets, such as `.env` files.
+- `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read. The settings run the hooks in Claude Code, Copilot CLI and Cursor. They also stop Claude Code from adding its name to commits and pull requests, and from reading `.env` files with its file tools or with shell commands such as `cat`.
+- `.codex/hooks.json`: has Codex run the hooks.
 
 ## License
 
