@@ -14,25 +14,20 @@ You need:
 
 Optional: to keep your email address out of the project's commits, set git's `user.email` to the noreply address in your GitHub email settings.
 
-1. Create a repository from the template, and clone it. Make it public, because the template supports only public repositories.
+1. Create a repository from the template, clone it, and go into the clone. Make the repository public, because the template supports only public repositories.
 
    ```bash
    gh repo create expense-tracker --public --template jtmpl/repo-template --clone
-   ```
-
-2. Apply the GitHub settings from inside the clone:
-
-   ```bash
    cd expense-tracker
-   scripts/configure-github
    ```
 
-3. Ask your agent to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Add any notes or spec you have about the project to your request. The agent asks you whatever else the setup needs, such as which languages, frameworks or database to use.
+2. Start your agent in the clone, and ask it to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Add any notes or spec you have about the project to your request. The agent asks you whatever else the setup needs, such as which languages, frameworks or database to use.
 
    <details>
    <summary>The setup list, for your agent</summary>
 
 
+   - First, run `gh api "repos/{owner}/{repo}/rulesets?includes_parents=false"`, as written, because gh fills in the owner and the repository. If it lists no ruleset named `main`, the repository's settings haven't been applied yet, so run `scripts/configure-github` to apply them. Run the script before you open the setup's pull request, so that the rules that protect main apply to it. When the script finishes, tell the person who asked for the setup to turn on Dependabot malware alerts at the link that the script prints, because GitHub gives scripts no way to turn the alerts on.
    - In `AGENTS.md`, rewrite the section "What this project is": what the project is for, and which kinds of change belong in it. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the version of each language, framework and database that the project uses, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install those versions and the packages.
    - Add the formatter, the linter, the type checker if the language has one, and the tests to `scripts/check`.
