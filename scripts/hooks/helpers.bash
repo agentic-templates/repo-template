@@ -11,7 +11,9 @@ trap 'exit 1' ERR
 # one JSON object, with the tool in tool_name and its input in tool_input.
 # - tool_name: the tool, such as Bash or Read. Cursor's Shell counts as Bash.
 # - shell_command: the command that Bash runs, or empty.
+# - patch: the patch text that Codex's apply_patch applies, or empty.
 # - file_path: the file that Read, Write or Edit uses, or empty.
+# - cwd: the folder the agent works in, or empty if the tool doesn't send it.
 read_input() {
   local input
   input=$(jq -c .)
@@ -19,8 +21,15 @@ read_input() {
   if [[ $tool_name == Shell ]]; then
     tool_name=Bash
   fi
-  shell_command=$(jq -r '.tool_input.command // "" | tostring' <<<"$input")
+  shell_command=""
+  patch=""
+  if [[ $tool_name == apply_patch ]]; then
+    patch=$(jq -r '.tool_input.command // "" | tostring' <<<"$input")
+  else
+    shell_command=$(jq -r '.tool_input.command // "" | tostring' <<<"$input")
+  fi
   file_path=$(jq -r '.tool_input.file_path // "" | tostring' <<<"$input")
+  cwd=$(jq -r '.cwd // "" | tostring' <<<"$input")
 }
 
 # Blocks the action, and tells the agent why: block <reason>
