@@ -140,9 +140,14 @@ fi
 # Add the project's formatter check, linter, type checker and tests here.
 
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
-# so that they don't start it again.
+# so that they don't start it again. They skip the tests of the hooks too, because the copies don't change the hooks.
 if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
   scripts/test-check
+  if has jq https://jqlang.org/download/; then
+    for hook_test in scripts/hooks/*.test; do
+      "$hook_test"
+    done
+  fi
 fi
 
 if [[ -n "$skipped" ]]; then

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# The agent's tool runs this hook before each action, because .claude/settings.json and .codex/hooks.json list it.
+# It passes the tool's input on stdin to each check in this folder, the files that end in .check.
+# A check blocks the action with exit code 2 and the reason on stderr, and this script passes both on.
+# To add a check, add its .check file and its .test file. Neither hook file needs a change.
+#
+# When the hook fails on its own error, such as when jq is missing or the input isn't JSON, it exits with
+# code 0, so the action goes ahead. A broken hook must never stop work, and Copilot CLI blocks on every
+# exit code other than 0 and 2.
+
+IFS= read -r -d '' input
+# This fails without jq, too.
+if ! jq -e 'type == "object"' >/dev/null 2>&1 <<<"$input"; then
+  exit 0
+fi
+
+for check in "${BASH_SOURCE[0]%/*}"/*.check; do
+  if [[ ! -x $check ]]; then
+    continue
+  fi
+  reason=$("$check" 2>&1 >/dev/null <<<"$input")
+  if (($? == 2)); then
+    printf '%s\n' "$reason" >&2
+    exit 2
+  fi
+done
+exit 0
