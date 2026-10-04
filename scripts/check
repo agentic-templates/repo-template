@@ -12,7 +12,7 @@ has() {
     return 0
   fi
   if [[ -n "${CI:-}" ]]; then
-    echo "error: $tool is not installed. Install it in .github/workflows/ci.yml." >&2
+    echo "error: $tool is not installed. Install it in scripts/install-check-tools, or in the step of .github/workflows/ci.yml that installs the project's toolchain." >&2
     exit 1
   fi
   echo "Skipped the $tool check because $tool is not installed. To run it here, install it: $install_url" >&2
