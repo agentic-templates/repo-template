@@ -1,6 +1,6 @@
 # repo-template
 
-Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. Instead of reviewing each pull request, you approve the issues before agents build them. Each approved issue's pull request merges once its checks pass.
+Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. You don't need to review each pull request. You approve the issues before agents build them, or ask an agent for a change yourself. Either way, the agent's pull request merges once its checks pass.
 
 The template works with any language. Agents follow `AGENTS.md` and the guides it links to in `docs/`. Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read `AGENTS.md` on their own. Gemini CLI and Aider read it only after you point their settings at it.
 
@@ -46,7 +46,7 @@ Optional: to keep your email address out of the project's commits, set git's `us
 
    </details>
 
-4. Review the setup's pull request, and ask the agent to merge it. Unlike the pull requests for approved issues, this one doesn't merge on its own. The setup replaces this README with one for your project. To read the rest of this page later, open [the template's README](https://github.com/jtmpl/repo-template#example-from-idea-to-first-release).
+   The setup replaces this README with one for your project. To read the rest of this page later, open [the template's README](https://github.com/jtmpl/repo-template#example-from-idea-to-first-release).
 
 ## Example: from idea to first release
 
@@ -91,7 +91,7 @@ For your project's later versions, use the same three requests. The requests bel
 - **"Triage the new issues."** The agent recommends what to do with each issue that waits for triage, such as a bug report from a user, and carries out what you decide.
 - **"Make #14 ready to build."** Use it for an issue you accepted at triage, or one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
 - **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
-- **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it. Unlike a ready issue's pull request, this one merges only when you ask, so add "and merge it" to your request, or ask later.
+- **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it, and the pull request merges once its checks pass.
 - **"Review pull request #12."** The agent compares the change with its issue and comments with what should change. If the pull request comes from someone without write access, the agent doesn't run the pull request's code on your machine, where it could reach your credentials. CI runs it on GitHub's machines instead.
 - **"Review the code for security problems."** The agent reviews the whole repository, unless you name a part of it or a range of changes, such as the changes since the last release. It tells you what it found and which parts it reviewed.
 
@@ -111,7 +111,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `.claude/settings.json` stops Claude Code from reading `.env` files with its file tools or with commands that name the file, because those files hold secrets. A script can still read one, and so can a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
-- When an agent builds the ready issues, it merges their pull requests, and Dependabot's, without anyone reviewing them. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
+- An agent merges the pull request for each ready issue and for each change you ask for, without anyone reviewing it. When it builds the ready issues, it also merges Dependabot's pull requests. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
 - If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them, and an agent marks a pull request as a breaking change only when it notices the break. So a release can miss a breaking change and raise the version number too little.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. To build faster, ask that agent for helpers. Helpers need an agent that can launch other agents.
 
