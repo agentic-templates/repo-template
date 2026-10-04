@@ -83,9 +83,9 @@ Then name it in your request: "Build the ready issues, with up to 3 helpers usin
 
 For your project's later versions, use the same three requests. The requests below cover the rest of the work:
 
-- **"Triage these ideas:"**, followed by the text or a link to it. The agent splits the text into single ideas and recommends what to do with each. It opens issues only for the ideas you accept, and those wait in the backlog until you ask to make them ready to build.
+- **"Triage these ideas:"**, followed by the text or a link to it. The agent splits the text into single ideas. It opens issues for the ideas it accepts, and asks you about the ones it would drop, that are too vague or that need your decision. The issues wait in the backlog until you ask to make them ready to build.
 - **"Triage the new issues."** The agent recommends what to do with each issue that waits for triage, such as a bug report from a user, and carries out what you decide.
-- **"Make #14 ready to build."** Use it for an issue you accepted at triage, or one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
+- **"Make #14 ready to build."** Use it for any issue in the backlog, including one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
 - **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
 - **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it, and the pull request merges once its checks pass.
 - **"Review pull request #12."** The agent compares the change with its issue and comments with what should change. If the pull request comes from someone without write access, the agent doesn't check out or run the pull request's code on your machine, where it could reach your credentials. CI runs it on GitHub's machines instead.

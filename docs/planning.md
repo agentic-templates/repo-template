@@ -1,19 +1,19 @@
 # Planning guide
 
-This guide turns ideas into issues that an agent can build. The agent does the work in each step, and maintainers make the decisions.
+This guide turns ideas into issues that an agent can build. The agent does the work in each step, and maintainers make the decisions that only they can make, such as which ideas to drop and which issues get built.
 
 ## Labels
 
 "Labels" in AGENTS.md says what each label means. These rules say how three of them are used:
 
-- `needs-triage`: the issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created while planning.
+- `needs-triage`: the issue forms add it. An agent adds it to every issue it opens on its own, for something it noticed. Issues a maintainer asks for don't get it, including the ones created at triage or while planning.
 - `needs-decision`: when you add it, write the question in the issue. When the maintainer decides, write the decision into the issue's body, because the agent that builds it reads the body. Then remove the label.
 - `ready`: an accepted issue without `ready` waits in the backlog, unless a maintainer asks an agent to work on it.
 
 ## How an idea becomes buildable
 
 1. **Input.** A maintainer shares or points to any text. The text itself isn't copied into the repository or into any issue.
-2. **Triage.** The agent splits the input into single ideas, checks each one against the project and recommends what to do with it. The maintainer decides.
+2. **Triage.** The agent splits the input into single ideas, checks each one against the project and gives it a verdict. It asks the maintainer to approve only the verdicts that need a maintainer, such as dropping an idea. Once the maintainer has answered, it carries out the verdicts.
 3. **Backlog.** Each accepted idea becomes one open issue without the `ready` label. A big idea stays one issue, with `needs-breakdown`.
 4. **Planning.** When a maintainer asks to plan the next work, the maintainer and the agent agree on a goal. The agent picks the issues that the goal needs, splits the big ones and rewrites each one until it meets the definition of ready. Once the maintainer approves them, they get the `ready` label.
 5. **Building.** Build runs take only issues with the `ready` label.
@@ -30,7 +30,7 @@ Follow these steps for every idea, whatever form the input takes:
    - Does an open or closed issue already cover it? Search with `gh issue list --state all --search "<words>"`.
    - Can the project build it, and is it worth what it costs?
    - Does it rely on claims about the project, such as how the code works or what users need? Check those claims against the code and AGENTS.md. List the ones that are out of date or contradict something. Ask the maintainer about them right away, before step 3, because the answers can change the verdicts you recommend there.
-3. Recommend one verdict for each idea, with the reason. Each verdict says what happens once the maintainer agrees:
+3. Recommend one verdict for each idea, with the reason. Each verdict says what happens when it's carried out:
    - **Accept:** the idea becomes an issue in the backlog.
    - **Accept, too big:** the idea becomes one issue with `needs-breakdown`.
    - **Research first:** a maintainer can't decide whether to build the idea, or what to build, until an open question is answered. The idea becomes an issue with `needs-decision`, blocked by a new research issue for the question. The maintainer decides once the answer is in.
@@ -40,8 +40,10 @@ Follow these steps for every idea, whatever form the input takes:
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
 
    When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, if no reading of an idea would fit the project, recommend **Drop**, not **Too vague**.
-4. Before you show the maintainer your verdicts, ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. Show the maintainer a table of the ideas, verdicts and reasons. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts.
-5. Carry out only the verdicts the maintainer approved. Write each new issue in your own words. Issues are public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
+
+   Four verdicts don't need the maintainer's approval: **Accept**, **Accept, too big**, **Research first** and **Duplicate**. You carry them out in step 5, once the maintainer has answered your questions. The ideas come from a maintainer, so accepting one does what they asked, and an accepted issue waits in the backlog until a maintainer approves it while planning. **Drop**, **Too vague** and **Needs a decision** wait for the maintainer.
+4. Before you show the maintainer your verdicts, ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. If the critic recommends revising or dropping an idea whose verdict doesn't need approval, make its verdict **Needs a decision**, because a maintainer decides each idea that the critic argues against. Show the maintainer a table of the ideas, verdicts and reasons, and mark the verdicts that you'll carry out without asking. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts that the table doesn't mark.
+5. Carry out the verdicts only after the maintainer has answered your questions, because an answer can change a verdict, such as one that changes the project's direction. Carry out the verdicts that the table marks, the verdicts the maintainer approved, and any verdict that an answer turned into one of the four, without asking again. The issues you open don't get `needs-triage`, because a maintainer asked for them. Write each new issue in your own words. Issues are public, so leave out private details from the input, and link a public source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
 
 Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak.
 
@@ -53,7 +55,7 @@ The critic mustn't see the maintainer's enthusiasm, so start a new agent without
 
 "Give the strongest case for building this idea and the strongest case against it. List what's unclear. Then recommend one: build it, revise it, or drop it. If you recommend revising it, say how. Say which concerns, if they were answered, would change your recommendation."
 
-Add its recommendation and its main concerns to the triage table. The critic informs the maintainer's decision and doesn't make it. Only a maintainer revises an idea. Don't ask another critic about it until the maintainer has revised it.
+Add its recommendation and its main concerns to the triage table. The critic's recommendation informs the verdict and doesn't make it. Only a maintainer revises an idea. Don't ask another critic about it until the maintainer has revised it.
 
 ## Triage issues that others open
 
