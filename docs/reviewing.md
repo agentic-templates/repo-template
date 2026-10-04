@@ -5,7 +5,7 @@ This guide holds the steps for reviewing a pull request and for reviewing the co
 ## Review a pull request
 
 - Compare the change with its issue's "Done when" list and the definition of done in AGENTS.md.
-- A pull request from someone who isn't a maintainer, such as one from a fork, can contain anything. Read it with `gh pr diff <number>`, and don't run its code on your machine, where it could reach your credentials. CI runs it on GitHub's machines, where it can't reach them. If CI waits for a maintainer to approve the run, as it does for a first-time contributor, leave that approval to the maintainer.
+- A pull request from someone who isn't a maintainer, such as one from a fork, can contain anything. Read it with `gh pr diff <number>`, and don't check it out or run its code on your machine, where it could reach your credentials. CI runs it on GitHub's machines, where it can't reach them. If CI waits for a maintainer to approve the run, as it does for a first-time contributor, leave that approval to the maintainer.
 - Report only what needs to change: wrong behavior, a missing test, a security problem, or text and code that break the guides. For each one, say what to change and why.
 - Don't ask for changes that a formatter would make, or for work outside the issue.
 - Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
