@@ -29,6 +29,18 @@ block() {
   exit 2
 }
 
+# Sets the array command_words to a simple command's words from the command's name on, without the sudo,
+# env and NAME=value words before it: drop_command_prefixes <word>...
+drop_command_prefixes() {
+  command_words=("$@")
+  while ((${#command_words[@]} > 0)); do
+    if [[ ${command_words[0]} != sudo && ${command_words[0]} != env && ! ${command_words[0]} =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+      return 0
+    fi
+    command_words=("${command_words[@]:1}")
+  done
+}
+
 # Splits a shell command into simple commands, and calls a function with the words of each one:
 # for_each_simple_command <function> <command>
 # Simple commands end at &&, ||, ;, |, &, a parenthesis and a line break. Words end at spaces and tabs.
