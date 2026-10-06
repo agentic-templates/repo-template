@@ -135,4 +135,4 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE)
