@@ -27,7 +27,7 @@ Write code that a reader understands the first time they read it. If a rule here
 
 Keep the complex code in one place behind a plain interface, so that the code that calls it doesn't need to know how it works.
 
-- Complexity is required when a simpler version would fail a requirement. Examples are code that must reach the accuracy an issue asks for, and the fix for a reported bug. Name the requirement in a comment.
+- Complexity is required when a simpler version would fail a requirement. Examples are code that must reach the accuracy or speed an issue asks for, and code that a bug fix adds and that a reader might later think is unnecessary, such as a special case. Name the requirement in a comment. A bug fix that adds no such code adds no complexity, and needs no comment that names the requirement.
 - Complexity is a choice when a simpler version already meets the requirements and the complex one does better, such as running faster, using less memory or giving more accurate results. Make that choice only where a measurement shows what the complex version gains. Say in a comment what the code gains and where the measurement is, such as a benchmark name or an issue.
 - Keep tests that check the complex code's results. For speed or memory, keep a plain version in the test code, such as the code before you optimized it, and check that both give the same results. For accuracy, keep the test cases that measure it, so that a later change can't make the results worse without anyone noticing.
 
