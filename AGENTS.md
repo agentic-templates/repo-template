@@ -31,7 +31,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
-- `scripts/instruction-file-names`: the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
+- `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
 - `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read.
 - `.codex/hooks.json`: has Codex run the hooks.
@@ -41,7 +41,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
 - `scripts/configure-github`: the agent that sets up the project runs it once, as the setup list in the README describes. After a change to the script merges, a maintainer with admin access runs it again.
 
-The checks on a pull request should finish within ten minutes. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
+Keep the checks on a pull request within ten minutes. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
 The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the maintainer before you run any `gh` command.
 
