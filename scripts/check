@@ -222,7 +222,8 @@ if [[ -n "$broken_name" ]]; then
 fi
 
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
-# so that they don't start it again. They skip the tests of the hooks too, because the copies don't change the hooks.
+# so that they don't start it again. They skip the tests in scripts/ and scripts/hooks/ too, because the copies
+# don't change the scripts that those tests run.
 if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
   # Add the project's formatter check, linter, type checker, tests and coverage check here.
   # The copies that scripts/test-check makes skip these checks, because the copies hold only the tracked files.
@@ -234,6 +235,9 @@ if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
       "$hook_test"
     done
   fi
+  for script_test in scripts/*.test; do
+    "$script_test"
+  done
 fi
 
 if [[ -n "$skipped" ]]; then

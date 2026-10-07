@@ -103,7 +103,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - The hooks in `scripts/hooks/` check each action of the agent before it happens, such as a command that reads a `.env` file. Codex runs them only after you review them with `/hooks`. The cloud agents of Copilot and Cursor don't run them, so they get only CI and the written rules.
 - The hook for secret files checks only the commands on its list, such as `cat`, `grep` and `cp`. Another command can still read a `.env` file, and so can a script, or a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes.
-- On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
+- On an organization's repository, people with GitHub's Triage role can add `ready`. A workflow removes a `ready` label that someone without write access adds, usually within a minute. An agent that's building the ready issues can still take the issue in that minute, so give the Triage role only to people you'd let approve work.
 - An agent merges the pull request for each ready issue and for each change you ask for, without anyone reviewing it. When it builds the ready issues, it also merges Dependabot's pull requests. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
 - If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them. So a release can miss a breaking change and raise the version number too little.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. That agent's helpers don't count, and they need an agent that can launch other agents.
@@ -123,7 +123,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `docs/releasing.md`: how an agent publishes a release, writes a workflow that publishes or deploys the project, checks the security advisories, and records and fixes a security problem that isn't public yet.
 - `scripts/check`: runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template.
-- `.github/`: CI, a check of each pull request's title and body, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
+- `.github/`: CI, a check of each pull request's title and body, issue forms, a pull request template, weekly Dependabot updates, release notes settings, the contributing and security pages, and a workflow that removes a `ready` label that the rules don't allow, such as one that someone without write access adds.
 - `scripts/hooks/`: hooks that block risky actions of the agent, such as reading a `.env` file or checking out a pull request from a fork.
 - `.claude/settings.json`: runs the hooks in Claude Code, Copilot CLI and Cursor, and stops Claude Code from adding its name to commits and pull requests.
 - `.codex/hooks.json`: has Codex run the hooks.
