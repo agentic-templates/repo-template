@@ -6,6 +6,8 @@ source "${BASH_SOURCE[0]%/*}/testing.bash"
 
 # A stand-in for gh, first on the PATH, so that the cases ask nothing of GitHub.
 # TEST_RULESETS says what it reports for the repository's rulesets: main, another, none or fail.
+# TEST_MAIN_RULES lists the checks that the rules for main require, separated by spaces, or says fail.
+# For the repository jtmpl/other in GH_REPO, TEST_OTHER_MAIN_RULES lists them instead.
 # TEST_PULL_REQUEST says what it reports for pull request 7, or the current branch's: fork, same or fail.
 # It fails for any other pull request, as gh does for one that doesn't exist, and records each call in TEST_GH_CALLS.
 stand_in=$(mktemp -d)
@@ -13,7 +15,18 @@ trap 'rm -rf "$stand_in"' EXIT
 cat >"$stand_in/gh" <<'STAND_IN'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$TEST_GH_CALLS"
-if [[ $1 == api ]]; then
+if [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
+  rules=$TEST_MAIN_RULES
+  if [[ ${GH_REPO:-} == jtmpl/other ]]; then
+    rules=$TEST_OTHER_MAIN_RULES
+  fi
+  if [[ $rules == fail ]]; then
+    exit 1
+  fi
+  for check in $rules; do
+    echo "$check"
+  done
+elif [[ $1 == api ]]; then
   case $TEST_RULESETS in
     main) echo '[{"id": 1, "name": "main", "target": "branch"}]' ;;
     another) echo '[{"id": 2, "name": "tags", "target": "tag"}]' ;;
@@ -35,7 +48,9 @@ fi
 STAND_IN
 chmod +x "$stand_in/gh"
 PATH=$stand_in:$PATH
-export TEST_GH_CALLS=$stand_in/calls TEST_RULESETS TEST_PULL_REQUEST
+# The rules for main require every check that scripts/configure-github requires, unless a case says otherwise.
+export TEST_GH_CALLS=$stand_in/calls TEST_RULESETS TEST_PULL_REQUEST TEST_MAIN_RULES="check title" TEST_OTHER_MAIN_RULES="check title"
+unset GH_REPO
 
 second_run="Blocked: this repository's settings were applied before, so a maintainer with admin access runs scripts/configure-github again. Go on with the other work, and list the command in your report for the maintainer, who runs it."
 merge_reason="comes from a fork, so a maintainer merges it. Go on with the other work, and list the command in your report for the maintainer, who runs it."
@@ -87,6 +102,40 @@ for TEST_PULL_REQUEST in same fail; do
     expect_allow Bash "$command"
   done
 done
+
+# A merge while the rules for main no longer require a check that scripts/configure-github requires there
+TEST_PULL_REQUEST=same
+report_this="Go on with the other work, and list this in your report for the maintainer."
+no_check="Blocked: main no longer requires the check job, so a pull request can merge without passing it. A maintainer with admin access restores it by running scripts/configure-github. $report_this"
+no_title="Blocked: main no longer requires the title job, so a pull request can merge without passing it. A maintainer with admin access restores it by running scripts/configure-github. $report_this"
+no_rules="Blocked: main no longer requires the check and title jobs, so a pull request can merge without passing them. A maintainer with admin access restores them by running scripts/configure-github. $report_this"
+merges=('gh pr merge 7 --squash' 'gh pr merge --auto --squash' 'gh pr merge 7 --admin --merge' 'gh pr merge --body "x" 7')
+TEST_MAIN_RULES="title CodeQL"
+for command in "${merges[@]}"; do
+  expect_block Bash "$command" "$no_check"
+done
+TEST_MAIN_RULES="check"
+expect_block Bash 'gh pr merge 7 --squash' "$no_title"
+TEST_MAIN_RULES=""
+expect_block Bash 'gh pr merge 7 --squash' "$no_rules"
+expect_allow Bash 'gh pr merge 7 --disable-auto'
+expect_allow Bash 'gh pr merge --disable-auto'
+for TEST_MAIN_RULES in "CodeQL check title" fail; do
+  for command in "${merges[@]}"; do
+    expect_allow Bash "$command"
+  done
+done
+
+# The rules for main of the repository that -R names
+TEST_MAIN_RULES="check title"
+TEST_OTHER_MAIN_RULES="check"
+expect_block Bash 'gh pr merge -R jtmpl/other 7 --squash' "$no_title"
+expect_block Bash 'gh pr merge --repo=jtmpl/other --auto --squash' "$no_title"
+expect_allow Bash 'gh pr merge 7 --squash'
+TEST_MAIN_RULES=""
+TEST_OTHER_MAIN_RULES="check title"
+expect_allow Bash 'gh pr merge --repo jtmpl/other 7 --squash'
+TEST_MAIN_RULES="check title"
 
 # Commands that only read a pull request, a checkout that asks the person to pick one, and a fetch of no one pull request
 TEST_PULL_REQUEST=fork

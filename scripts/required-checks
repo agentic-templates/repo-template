@@ -1,0 +1,13 @@
+# shellcheck shell=bash
+# Prints the checks that scripts/configure-github requires on main from GitHub Actions, whose integration ID is 15368,
+# one to a line. Each one is a JSON object with a context, written on one line or on several.
+# scripts/check and scripts/check-main-rules read them with this function. Run it from the repository's root.
+required_checks() {
+  local rule context_pattern='"context"[[:space:]]*:[[:space:]]*"([^"]*)"'
+  local actions_pattern='"integration_id"[[:space:]]*:[[:space:]]*15368([^0-9]|$)'
+  while IFS= read -r rule; do
+    if [[ $rule =~ $actions_pattern ]] && [[ $rule =~ $context_pattern ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done < <(tr '\n' ' ' < scripts/configure-github | { grep -o '{[^{}]*"context"[^{}]*}' || true; })
+}
