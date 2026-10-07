@@ -49,5 +49,5 @@ As soon as you find a vulnerability that isn't public yet, open a draft security
 
 1. Build the fix in the advisory's temporary private fork, which an admin can create with `gh api --method POST repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks`.
 2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
-3. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it.
+3. The fix's issue, pull request and commits say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it.
 4. Publish the release in the same session.
