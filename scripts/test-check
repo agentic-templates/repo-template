@@ -100,6 +100,7 @@ fixme="FIX""ME"
 
 todo_in_a_shell_script() {
   printf '%s\n' '#!/usr/bin/env bash' 'echo "start"' "# $todo: print the total" > "$copy/scripts/unfinished"
+  chmod +x "$copy/scripts/unfinished"
 }
 
 fixme_in_a_text_file() {
@@ -298,6 +299,21 @@ run_case long_file_listed_with_a_reason pass
 run_case blank_line_in_the_list_of_long_files pass
 run_case long_file_listed_without_a_reason fail "error: scripts/long-files lists tests/statement.csv without a reason. Add a space and the reason after the path."
 run_case listed_file_of_1000_lines fail "error: scripts/long-files lists tests/statement.csv, which scripts/check accepts without the list. Remove its line, or fix the path."
+
+# Cases for the checks that scripts are executable and that each check of the hooks has a test.
+# The repository as it is has a test without a check, scripts/hooks/session-start.test, and passes.
+
+script_that_isnt_executable() {
+  printf '%s\n' '#!/usr/bin/env bash' 'echo "The total is 0."' > "$copy/scripts/total"
+}
+
+hook_check_without_a_test() {
+  printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$copy/scripts/hooks/example.check"
+  chmod +x "$copy/scripts/hooks/example.check"
+}
+
+run_case script_that_isnt_executable fail "error: scripts/total starts with #!, and git doesn't record it as executable. Run chmod +x scripts/total, and commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x scripts/total instead."
+run_case hook_check_without_a_test fail "error: scripts/hooks/example.check has no test. Add scripts/hooks/example.test, which runs the check through scripts/hooks/before-tool, as the other tests in scripts/hooks/ do."
 
 # Cases for the check that finds section names that match no heading.
 
