@@ -134,6 +134,93 @@ if [[ -n "$too_big" ]]; then
   exit 1
 fi
 
+# The Markdown files refer to sections by their headings, in quotes. Each name must match a heading in its file,
+# so that a renamed or removed section doesn't leave a name that leads nowhere.
+# A name is written as "<heading>" in <file>, or as "<heading>" describes or "<heading>" says for a section of its own file.
+# <file> is a path from the repository's root, written as AGENTS.md, `docs/planning.md` or [docs/releasing.md](docs/releasing.md).
+# In a link, its text names the file. A name with describes or says can also match the label of a field in an issue form.
+quoted_name='"([^"]+)"'
+markdown_path='([A-Za-z0-9_./-]+\.md)'
+named_file="($markdown_path|\`$markdown_path\`|\[$markdown_path]\([^)]*\))"
+# Text that matches this names a section.
+section_name="$quoted_name (in $named_file|describes|says)"
+issue_forms=.github/ISSUE_TEMPLATE
+
+# Prints the text of each heading in a Markdown file, at any level: headings <file>
+headings() {
+  sed -n 's/^#\{1,6\} //p' "$1"
+}
+
+# Prints the label of each field in the issue forms.
+form_field_labels() {
+  local form
+  for form in "$issue_forms"/*; do
+    if [[ -f $form ]]; then
+      sed -n 's/^[[:space:]]*label:[[:space:]]*//p' "$form"
+    fi
+  done
+}
+
+# Succeeds if a line of the input is exactly the text: has_line <text>
+# With -q, grep would stop reading at the first match. The command that writes to grep could then fail
+# on the closed pipe, and pipefail would fail the whole pipeline.
+has_line() {
+  grep -F -x -- "$1" >/dev/null
+}
+
+# Prints each section name in a Markdown file on a line of its own: its line number, the name and the file
+# that the name points to, separated by tabs. The file is empty for describes and says: section_names_in <file>
+section_names_in() {
+  local line line_number=0 rest
+  # The test after || also reads a last line that has no line break.
+  while IFS= read -r line || [[ -n $line ]]; do
+    line_number=$((line_number + 1))
+    rest=$line
+    while [[ $rest =~ $section_name ]]; do
+      # One of the groups 4, 5 and 6 holds the path, as it's written plainly, in backticks or as a link's text.
+      printf '%s\t%s\t%s\n' "$line_number" "${BASH_REMATCH[1]}" "${BASH_REMATCH[4]}${BASH_REMATCH[5]}${BASH_REMATCH[6]}"
+      rest=${rest#*"${BASH_REMATCH[0]}"}
+    done
+  done < "$1"
+}
+
+# Prints an error and fails if a section name matches nothing:
+# check_section_name <Markdown file> <line number> <name> <file that the name points to, or empty for its own file>
+check_section_name() {
+  local file=$1 line_number=$2 name=$3 target=$4
+  if [[ -z $target ]]; then
+    if headings "$file" | has_line "$name" || form_field_labels | has_line "$name"; then
+      return 0
+    fi
+    echo "error: $file:$line_number names \"$name\", which matches no heading in $file and no field label in $issue_forms/. Fix the name, or the heading." >&2
+    return 1
+  fi
+  if [[ ! -f $target ]]; then
+    echo "error: $file:$line_number names \"$name\" in $target, which doesn't exist. Write the path from the repository's root to the file." >&2
+    return 1
+  fi
+  if ! headings "$target" | has_line "$name"; then
+    echo "error: $file:$line_number names \"$name\" in $target, which has no such heading. Fix the name, or the heading." >&2
+    return 1
+  fi
+}
+
+broken_name=""
+while IFS= read -r -d '' file; do
+  # -f skips the deleted files that git ls-files also lists.
+  if [[ ! -f $file ]]; then
+    continue
+  fi
+  while IFS=$'\t' read -r line_number name target; do
+    if ! check_section_name "$file" "$line_number" "$name" "$target"; then
+      broken_name=yes
+    fi
+  done < <(section_names_in "$file")
+done < <(git ls-files -z -- '*.md')
+if [[ -n "$broken_name" ]]; then
+  exit 1
+fi
+
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
 # so that they don't start it again. They skip the tests of the hooks too, because the copies don't change the hooks.
 if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
