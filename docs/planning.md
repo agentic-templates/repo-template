@@ -18,7 +18,7 @@ Follow these steps for every idea, whatever form the input takes:
 2. Check each idea:
    - Does it fit the direction in "What this project is" in AGENTS.md?
    - Does an open or closed issue already cover it? Search with `gh issue list --state all --search "<words>"`.
-   - Can the project build it, and is it worth what it costs?
+   - Can the project build it, and is it worth what it costs? Count what it adds for agents to read in later sessions, such as rules, checks and options.
    - Does it rely on claims about the project, such as how the code works or what users need? Check those claims against the code and AGENTS.md. List the ones that are out of date or contradict something. Ask the maintainer about them right away, before step 3.
 3. Recommend one verdict for each idea, with the reason:
    - **Accept:** the idea becomes an issue in the backlog.
