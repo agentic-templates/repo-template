@@ -68,6 +68,24 @@ if git grep -n -w -I -e "$todo" -e "$fixme" -- ':!*.md' >&2; then
   exit 1
 fi
 
+# Prints the lines of a section of a Markdown file, between its "## " heading and the next one: section <file> <heading>
+section() {
+  local file=$1 heading=$2 line is_in_section=""
+  if [[ ! -f $file ]]; then
+    return 0
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == "## "* ]]; then
+      is_in_section=""
+      if [[ $line == "## $heading" ]]; then
+        is_in_section=yes
+      fi
+    elif [[ -n $is_in_section ]]; then
+      printf '%s\n' "$line"
+    fi
+  done < "$file"
+}
+
 # Instruction files stay small, as docs/rules.md describes.
 # The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
 max_lines=199
@@ -93,7 +111,7 @@ if [[ -f AGENTS.md ]]; then
     if [[ -f $guide ]]; then
       instruction_files+=("$guide")
     fi
-  done < <(sed -n '/^## Read the guides$/,/^## /p' AGENTS.md | sed -n 's/.*](\(docs\/[^)#]*\)).*/\1/p' | sort -u)
+  done < <(section AGENTS.md "Read the guides" | sed -n 's/.*](\(docs\/[^)#]*\)).*/\1/p' | sort -u)
 fi
 
 if ((${#instruction_files[@]} > 0)); then
@@ -218,6 +236,311 @@ while IFS= read -r -d '' file; do
   done < <(section_names_in "$file")
 done < <(git ls-files -z -- '*.md')
 if [[ -n "$broken_name" ]]; then
+  exit 1
+fi
+
+# Several files repeat the labels, the commit types, the checks that main requires, the gh version and the guides.
+# A file that no longer agrees with the others breaks something without an error, so these checks compare them.
+# They report every difference, then fail. They leave out a file that doesn't exist.
+files_disagree=""
+
+# Prints an error, and fails the checks once every difference is reported: report_difference <message>
+report_difference() {
+  echo "error: $1" >&2
+  files_disagree=yes
+}
+
+# Succeeds if a Markdown file has a section with this heading: has_section <file> <heading>
+has_section() {
+  [[ -f $1 ]] && has_line "## $2" < "$1"
+}
+
+# Prints each line of the first list that the second list doesn't hold: lines_missing_from <list> <other list>
+lines_missing_from() {
+  local line
+  while IFS= read -r line; do
+    if [[ -n $line ]] && ! has_line "$line" <<<"$2"; then
+      printf '%s\n' "$line"
+    fi
+  done <<<"$1"
+}
+
+# Prints a YAML value without the spaces and the quotes around it, or nothing if it's empty.
+yaml_value() {
+  local value=$1 trimmed='^[[:space:]]*(.*[^[:space:]])[[:space:]]*$' double_quoted='^"(.*)"$' single_quoted="^'(.*)'$"
+  if [[ ! $value =~ $trimmed ]]; then
+    return 0
+  fi
+  value=${BASH_REMATCH[1]}
+  if [[ $value =~ $double_quoted || $value =~ $single_quoted ]]; then
+    value=${BASH_REMATCH[1]}
+  fi
+  printf '%s\n' "$value"
+}
+
+# Prints the labels in the labels: lists of a YAML file. A list is written as [a, b], as lines that start with "- ",
+# or as a string with commas, which issue forms also allow.
+yaml_labels() {
+  local line value item key_column=""
+  local key_pattern='^([[:space:]]*(-[[:space:]]+)?)labels:(.*)$' item_pattern='^([[:space:]]*)-[[:space:]]+(.*)$'
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%%[[:space:]]#*}
+    if [[ $line == "#"* || -z ${line//[[:space:]]/} ]]; then
+      continue
+    fi
+    # The items of a list under labels: are indented at least as far as the key.
+    if [[ -n $key_column ]]; then
+      if [[ $line =~ $item_pattern ]] && ((${#BASH_REMATCH[1]} >= key_column)); then
+        yaml_value "${BASH_REMATCH[2]}"
+        continue
+      fi
+      key_column=""
+    fi
+    if [[ ! $line =~ $key_pattern ]]; then
+      continue
+    fi
+    value=$(yaml_value "${BASH_REMATCH[3]}")
+    if [[ -z $value ]]; then
+      key_column=${#BASH_REMATCH[1]}
+      continue
+    fi
+    value=${value#\[}
+    value=${value%\]}
+    while IFS= read -r item; do
+      yaml_value "$item"
+    done < <(tr ',' '\n' <<<"$value")
+  done < "$1"
+}
+
+# Prints the labels that scripts/configure-github creates: the first field of each line between <<'LABELS' and LABELS.
+created_labels() {
+  local line is_in_list=""
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == *"<<'LABELS'" ]]; then
+      is_in_list=yes
+    elif [[ $line == LABELS ]]; then
+      is_in_list=""
+    elif [[ -n $is_in_list ]]; then
+      printf '%s\n' "${line%%|*}"
+    fi
+  done < scripts/configure-github
+}
+
+# Prints the types under "Use one of these types" in "Commits" in AGENTS.md: the word in backticks that starts each item.
+listed_types() {
+  local line is_in_list="" pattern="^[[:space:]]+- \`([^\`]+)\`"
+  while IFS= read -r line; do
+    if [[ $line == *"Use one of these types"* ]]; then
+      is_in_list=yes
+    elif [[ -n $is_in_list ]]; then
+      if [[ ! $line =~ $pattern ]]; then
+        return 0
+      fi
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done < <(section AGENTS.md Commits)
+}
+
+# Prints the checks that scripts/configure-github requires on main from GitHub Actions, whose integration ID is 15368.
+# Each one is a JSON object with a context, written on one line or on several.
+required_checks() {
+  local rule context_pattern='"context"[[:space:]]*:[[:space:]]*"([^"]*)"'
+  local actions_pattern='"integration_id"[[:space:]]*:[[:space:]]*15368([^0-9]|$)'
+  while IFS= read -r rule; do
+    if [[ $rule =~ $actions_pattern ]] && [[ $rule =~ $context_pattern ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done < <(tr '\n' ' ' < scripts/configure-github | { grep -o '{[^{}]*"context"[^{}]*}' || true; })
+}
+
+# Prints the check of each job in a workflow that runs on pull_request, and nothing for any other workflow.
+# A job's check has the job's name, or its key when it has no name.
+pull_request_job_checks() {
+  local line spaces content block="" block_indent="" job_check="" property_indent="" checks="" runs_on_pull_request=""
+  local event_pattern='(^|[^[:alnum:]_])pull_request([^[:alnum:]_]|$)' job_pattern='^([[:alnum:]_-]+):' name_pattern='^name:(.*)$'
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%%[[:space:]]#*}
+    if [[ $line == "#"* || -z ${line//[[:space:]]/} ]]; then
+      continue
+    fi
+    spaces=${line%%[! ]*}
+    content=${line#"$spaces"}
+    # A key without indentation, such as on: or jobs:, starts a block. YAML lets on be quoted.
+    if [[ -z $spaces ]]; then
+      block=${content%%:*}
+      block=${block//\"/}
+      block=${block//\'/}
+      block_indent=""
+      if [[ $block == on && ${content#*:} =~ $event_pattern ]]; then
+        runs_on_pull_request=yes
+      fi
+      continue
+    fi
+    if [[ -z $block_indent ]]; then
+      block_indent=${#spaces}
+    fi
+    if [[ $block == on ]] && ((${#spaces} == block_indent)) && [[ $content =~ $event_pattern ]]; then
+      runs_on_pull_request=yes
+    elif [[ $block == jobs ]] && ((${#spaces} == block_indent)) && [[ $content =~ $job_pattern ]]; then
+      if [[ -n $job_check ]]; then
+        checks+=$job_check$'\n'
+      fi
+      job_check=${BASH_REMATCH[1]}
+      property_indent=""
+    elif [[ $block == jobs && -n $job_check ]]; then
+      # The job's own name is indented less than the names of its steps.
+      if [[ -z $property_indent ]]; then
+        property_indent=${#spaces}
+      fi
+      if ((${#spaces} == property_indent)) && [[ $content =~ $name_pattern ]]; then
+        job_check=$(yaml_value "${BASH_REMATCH[1]}")
+      fi
+    fi
+  done < "$1"
+  if [[ -n $job_check ]]; then
+    checks+=$job_check$'\n'
+  fi
+  if [[ -n $runs_on_pull_request ]]; then
+    printf '%s' "$checks"
+  fi
+}
+
+# Prints the version in the first "<phrase> <version> or later" in a file: gh_version <file> <phrase>
+gh_version() {
+  local line pattern="(^|[^[:alnum:]])$2 ([0-9]+\.[0-9]+) or later"
+  if [[ ! -f $1 ]]; then
+    return 0
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line =~ $pattern ]]; then
+      printf '%s\n' "${BASH_REMATCH[2]}"
+      return 0
+    fi
+  done < "$1"
+}
+
+# Prints the title of a Markdown page: its first line that starts with "# ", without the "# " and the spaces at its end.
+page_title() {
+  local line
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == "# "* ]]; then
+      line=${line#"# "}
+      printf '%s\n' "${line%"${line##*[![:space:]]}"}"
+      return 0
+    fi
+  done < "$1"
+}
+
+for heading in Labels Commits "Read the guides"; do
+  if ! has_section AGENTS.md "$heading"; then
+    report_difference "AGENTS.md has no section \"$heading\", and scripts/check compares that section with other files. Add it, with the heading \"## $heading\"."
+  fi
+done
+
+if has_section AGENTS.md Labels; then
+  agents_md_labels=$(section AGENTS.md Labels | { grep -o "\`[^\`]*\`" || true; } | tr -d '`' | sort -u)
+  if [[ -f scripts/configure-github ]]; then
+    created=$(created_labels)
+    while IFS= read -r label; do
+      report_difference "\"Labels\" in AGENTS.md names $label, and scripts/configure-github doesn't create it. Add it to scripts/configure-github, or remove it from AGENTS.md."
+    done < <(lines_missing_from "$agents_md_labels" "$created")
+    while IFS= read -r label; do
+      report_difference "scripts/configure-github creates the label $label, and \"Labels\" in AGENTS.md doesn't name it. Add it to AGENTS.md, or remove it from scripts/configure-github."
+    done < <(lines_missing_from "$created" "$agents_md_labels")
+  fi
+  for file in "$issue_forms"/*.yml "$issue_forms"/*.yaml .github/release.yml .github/dependabot.yml; do
+    if [[ ! -f $file ]]; then
+      continue
+    fi
+    allowed_labels=$agents_md_labels
+    # In release notes, "*" stands for every label.
+    if [[ $file == .github/release.yml ]]; then
+      allowed_labels+=$'\n*'
+    fi
+    while IFS= read -r label; do
+      report_difference "$file names the label $label, and \"Labels\" in AGENTS.md doesn't name it. Use a label that AGENTS.md names, or add $label to AGENTS.md and scripts/configure-github."
+    done < <(lines_missing_from "$(yaml_labels "$file" | sort -u)" "$allowed_labels")
+  done
+fi
+
+if has_section AGENTS.md Commits && [[ -f .github/workflows/pr-title.yml ]]; then
+  agents_md_types=$(listed_types)
+  title_check_types=$(sed -n 's/^[[:space:]]*types="\([^"]*\)".*/\1/p' .github/workflows/pr-title.yml | tr '|' '\n')
+  while IFS= read -r type; do
+    report_difference "\"Commits\" in AGENTS.md lists the type $type, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
+  done < <(lines_missing_from "$agents_md_types" "$title_check_types")
+  while IFS= read -r type; do
+    report_difference "the title check in .github/workflows/pr-title.yml allows the type $type, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in .github/workflows/pr-title.yml."
+  done < <(lines_missing_from "$title_check_types" "$agents_md_types")
+fi
+
+# A required check that no job reports never passes, so no pull request can merge.
+if [[ -f scripts/configure-github ]]; then
+  job_checks=""
+  for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+    if [[ -f $workflow ]]; then
+      job_checks+=$(pull_request_job_checks "$workflow")$'\n'
+    fi
+  done
+  job_check_list=$(sed '/^$/d' <<<"$job_checks" | paste -sd ',' - | sed 's/,/, /g')
+  while IFS= read -r check; do
+    report_difference "scripts/configure-github requires the check $check on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: ${job_check_list:-no checks}. Rename a job to $check, or change the check in scripts/configure-github."
+  done < <(lines_missing_from "$(required_checks)" "$job_checks")
+fi
+
+agents_md_gh_version=$(gh_version AGENTS.md gh)
+if [[ -z $agents_md_gh_version ]]; then
+  report_difference "AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". scripts/check compares it with other files, so add it."
+else
+  # Setup replaces the template's README with the project's, which may name no gh version.
+  readme_gh_version=$(gh_version README.md "GitHub CLI")
+  if [[ -n $readme_gh_version && $readme_gh_version != "$agents_md_gh_version" ]]; then
+    report_difference "README.md asks for the GitHub CLI $readme_gh_version, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
+  fi
+  if [[ -f scripts/hooks/session-start ]]; then
+    hook_gh_major=$(sed -n 's/^minimum_gh_major=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
+    hook_gh_minor=$(sed -n 's/^minimum_gh_minor=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
+    if [[ -z $hook_gh_major || -z $hook_gh_minor ]]; then
+      report_difference "scripts/hooks/session-start doesn't set both minimum_gh_major and minimum_gh_minor, so it can't ask for gh $agents_md_gh_version, as AGENTS.md does. Set both to that version."
+    elif [[ $hook_gh_major.$hook_gh_minor != "$agents_md_gh_version" ]]; then
+      report_difference "scripts/hooks/session-start asks for gh $hook_gh_major.$hook_gh_minor, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
+    fi
+  fi
+fi
+
+# A guide that "Read the guides" doesn't link to is a guide that no agent reads.
+guide_links=""
+if has_section AGENTS.md "Read the guides"; then
+  guide_links=$(section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u)
+fi
+# Setup replaces the template's README with the project's, which may have no section "What you get".
+readme_docs=""
+if has_section README.md "What you get"; then
+  readme_docs=$(section README.md "What you get" | { grep -o "\`docs/[^\`]*\`" || true; } | tr -d '`' | sort -u)
+fi
+for page in docs/*.md; do
+  if [[ ! -f $page || $(page_title "$page") != *guide ]]; then
+    continue
+  fi
+  if has_section AGENTS.md "Read the guides" && ! has_line "$page" <<<"$guide_links"; then
+    report_difference "\"Read the guides\" in AGENTS.md doesn't link to $page, which is a guide because its title ends in \"guide\". Link to it there, and say when to read it."
+  fi
+  if has_section README.md "What you get" && ! has_line "$page" <<<"$readme_docs"; then
+    report_difference "\"What you get\" in README.md doesn't name $page, which is a guide because its title ends in \"guide\". Name it there, and say what it covers."
+  fi
+done
+while IFS= read -r path; do
+  if [[ -n $path && ! -e $path ]]; then
+    report_difference "\"Read the guides\" in AGENTS.md links to $path, which doesn't exist. Fix the link, or remove it from AGENTS.md."
+  fi
+done <<<"$guide_links"
+while IFS= read -r path; do
+  if [[ -n $path && ! -e $path ]]; then
+    report_difference "\"What you get\" in README.md names $path, which doesn't exist. Fix the path, or remove it from README.md."
+  fi
+done <<<"$readme_docs"
+
+if [[ -n "$files_disagree" ]]; then
   exit 1
 fi
 
