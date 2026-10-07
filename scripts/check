@@ -273,6 +273,40 @@ if [[ -n "$long_file_error" ]]; then
   exit 1
 fi
 
+# Each tracked file that starts with #! is executable in git, because a clone can't run it otherwise,
+# and scripts/hooks/before-tool skips a check that isn't executable.
+found_mode_error=""
+# git ls-files -s prints each file's mode, object and stage, then a tab and its path. A regular file that isn't
+# executable has mode 100644. Symlinks and submodules have modes of their own.
+while IFS= read -r -d '' entry; do
+  file=${entry#*$'\t'}
+  if [[ ${entry%% *} != 100644 || ! -f $file ]]; then
+    continue
+  fi
+  first_line=""
+  IFS= read -r first_line < "$file" || true
+  if [[ $first_line == '#!'* ]]; then
+    echo "error: $file starts with #!, and git doesn't record it as executable. Run chmod +x $file, and commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x $file instead." >&2
+    found_mode_error=yes
+  fi
+done < <(git ls-files -s -z)
+if [[ -n "$found_mode_error" ]]; then
+  exit 1
+fi
+
+# Each check of the hooks has a test, as the comment at the top of scripts/hooks/before-tool asks,
+# because a check that fails on its own error lets every action through, and only its test shows that.
+found_untested_check=""
+while IFS= read -r -d '' hook_check; do
+  if [[ -f $hook_check && ! -f ${hook_check%.check}.test ]]; then
+    echo "error: $hook_check has no test. Add ${hook_check%.check}.test, which runs the check through scripts/hooks/before-tool, as the other tests in scripts/hooks/ do." >&2
+    found_untested_check=yes
+  fi
+done < <(git ls-files -z -- 'scripts/hooks/*.check')
+if [[ -n "$found_untested_check" ]]; then
+  exit 1
+fi
+
 # The Markdown files refer to sections by their headings, in quotes. Each name must match a heading in its file,
 # so that a renamed or removed section doesn't leave a name that leads nowhere.
 # A name is written as "<heading>" in <file>, or as "<heading>" describes or "<heading>" says for a section of its own file.
