@@ -31,6 +31,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/test-check`: tests `scripts/check`.
 - `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
+- `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.
 - `scripts/check-pull-request`: checks that a pull request's body closes an open issue and fills in the template. The `title` job in `.github/workflows/pr-title.yml` runs it.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
 - `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
