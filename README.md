@@ -111,7 +111,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - An agent merges the pull request for each ready issue and for each change you ask for, without anyone reviewing it. When it builds the ready issues, it also merges Dependabot's pull requests. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
 - If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them. So a release can miss a breaking change and raise the version number too little.
-- Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. Helpers need an agent that can launch other agents.
+- Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. That agent's helpers don't count, and they need an agent that can launch other agents.
 
 ## What you get
 
