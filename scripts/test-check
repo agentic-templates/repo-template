@@ -116,6 +116,48 @@ run_case todo_in_a_shell_script fail "error: the lines above hold $todo or $fixm
 run_case fixme_in_a_text_file fail "notes.txt:1:$fixme the rounding"
 run_case other_words_and_markdown pass
 
+# Cases for the check that finds paths into a person's home folder.
+
+# Prints each argument on a line of its own, with a person's name in place of <name>.
+# The check doesn't take <name> for a name, so this file holds no path into a home folder.
+fill_in_name() {
+  printf '%s\n' "${@//<name>/ana}"
+}
+
+paths_into_home_folders() {
+  fill_in_name '/home/<name>/notes' '/Users/<name>/notes' 'C:\Users\<name>\notes' '{"notes": "C:\\Users\\<name>\\notes"}' \
+    'c:/users/<name>/notes or /home/<name>/notes' > "$copy/notes.txt"
+}
+
+paths_into_no_persons_home_folder() {
+  cat > "$copy/notes.txt" <<'EOF'
+/home-for-tests/someone
+/home/<name>/notes, /home/$USER/notes, /Users/{name}/notes and C:\Users\%USERNAME%\notes
+/home/runner/work, /Users/runner/work, C:\Users\runneradmin\work, /home/node/app and /home/linuxbrew/.linuxbrew
+/home/vscode/app, /Users/Shared/notes and C:\Users\Public\notes
+https://example.com/home/docs/, /users/ana/repos in GitHub's API and src/home/ana/notes
+EOF
+}
+
+paths_into_home_folders_in_generated_and_vendored_files() {
+  local file
+  printf '%s\n' 'dist/** linguist-generated' 'api.json linguist-generated=true' 'vendor/** linguist-vendored' \
+    'third_party/** linguist-vendored=true' >> "$copy/.gitattributes"
+  mkdir -p "$copy/dist" "$copy/vendor" "$copy/third_party"
+  for file in dist/app.js api.json vendor/lib.js third_party/lib.js; do
+    fill_in_name '/home/<name>/notes' > "$copy/$file"
+  done
+}
+
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:1 holds a path into a home folder, /home/<name>/.') Use a path relative to the repository, or ~ or \$HOME."
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:2 holds a path into a home folder, /Users/<name>/.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:3 holds a path into a home folder, C:\Users\<name>\.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:4 holds a path into a home folder, C:\\Users\\<name>\\.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:5 holds a path into a home folder, c:/users/<name>/.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:5 holds a path into a home folder, /home/<name>/.')"
+run_case paths_into_no_persons_home_folder pass
+run_case paths_into_home_folders_in_generated_and_vendored_files pass
+
 # Cases for the check that limits the size of instruction files.
 
 # Writes a file: write_lines <file> <lines> <bytes in each line, with its line ending>
