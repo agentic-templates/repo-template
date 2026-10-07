@@ -28,6 +28,29 @@ make_copy() {
   git -C "$copy" init --quiet
 }
 
+# Checks that scripts/check recorded the tree of the copy's files in .git/check-passed if it passed, and nothing if it failed.
+# Every file of the copy is staged, so the tree of the index is the tree of the files on disk.
+# Prints an error and fails if the record is wrong: check_record <function> <pass or fail>
+check_record() {
+  local case_function=$1 result=$2 record=$copy/.git/check-passed tree
+  if [[ $result == fail ]]; then
+    if [[ -f $record ]]; then
+      echo "error: in the case $case_function, scripts/check failed, so it must not write .git/check-passed, but it did." >&2
+      return 1
+    fi
+    return 0
+  fi
+  tree=$(git -C "$copy" write-tree)
+  if [[ ! -f $record ]]; then
+    echo "error: in the case $case_function, scripts/check passed, so it must write the tree of the files it checked, $tree, to .git/check-passed, but it wrote no such file." >&2
+    return 1
+  fi
+  if [[ $(< "$record") != "$tree" ]]; then
+    echo "error: in the case $case_function, scripts/check passed, so .git/check-passed must hold the tree of the files it checked, $tree, but it holds: $(< "$record")" >&2
+    return 1
+  fi
+}
+
 # Runs one case: run_case <function> <pass or fail> [<text that the output must hold>]
 # The function gets a fresh copy at $copy, and adds the files that the case needs to it.
 # Use only checks that need no extra tool, so that a case gives the same result on every machine.
@@ -49,6 +72,10 @@ run_case() {
     failed_cases=$((failed_cases + 1))
     return
   fi
+  if ! check_record "$case_function" "$actual"; then
+    failed_cases=$((failed_cases + 1))
+    return
+  fi
   if [[ -n "$expected_text" && "$output" != *"$expected_text"* ]]; then
     echo "error: in the case $case_function, the output of scripts/check must hold \"$expected_text\". Its output:" >&2
     printf '%s\n' "$output" >&2
@@ -61,6 +88,14 @@ repository_as_it_is() {
 }
 
 run_case repository_as_it_is pass
+
+# Case for the record of a pass, which run_case checks in every case.
+
+record_that_cant_be_written() {
+  mkdir "$copy/.git/check-passed"
+}
+
+run_case record_that_cant_be_written fail "error: the checks passed, but scripts/check can't record the pass in .git/check-passed, and a hook blocks opening a pull request without that record."
 
 # Cases for the check that finds files that make a tool skip AGENTS.md.
 
