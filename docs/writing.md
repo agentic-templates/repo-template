@@ -1,11 +1,12 @@
 # Writing guide
 
-This guide covers everything written for the project: docs, issues, pull requests, commit messages, code comments and error messages. It applies to people and agents alike. The aim is text that a reader understands the first time they read it. The examples use a made-up expense tracker. [docs/pages.md](pages.md) adds the rules for the README and docs pages.
+This guide covers everything written for the project: docs, issues, pull requests, commit messages, code comments, error messages, and replies and reports to the maintainer. The aim is text that a reader understands the first time they read it. The examples use a made-up expense tracker.
 
 ## Know your reader
 
 - Write for a reader who is new to the project but not to its field, and who reads once. For someone who uses the project, the field is the kind of work it helps with, such as keeping track of spending. For a developer, the field also includes the project's language and tools.
 - Leave out what the reader already knows and what the code already shows.
+- Leave out how something works inside, and how one tool differs from another, unless the reader must act on it.
 - Start with what the reader came for: what they can do, what changed or what went wrong.
 
 ## Use plain words
@@ -16,7 +17,7 @@ This guide covers everything written for the project: docs, issues, pull request
 - Use one term for one thing, everywhere. Don't switch to a synonym for variety.
 - Don't use metaphors or marketing words such as "seamless", "powerful" or "blazing fast".
 - Cut filler such as "simply", "just", "basically" and "note that".
-- When you give a single example, pick the case that applies to most readers, because readers take it for the main case.
+- When you give a single example, pick the case that applies to most readers.
 - Replace a vague judgment with the fact behind it. Write "imports 10,000 expenses in 2 seconds", not "fast".
 
 For example, in a README for people who use an expense tracker:
@@ -29,7 +30,7 @@ For example, in a README for people who use an expense tracker:
 ## Write clear sentences
 
 - Put one idea in each sentence. "The app totals the expenses for each month, and it can export them as a spreadsheet" holds two ideas, so it becomes two sentences.
-- Keep the words that link ideas, such as "because", "so", "but" and "unless". "The app leaves an expense in a foreign currency out of the total, because it doesn't know the exchange rate" is one idea with its reason. Being concise means cutting what the reader doesn't need, never the reasoning.
+- Keep the words that link ideas, such as "because", "so", "but" and "unless". "The app leaves an expense in a foreign currency out of the total, because it doesn't know the exchange rate" is one idea with its reason. Give a reason only when the reader needs it to act correctly.
 - Don't use semicolons in prose. Don't join two sentences with a dash either. Write two sentences.
 - Say who does what. Write "The app deletes the expense", not "The expense is deleted". Leave out the actor only when it is unknown or doesn't matter.
 - In a step the reader follows, put the condition first: "If the command reports that the disk is full, free at least 2 GB and run it again."
@@ -55,6 +56,11 @@ An error message says what failed and what the reader can do about it. When a li
 ## Write issues, pull requests and commit messages
 
 - Write for a reader who hasn't seen your conversation, notes or session. Don't refer to any of them.
-- A pull request is the lasting record of a change. Write it for a developer who joins the project later, not only for today's reviewer. Say what changed and why. Don't list the changed files, because the diff shows them.
+- Write a pull request for a developer who joins the project later, not only for today's reviewer. Say what changed and why. Don't list the changed files.
 - Say how you checked the change: the checks you ran and what they showed. That includes the review described under "Review a changed page with a fresh reader" in [docs/pages.md](pages.md). Name any check from AGENTS.md that you skipped, and say why.
-- A commit message follows the rules in [AGENTS.md](../AGENTS.md#commits).
+
+## Write replies and reports
+
+- Start with what the maintainer must decide, or with what changed.
+- Give each decision with the option you recommend.
+- Leave out the steps you took, unless the maintainer or a guide asks for them.
