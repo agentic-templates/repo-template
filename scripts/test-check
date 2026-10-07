@@ -223,6 +223,82 @@ run_case long_page_that_is_no_guide pass
 run_case agents_md_files_of_32000_bytes_on_one_path fail "error: the AGENTS.md files from the root down to src/api have 32000 bytes together, and the limit is 31999."
 run_case agents_md_files_of_32000_bytes_on_two_paths pass
 
+# Cases for the check that limits the length of every tracked file.
+
+file_of_1001_lines() {
+  write_lines "$copy/src/report.py" 1001 10
+}
+
+file_of_1000_lines() {
+  write_lines "$copy/src/report.py" 1000 10
+}
+
+two_long_files() {
+  write_lines "$copy/src/report.py" 1001 10
+  write_lines "$copy/web/app.js" 1500 10
+}
+
+# git counts a file as binary when its first 8,000 bytes hold a zero byte.
+long_binary_file() {
+  mkdir -p "$copy/assets"
+  for ((written = 0; written < 1001; written++)); do
+    printf 'x\0\n'
+  done > "$copy/assets/logo.png"
+}
+
+long_lockfile_in_a_folder() {
+  write_lines "$copy/web/package-lock.json" 1001 10
+}
+
+long_file_marked_linguist_generated() {
+  write_lines "$copy/src/schema.py" 1001 10
+  echo "src/schema.py linguist-generated" >> "$copy/.gitattributes"
+}
+
+long_file_marked_linguist_vendored() {
+  write_lines "$copy/vendor/chart.js" 1001 10
+  echo "vendor/** linguist-vendored=true" >> "$copy/.gitattributes"
+}
+
+long_file_unmarked_as_generated_and_vendored() {
+  write_lines "$copy/src/schema.py" 1001 10
+  printf '%s\n' "src/*.py linguist-generated linguist-vendored" "src/schema.py -linguist-generated linguist-vendored=false" >> "$copy/.gitattributes"
+}
+
+long_file_listed_with_a_reason() {
+  write_lines "$copy/tests/statement.csv" 1001 10
+  echo "tests/statement.csv A whole bank statement, to test the import" > "$copy/scripts/long-files"
+}
+
+blank_line_in_the_list_of_long_files() {
+  write_lines "$copy/tests/statement.csv" 1001 10
+  printf '%s\n' "" "tests/statement.csv A whole bank statement, to test the import" "" > "$copy/scripts/long-files"
+}
+
+long_file_listed_without_a_reason() {
+  write_lines "$copy/tests/statement.csv" 1001 10
+  echo "tests/statement.csv" > "$copy/scripts/long-files"
+}
+
+listed_file_of_1000_lines() {
+  write_lines "$copy/tests/statement.csv" 1000 10
+  echo "tests/statement.csv A whole bank statement, to test the import" > "$copy/scripts/long-files"
+}
+
+run_case file_of_1001_lines fail "error: src/report.py has 1001 lines, and the limit is 1000. Move a part with its own responsibility into a file of its own."
+run_case file_of_1000_lines pass
+run_case two_long_files fail "error: src/report.py has 1001 lines, and the limit is 1000."
+run_case two_long_files fail "error: web/app.js has 1500 lines, and the limit is 1000."
+run_case long_binary_file pass
+run_case long_lockfile_in_a_folder pass
+run_case long_file_marked_linguist_generated pass
+run_case long_file_marked_linguist_vendored pass
+run_case long_file_unmarked_as_generated_and_vendored fail "error: src/schema.py has 1001 lines, and the limit is 1000."
+run_case long_file_listed_with_a_reason pass
+run_case blank_line_in_the_list_of_long_files pass
+run_case long_file_listed_without_a_reason fail "error: scripts/long-files lists tests/statement.csv without a reason. Add a space and the reason after the path."
+run_case listed_file_of_1000_lines fail "error: scripts/long-files lists tests/statement.csv, which scripts/check accepts without the list. Remove its line, or fix the path."
+
 # Cases for the check that finds section names that match no heading.
 
 section_names_in_files_without_those_headings() {
