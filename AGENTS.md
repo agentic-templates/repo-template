@@ -32,6 +32,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.
+- `scripts/check-main-rules`: fails when the rules for main no longer require a check that `scripts/configure-github` requires there. A hook runs it before each `gh pr merge`, and a workflow runs it each week.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
 - `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.

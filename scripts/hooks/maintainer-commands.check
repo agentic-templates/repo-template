@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Blocks two kinds of command that a maintainer runs:
+# Blocks the commands that wait for a maintainer:
 # - running scripts/configure-github again, once the repository's settings were applied, because a build run
 #   can merge a change to the script that nobody read
 # - checking out, fetching or merging a pull request from a fork, because a checkout brings in the pull
 #   request's hook scripts and AGENTS.md, and only a maintainer decides to put a fork's code on main
+# - merging a pull request while the rules for main no longer require a check that scripts/configure-github
+#   requires there, because the merge could skip that check
 # It asks gh about the repository, and allows the command when gh fails, such as without a network.
 # shellcheck source=scripts/hooks/helpers.bash
 source "${BASH_SOURCE[0]%/*}/helpers.bash"
@@ -34,6 +36,23 @@ is_from_fork() {
   [[ $(jq -r .isCrossRepository <<<"$answer") == true ]]
 }
 
+# Blocks a merge while the rules for main no longer require a check that scripts/configure-github requires there,
+# which scripts/check-main-rules finds: block_if_main_lacks_checks [--repo <repository>]
+# Without a repository, the script asks about this checkout's.
+block_if_main_lacks_checks() {
+  local problem status=0
+  # The subshells drop the trap, which would otherwise turn every exit code of the script into 1.
+  if (($# == 2)); then
+    problem=$(trap - ERR && GH_REPO=$2 "${BASH_SOURCE[0]%/*}/../check-main-rules" 2>&1 >/dev/null) || status=$?
+  else
+    problem=$(trap - ERR && "${BASH_SOURCE[0]%/*}/../check-main-rules" 2>&1 >/dev/null) || status=$?
+  fi
+  # Any other code means that the script can't tell, such as when gh fails.
+  if ((status == 1)); then
+    block "Blocked: ${problem#error: } Go on with the other work, and list this in your report for the maintainer."
+  fi
+}
+
 check_configure_github() {
   local -a words=("${command_words[@]}")
   # bash or sh, with any flags, can run the script too.
@@ -55,7 +74,7 @@ check_configure_github() {
 }
 
 check_gh_pr() {
-  local subcommand flags_with_value argument="" i word
+  local subcommand flags_with_value argument="" i word disables_auto_merge=""
   local -a repository=() view=()
   if [[ ${command_words[0]##*/} != gh || ${command_words[1]:-} != pr ]]; then
     return 0
@@ -76,6 +95,7 @@ check_gh_pr() {
         i=$((i + 1))
         ;;
       --repo=*) repository=(--repo "${word#--repo=}") ;;
+      --disable-auto) disables_auto_merge=yes ;;
       -*=*) ;;
       -*)
         if [[ $flags_with_value == *" $word "* ]]; then
@@ -99,15 +119,18 @@ check_gh_pr() {
   if ((${#repository[@]} > 0)); then
     view+=("${repository[@]}")
   fi
-  if ! is_from_fork ${view[@]+"${view[@]}"}; then
-    return 0
+  if is_from_fork ${view[@]+"${view[@]}"}; then
+    if [[ $subcommand != merge ]]; then
+      block_checkout "${view[@]}"
+    elif [[ -n $argument ]]; then
+      block "Blocked: pull request $argument comes from a fork, so a maintainer merges it. $report"
+    else
+      block "Blocked: this branch's pull request comes from a fork, so a maintainer merges it. $report"
+    fi
   fi
-  if [[ $subcommand != merge ]]; then
-    block_checkout "${view[@]}"
-  elif [[ -n $argument ]]; then
-    block "Blocked: pull request $argument comes from a fork, so a maintainer merges it. $report"
-  else
-    block "Blocked: this branch's pull request comes from a fork, so a maintainer merges it. $report"
+  # Turning auto-merge off merges nothing.
+  if [[ $subcommand == merge && -z $disables_auto_merge ]]; then
+    block_if_main_lacks_checks ${repository[@]+"${repository[@]}"}
   fi
 }
 
