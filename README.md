@@ -10,6 +10,7 @@ You need:
 
 - The GitHub CLI 2.98 or later, signed in with `gh auth login`.
 - bash, which macOS and Linux include. On Windows, use Git Bash or WSL.
+- [jq](https://jqlang.org/download/). Without it, the agent hooks let every action through, and `scripts/check` skips the hooks' tests on your machine.
 - Claude Code 2.1.281 or later, if you use Claude Code. Earlier versions don't always read `AGENTS.md`.
 
 Optional: to keep your email address out of the project's commits, set git's `user.email` to the noreply address in your GitHub email settings.
