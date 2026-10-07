@@ -11,6 +11,7 @@ Read each guide before you first do its kind of work in a session, even when the
 - [docs/rules.md](docs/rules.md), before you change AGENTS.md, a guide or the labels.
 - [docs/code.md](docs/code.md), before you write or review code.
 - [docs/dependencies.md](docs/dependencies.md), before you add or update a tool, a package or a GitHub Action.
+- [docs/languages.md](docs/languages.md), before you add a language to the project, at setup or later.
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work.
 - [docs/building.md](docs/building.md), before you build the ready issues. That work is called a build run. Read the guide too before you build one ready issue as a helper in a build run, or work on a ready issue outside a build run.
 - [docs/reviewing.md](docs/reviewing.md), before you review a pull request or review the code for security problems.
@@ -39,7 +40,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 ## Commands
 
 - `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
-- `scripts/configure-github`: the agent that sets up the project runs it once, as the setup list in the README describes. After a change to the script merges, a maintainer with admin access runs it again.
+- `scripts/configure-github`: the agent that sets up the project runs it once. After a change to the script merges, a maintainer with admin access runs it again.
 
 Keep the checks on a pull request within ten minutes. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
@@ -75,7 +76,7 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If they do, open a new issue with `gh issue create`, and mention the closed one in it. If no issue asks for the change at all, open one too. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. If a maintainer asks you to work on an issue outside a build run, remove `needs-triage` from it. If it has `ready`, also follow "Work on a ready issue outside a build run" in [docs/building.md](docs/building.md).
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder, and each guide that "Read the guides" names for the change. Where the AGENTS.md files differ, the one closest to the file wins.
-4. Make the change. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. For a security vulnerability that isn't public yet, don't open an issue that describes it. Follow "Keep a security vulnerability private" instead.
+4. Make the change. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer, and record it as "Record a vulnerability privately" in `docs/releasing.md` describes.
 5. Push the branch and open a pull request with `gh pr create`.
 6. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 4 describes.
 7. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 6. Otherwise, merge with `gh pr merge --squash`.
@@ -130,7 +131,3 @@ The repository holds the product and the rules for building it. Everything in it
 - Never read, print or commit secrets. Keep them in `.env`, and list each variable in `.env.example` with a placeholder value.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commit messages, issues and pull requests.
 - Don't create a `CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one, it reads that file and ignores AGENTS.md.
-
-## Keep a security vulnerability private
-
-If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. The fix still goes through an issue and a pull request, but they say only what the change does, not what the vulnerability is. Tell the maintainer about the vulnerability. Also record it privately, where it stays until a maintainer publishes it, as "Record a vulnerability privately" in [docs/releasing.md](docs/releasing.md) describes. Build the fix in private, and open its issue and pull request only when the maintainer asks for the release that includes it, as "Fix a security vulnerability" in [docs/releasing.md](docs/releasing.md) describes.
