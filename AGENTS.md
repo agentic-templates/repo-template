@@ -32,6 +32,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.
+- `scripts/check-pull-request`: checks that a pull request's body closes an open issue and fills in the template. The `title` job in `.github/workflows/pr-title.yml` runs it.
 - `scripts/check-main-rules`: fails when the rules for main no longer require a check that `scripts/configure-github` requires there. A hook runs it before each `gh pr merge`, and a workflow runs it each week.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
 - `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
@@ -108,7 +109,7 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject.
-- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it.
+- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. The `title` check fails unless `Closes #<issue>` names an open issue, and the template's headings "What changed and why" and "How it was checked" each have text under them.
 - A workflow labels each pull request from its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Dependabot's pull requests get `dependencies`. The workflow can't label a pull request from a fork, so a maintainer labels it by hand and then merges it.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 

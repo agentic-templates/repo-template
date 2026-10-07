@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# Checks the body of a pull request, which the title job in .github/workflows/pr-title.yml passes in BODY:
+# - Each line that closes an issue, such as "Closes #12", names an open issue in this repository, which gh looks up.
+# - The body has the headings of .github/pull_request_template.md, "What changed and why" and "How it was checked",
+#   at any level, with text under each besides HTML comments.
+# It prints each problem as an error for GitHub Actions, and fails once it has checked everything.
+set -euo pipefail
+
+# The browser's editor ends each line of the body with \r\n.
+body=${BODY:-}
+body=${body//$'\r'/}
+problem_count=0
+
+# Prints a problem as an error for GitHub Actions, and counts it: report <message>
+report() {
+  echo "::error::$1"
+  problem_count=$((problem_count + 1))
+}
+
+# The words that GitHub treats as closing an issue, at the start of a line, in any case.
+# Group 3 holds the issue's number.
+closing_line='^(close[sd]?|fix(es|ed)?|resolve[sd]?):? +#([0-9]+)'
+
+# Prints the number of the issue that a line closes, or nothing: closed_number <line>
+closed_number() {
+  local number=""
+  shopt -s nocasematch
+  if [[ $1 =~ $closing_line ]]; then
+    number=${BASH_REMATCH[3]}
+  fi
+  shopt -u nocasematch
+  printf '%s' "$number"
+}
+
+# Reports the problem with the issue that a closing line names, if it has one: check_closed_issue <number> <line>
+check_closed_issue() {
+  local number=$1 line=$2 answer
+  # gh prints the issue's state, a tab, and whether it's a pull request. GitHub counts a pull request as an issue.
+  if ! answer=$(gh api "repos/{owner}/{repo}/issues/$number" --jq '[.state, (.pull_request != null)] | @tsv' 2>&1); then
+    if [[ $answer == *"(HTTP 404)"* ]]; then
+      report "The line \"$line\" names #$number, which isn't an issue in this repository. Edit the line to name the open issue that the pull request closes."
+    else
+      report "Can't look up #$number, because gh failed: $answer. Run the job again to try again."
+    fi
+    return 0
+  fi
+  case $answer in
+    $'open\tfalse') ;;
+    *$'\ttrue') report "The line \"$line\" names #$number, which is a pull request, not an issue. Edit the line to name the open issue that the pull request closes." ;;
+    *) report "The line \"$line\" names #$number, which is closed. Edit the line to name the open issue that the pull request closes." ;;
+  esac
+}
+
+has_closing_line=""
+while IFS= read -r line; do
+  number=$(closed_number "$line")
+  if [[ -n $number ]]; then
+    has_closing_line=yes
+    check_closed_issue "$number" "$line"
+  fi
+done <<<"$body"
+if [[ -z $has_closing_line ]]; then
+  report "The body has no line that says which issue the pull request closes. Edit the body and add a line such as \"Closes #12\", with the number of the issue."
+fi
+
+# The body without its HTML comments, which can span lines. A comment that doesn't end runs to the end of the body.
+rest=$body
+text=""
+while [[ $rest == *"<!--"* ]]; do
+  text+=${rest%%"<!--"*}
+  rest=${rest#*"<!--"}
+  if [[ $rest != *"-->"* ]]; then
+    rest=""
+    break
+  fi
+  rest=${rest#*"-->"}
+done
+text+=$rest
+
+# A heading at any level. Group 2 holds its text.
+heading_line='^ {0,3}#{1,6}([[:space:]]+(.*))?$'
+# The #s that can close a heading, after a space. Group 1 holds the text before them.
+closing_hashes='^(.*[^[:space:]])[[:space:]]+#+$'
+
+# Prints a heading's text, without the spaces at its end and the #s that can close it: heading_text <line>
+heading_text() {
+  local text=""
+  if [[ $1 =~ $heading_line ]]; then
+    text=${BASH_REMATCH[2]}
+  fi
+  text=${text%"${text##*[![:space:]]}"}
+  if [[ $text =~ $closing_hashes ]]; then
+    text=${BASH_REMATCH[1]}
+  fi
+  printf '%s' "$text"
+}
+
+# Reports a heading of the template that's missing from the body, or has no text under it: check_section <heading>
+# A section runs to the next heading.
+check_section() {
+  local heading=$1 line is_in_section="" has_heading="" has_text=""
+  while IFS= read -r line; do
+    if [[ $line =~ $heading_line ]]; then
+      is_in_section=""
+      if [[ $(heading_text "$line") == "$heading" ]]; then
+        is_in_section=yes
+        has_heading=yes
+      fi
+    elif [[ -n $is_in_section && $line == *[![:space:]]* ]]; then
+      has_text=yes
+    fi
+  done <<<"$text"
+  if [[ -z $has_heading ]]; then
+    report "The body has no heading \"$heading\". Add it as .github/pull_request_template.md has it, and write under it what the template's comment asks for."
+  elif [[ -z $has_text ]]; then
+    report "The body has no text under the heading \"$heading\", apart from HTML comments. Write under it what the template's comment asks for."
+  fi
+}
+
+check_section "What changed and why"
+check_section "How it was checked"
+
+if ((problem_count > 0)); then
+  exit 1
+fi
