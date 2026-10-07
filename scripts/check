@@ -3,6 +3,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# When the checks pass, the script records the tree of the files it checked, which a hook compares with the files
+# of a pull request. It takes the tree before the checks start, so that a file changed during the checks doesn't
+# count as checked. If git can't give the tree, the checks still run, and the script fails at the end.
+# shellcheck source=scripts/hooks/check-passed.bash
+source scripts/hooks/check-passed.bash
+checked_tree=$(tree_on_disk) || checked_tree=""
+
 # CI installs every tool, so a missing tool there is an error.
 # On your machine the check is skipped, and CI still runs it.
 skipped=""
@@ -845,6 +852,12 @@ if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
       "$hook_test"
     done
   fi
+fi
+
+record=$(pass_record_path)
+if [[ -z $checked_tree ]] || ! printf '%s\n' "$checked_tree" > "$record"; then
+  echo "error: the checks passed, but scripts/check can't record the pass in $record, and a hook blocks opening a pull request without that record. Fix the error above, and run scripts/check again." >&2
+  exit 1
 fi
 
 if [[ -n "$skipped" ]]; then
