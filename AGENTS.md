@@ -11,7 +11,7 @@ Read each guide before you first do its kind of work in a session, even when the
 - [docs/rules.md](docs/rules.md), before you change AGENTS.md, a guide or the labels.
 - [docs/code.md](docs/code.md), before you write or review code.
 - [docs/dependencies.md](docs/dependencies.md), before you add or update a tool, a package or a GitHub Action.
-- [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work. It decides what goes into an issue, and the writing guide decides how the issue reads.
+- [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work.
 - [docs/building.md](docs/building.md), before you build the ready issues. That work is called a build run. Read the guide too before you build one ready issue as a helper in a build run, or work on a ready issue outside a build run.
 - [docs/reviewing.md](docs/reviewing.md), before you review a pull request or review the code for security problems.
 - [docs/releasing.md](docs/releasing.md), before you publish a release, write a workflow that publishes or deploys the project, check the security advisories, or record or fix a security vulnerability that isn't public yet.
@@ -20,20 +20,20 @@ Read each guide before you first do its kind of work in a session, even when the
 
 repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
 
-When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction. If they change the direction, update this section in the pull request that does what they asked for.
+When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction.
 
 ## Where things are
 
 - `README.md`: what the project does, how to set it up, and an example.
 - `AGENTS.md`: these rules.
 - `scripts/check`: runs the checks that CI runs on the code.
-- `scripts/test-check`: tests `scripts/check`. `scripts/check` runs these tests after its other checks.
-- `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it. CI runs it before `scripts/check`, and so does the session-start hook in Claude Code on the web.
+- `scripts/test-check`: tests `scripts/check`.
+- `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
-- `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, such as a shell command. The folder's script `before-tool` runs each `.check` file in the folder. Each `.check` file can block the action. For example, `secret-files.check` blocks a command that reads a `.env` file. Each `.check` file has a `.test` file, which `scripts/check` runs. When a session starts, Claude Code also runs `session-start`, which tells Claude about three problems: a `CLAUDE.md` that makes Claude Code skip AGENTS.md, a gh that's too old and a missing jq. In Claude Code on the web, it also installs the tools that `scripts/check` runs.
-- `scripts/instruction-file-names`: the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`. `scripts/check` fails when the repository has such a file, and a hook blocks the agent from writing one.
+- `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
+- `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read. The settings run the hooks in Claude Code, Copilot CLI and Cursor. They also stop Claude Code from adding attribution to commits and pull requests, and from reading `.env` files with its file tools or with commands that name the file.
+- `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read.
 - `.codex/hooks.json`: has Codex run the hooks.
 
 ## Commands
@@ -41,7 +41,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
 - `scripts/configure-github`: the agent that sets up the project runs it once, as the setup list in the README describes. After a change to the script merges, a maintainer with admin access runs it again.
 
-The checks on a pull request should finish within ten minutes, because every merge waits for them. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
+Keep the checks on a pull request within ten minutes. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
 The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` before you first use `gh` in a session. If it's older, tell the maintainer before you run any `gh` command.
 
@@ -68,14 +68,14 @@ Dependabot adds `dependencies` to its own pull requests.
 
 ## Make a change
 
-Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue, because each one already says what it updates.
+Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue.
 
 If a maintainer asks for something that's bigger than one pull request or needs a decision along the way, triage it first, as "Triage new ideas" in `docs/planning.md` describes.
 
-1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If they do, open a new issue with `gh issue create`, and mention the closed one in it. If no issue asks for the change at all, open one too. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. If a maintainer asks you to work on an issue outside a build run, remove `needs-triage` from it, because the request accepts the issue. If it has `ready`, also follow "Work on a ready issue outside a build run" in [docs/building.md](docs/building.md).
+1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If they do, open a new issue with `gh issue create`, and mention the closed one in it. If no issue asks for the change at all, open one too. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. If a maintainer asks you to work on an issue outside a build run, remove `needs-triage` from it. If it has `ready`, also follow "Work on a ready issue outside a build run" in [docs/building.md](docs/building.md).
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder, and each guide that "Read the guides" names for the change. Where the AGENTS.md files differ, the one closest to the file wins.
-4. Make the change in small commits. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. For a security vulnerability that isn't public yet, don't open an issue that describes it. Follow "Keep a security vulnerability private" instead.
+4. Make the change. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. For a security vulnerability that isn't public yet, don't open an issue that describes it. Follow "Keep a security vulnerability private" instead.
 5. Push the branch and open a pull request with `gh pr create`.
 6. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 4 describes.
 7. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 6. Otherwise, merge with `gh pr merge --squash`.
@@ -104,8 +104,8 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 ## Pull requests
 
 - Keep each pull request to one issue, and small enough to review in one sitting.
-- The title follows the rules for a commit subject, because it becomes the commit subject on main. CI checks its format.
-- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. CI checks that the body has a line that closes an issue.
+- The title follows the rules for a commit subject.
+- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it.
 - A workflow labels each pull request from its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Dependabot's pull requests get `dependencies`. The workflow can't label a pull request from a fork, so a maintainer labels it by hand and then merges it.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
@@ -127,7 +127,7 @@ The repository holds the product and the rules for building it. Everything in it
 
 - Put plans in issues, the reason for a change in its pull request, and review comments on the pull request.
 - Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
-- Never read, print or commit secrets. Keep them in `.env`, which git ignores, and list each variable in `.env.example` with a placeholder value.
+- Never read, print or commit secrets. Keep them in `.env`, and list each variable in `.env.example` with a placeholder value.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commit messages, issues and pull requests.
 - Don't create a `CLAUDE.md` or `CLAUDE.local.md` in the repository or in any folder above it, such as your home folder. When Claude Code finds one, it reads that file and ignores AGENTS.md.
 
