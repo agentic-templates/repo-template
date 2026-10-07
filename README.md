@@ -28,14 +28,14 @@ Optional: to keep your email address out of the project's commits, set git's `us
    <summary>The setup list, for your agent</summary>
 
 
-   - First, run `gh api "repos/{owner}/{repo}/rulesets?includes_parents=false"`, as written, because gh fills in the owner and the repository. If it lists no ruleset named `main`, the repository's settings haven't been applied yet, so run `scripts/configure-github` to apply them. Run the script before you open the setup's pull request, so that the rules that protect main apply to it. When the script finishes, tell the person who asked for the setup to turn on Dependabot malware alerts at the link that the script prints, because GitHub gives scripts no way to turn the alerts on.
+   - First, run `gh api "repos/{owner}/{repo}/rulesets?includes_parents=false"`, as written, because gh fills in the owner and the repository. If it lists no ruleset named `main`, the repository's settings haven't been applied yet, so run `scripts/configure-github` to apply them. Run the script before you open the setup's pull request, so that the rules that protect main apply to it. When the script finishes, tell the person who asked for the setup to turn on Dependabot malware alerts at the link that the script prints.
    - In `AGENTS.md`, rewrite the section "What this project is": what the project is for, and which kinds of change belong in it. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
    - Pin the version of each language, framework and database that the project uses, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install those versions and the packages.
    - Add the formatter, the linter, the type checker if the language has one, and the tests to `scripts/check`.
    - Add a hook to `.claude/settings.json` and `.codex/hooks.json` that runs the project's formatter on each file the agent edits.
-   - If the language's coverage tool can mark single lines as excluded, add a coverage check to `scripts/check`. The check fails when a line never runs in a test. Where the tool measures branches, the check also fails when a branch is never taken. Lines marked as excluded don't count, but the check fails on an exclusion marker that gives no reason. Measure coverage with the tests that `scripts/check` runs, and with no others. If the tool can't mark lines as excluded, add no coverage check, because the check would always fail on code that no test can run.
+   - If the language's coverage tool can mark single lines as excluded, add a coverage check to `scripts/check`. The check fails when a line never runs in a test. Where the tool measures branches, the check also fails when a branch is never taken. Lines marked as excluded don't count, but the check fails on an exclusion marker that gives no reason. Measure coverage with the tests that `scripts/check` runs, and with no others. If the tool can't mark lines as excluded, add no coverage check.
    - If the project publishes a library and its language has a tool that finds breaking changes, such as cargo-semver-checks for Rust, add a check to CI that looks for a break in the library's public interface. If a pull request breaks the interface, the check fails, unless the pull request's title marks the change with `!` before the colon, as in `feat!: rename the import command`. Have the check compare the pull request with the commit on main that it branched from, not with the last release. Once a breaking change has merged, main itself differs from the last release, so a comparison with that release would fail every later pull request.
-   - If the project's output is visual, such as a web page or a 3D scene, add a command that saves a picture of that output, such as a screenshot of the page or a render of the scene. List the command under "Commands" in `AGENTS.md`. Agents look at the picture to check their changes, so the command has to run without anyone at the screen. Save the pictures outside the repository, such as in a temporary folder.
+   - If the project's output is visual, such as a web page or a 3D scene, add a command that saves a picture of that output, such as a screenshot of the page or a render of the scene. List the command under "Commands" in `AGENTS.md`. The command has to run without anyone at the screen. Save the pictures outside the repository, such as in a temporary folder.
    - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - If the project publishes a package or deploys, add a workflow that does it when a release is published.
    - Set the year and the copyright holder in `LICENSE`.
@@ -55,9 +55,9 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 2. **"Build the ready issues."**
 
-   The agent builds them lowest number first, and waits to build an issue until the issues that block it are closed. Each pull request merges once its checks pass. The agent also merges Dependabot's updates once their checks pass. It leaves failing Dependabot updates open for you.
+   The agent builds them lowest number first, and waits to build an issue until the issues that block it are closed.
 
-   If the agent can't finish an issue, it closes the issue's pull request, so that unfinished work can't merge. The work stays on the issue's branch. The agent comments on the issue with what it needs, and labels it `needs-decision`. An issue that's too big for one pull request gets `needs-breakdown` instead.
+   If the agent can't finish an issue, it closes the issue's pull request and keeps the work on the issue's branch. The agent comments on the issue with what it needs, and labels it `needs-decision`. An issue that's too big for one pull request gets `needs-breakdown` instead.
 
    At the end, the agent reports what merged and what waits for you. Tell it your decisions. It writes each one into its issue and removes `needs-decision`. The issue still has `ready`, so your next "Build the ready issues" takes it again, starting from the work on the issue's branch.
 
@@ -87,9 +87,9 @@ For your project's later versions, use the same three requests. The requests bel
 - **"Triage these ideas:"**, followed by the text or a link to it. The agent splits the text into single ideas. It opens issues for the ideas it accepts, and asks you about the ones it would drop, that are too vague or that need your decision. The issues wait in the backlog until you ask to make them ready to build.
 - **"Triage the new issues."** The agent recommends what to do with each issue that waits for triage, such as a bug report from a user, and carries out what you decide.
 - **"Make #14 ready to build."** Use it for any issue in the backlog, including one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
-- **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers, and it writes each one into its issue and removes the label.
-- **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it, and the pull request merges once its checks pass.
-- **"Review pull request #12."** The agent compares the change with its issue and comments with what should change. If the pull request comes from someone without write access, the agent doesn't check out or run the pull request's code on your machine, where it could reach your credentials. CI runs it on GitHub's machines instead.
+- **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers.
+- **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it.
+- **"Review pull request #12."** The agent compares the change with its issue and comments with what should change.
 - **"Review the code for security problems."** The agent reviews the whole repository, unless you name a part of it or a range of changes, such as the changes since the last release. It tells you what it found and which parts it reviewed.
 
 ### Fix security problems
@@ -98,22 +98,20 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 
 1. Ask the agent to fix the problem. It builds the fix in a temporary private fork that GitHub creates for the advisory.
 2. Ask for a release. Ask right away if the problem's severity is high or critical, or if the problem is already public. If someone reported the problem, ask within 90 days of their report, because `.github/SECURITY.md` asks reporters to keep a problem private only that long. The agent asks whether the release should include each fix that's waiting in a private fork.
-3. Once the checks pass, the agent merges the fix and publishes the release right away. Merging makes the fix public, and users can't update until the release is out, so the agent keeps that gap short.
+3. Once the checks pass, the agent merges the fix and publishes the release right away.
 4. Start a new conversation, because an agent checks less carefully in the conversation where it published the release. In it, ask "Check the security advisories." The agent checks whether each problem is still in the released code, and looks closely at each fix, because a fix can be incomplete.
-5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. If a workflow publishes a package for the release, users can install the package only once you've approved the workflow's run and the run has finished. In each advisory it publishes, the agent names the release that fixes the problem, and it links to the advisory from the release notes.
+5. Ask the agent to publish only the advisories you're sure are fixed, and only once users can install the release, because a published advisory shows attackers where to look. If a workflow publishes a package for the release, users can install the package only once you've approved the workflow's run and the run has finished.
 
 ## Limits
 
-- The template supports only public repositories on GitHub. `scripts/configure-github` stops on a private repository, and a repository made private after setup no longer works with the template.
-- The hooks in `scripts/hooks/` check each action of the agent before it happens, such as a command that reads a `.env` file. Claude Code, Codex, Copilot CLI and Cursor run them on your machine. Codex runs them only after you review them with `/hooks`. Until then, `codex exec`, which runs Codex without a person, skips them without a warning. The cloud agents of Copilot and Cursor don't run them, so they get only CI and the written rules.
-- A hook reads a command as text, without running it, so the same command written differently can get past it. The hook for secret files checks only the commands on its list, such as `cat`, `grep` and `cp`. Another command can still read a `.env` file, and so can a script, or a command that doesn't name the file, such as `grep -r`.
-- Claude Code runs one more hook at the start of each session, and the other tools don't. It warns when Claude Code reads a `CLAUDE.md` instead of `AGENTS.md`. `scripts/check` fails when the repository holds such a file, but it can't see one in a folder above the repository, so the hook looks there too. Codex needs no hook like this, because it skips `AGENTS.md` only for an `AGENTS.override.md` inside the repository, which `scripts/check` finds.
-- When a session starts, Claude Code on the web installs the tools that `scripts/check` runs, and the other cloud agents don't. In Codex cloud, Copilot's cloud agent and Cursor's cloud agents, `scripts/check` skips the checks that need those tools, and CI still runs them.
-- A repository made from the template doesn't get the template's later changes, because GitHub copies the files only once.
+- The template supports only public repositories on GitHub. A repository made private after setup no longer works with the template.
+- The hooks in `scripts/hooks/` check each action of the agent before it happens, such as a command that reads a `.env` file. Codex runs them only after you review them with `/hooks`. The cloud agents of Copilot and Cursor don't run them, so they get only CI and the written rules.
+- The hook for secret files checks only the commands on its list, such as `cat`, `grep` and `cp`. Another command can still read a `.env` file, and so can a script, or a command that doesn't name the file, such as `grep -r`.
+- A repository made from the template doesn't get the template's later changes.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - An agent merges the pull request for each ready issue and for each change you ask for, without anyone reviewing it. When it builds the ready issues, it also merges Dependabot's pull requests. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
-- If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them, and an agent marks a pull request as a breaking change only when it notices the break. So a release can miss a breaking change and raise the version number too little.
-- Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. To build faster, ask that agent for helpers. Helpers need an agent that can launch other agents.
+- If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them. So a release can miss a breaking change and raise the version number too little.
+- Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. Helpers need an agent that can launch other agents.
 
 ## What you get
 
@@ -130,8 +128,8 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `scripts/check`: runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template.
 - `.github/`: CI, a check of each pull request's title and body, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
-- `scripts/hooks/`: agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent. They stop the agent from reading files that hold secrets, such as `.env` files, and from writing a file that makes a tool skip `AGENTS.md`. When a Claude Code session starts, another hook tells Claude about three problems: a `CLAUDE.md` that makes Claude Code skip `AGENTS.md`, a gh that's too old, and a missing jq. In Claude Code on the web, it also installs the tools that `scripts/check` runs.
-- `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read. The settings run the hooks in Claude Code, Copilot CLI and Cursor. They also stop Claude Code from adding its name to commits and pull requests, and from reading `.env` files with its file tools or with shell commands such as `cat`.
+- `scripts/hooks/`: hooks that block risky actions of the agent, such as reading a `.env` file or checking out a pull request from a fork.
+- `.claude/settings.json`: runs the hooks in Claude Code, Copilot CLI and Cursor, and stops Claude Code from adding its name to commits and pull requests.
 - `.codex/hooks.json`: has Codex run the hooks.
 
 ## License
