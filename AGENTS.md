@@ -6,7 +6,7 @@ These rules apply to every coding agent and every person who changes the reposit
 
 Read each guide before you first do its kind of work in a session, even when the change is small. When a maintainer asks for work that a guide has steps for, such as building the ready issues or publishing a release, follow those steps.
 
-- [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments and error messages.
+- [docs/writing.md](docs/writing.md), before you write anything that others read: docs, issues, pull requests, commit messages, comments, error messages, and replies and reports to the maintainer.
 - [docs/pages.md](docs/pages.md), before you write or change the README, AGENTS.md or a page in `docs/`.
 - [docs/rules.md](docs/rules.md), before you change AGENTS.md, a guide or the labels.
 - [docs/code.md](docs/code.md), before you write or review code.
