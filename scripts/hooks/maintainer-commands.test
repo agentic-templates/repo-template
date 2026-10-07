@@ -95,4 +95,42 @@ expect_allow Bash 'gh pr view 7'
 expect_allow Bash 'gh pr checkout'
 expect_allow Bash "git fetch origin 'refs/pull/*/head'"
 
+# Changing a code scanning or Dependabot alert, with any method other than GET.
+# gh api sends POST when the command adds a field or an input file and names no method.
+alert_change="Blocked: only a maintainer dismisses or changes a code scanning or Dependabot alert. Fix the code that the alert points to. If you think the alert is wrong, tell the maintainer which alert and why."
+dismissal_query='mutation { dismissRepositoryVulnerabilityAlert(input: {repositoryVulnerabilityAlertId: "RVA_1", dismissReason: INACCURATE}) { clientMutationId } }'
+dismissal_from_standard_input=$(
+  cat <<'COMMAND'
+gh api graphql --input - <<'JSON'
+{"query": "mutation { dismissRepositoryVulnerabilityAlert(input: {repositoryVulnerabilityAlertId: \"RVA_1\", dismissReason: INACCURATE}) { clientMutationId } }"}
+JSON
+COMMAND
+)
+# shellcheck disable=SC2016 # The command is the text that the agent sends, so $repo and $alert stay as written.
+for command in \
+  'gh api --method PATCH repos/{owner}/{repo}/code-scanning/alerts/12 -f state=dismissed -f dismissed_reason="false positive"' \
+  'gh api --method PATCH repos/{owner}/{repo}/dependabot/alerts/3 -f state=dismissed -f dismissed_reason=tolerable_risk' \
+  'gh api -X PATCH -H "Accept: application/vnd.github+json" /repos/jtmpl/app/code-scanning/alerts/12 -f state=open' \
+  'gh api --method=patch "https://api.github.com/repos/jtmpl/app/dependabot/alerts/3?state=dismissed&dismissed_reason=no_bandwidth"' \
+  'gh api -XPATCH "repos/$repo/code-scanning/alerts/$alert?state=dismissed"' \
+  'gh api repos/{owner}/{repo}/code-scanning/alerts/12 -fstate=dismissed' \
+  'gh api --field state=dismissed repos/{owner}/{repo}/dependabot/alerts/3' \
+  'gh api repos/{owner}/{repo}/dependabot/alerts/3 --input=dismissal.json' \
+  "gh api graphql -f query='$dismissal_query'" \
+  "$dismissal_from_standard_input"; do
+  expect_block Bash "$command" "$alert_change"
+done
+
+# Commands that read alerts, and a request for a fix of an alert
+for command in \
+  'gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"' \
+  'gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"' \
+  'gh api repos/{owner}/{repo}/code-scanning/alerts/12' \
+  'gh api --method GET repos/{owner}/{repo}/dependabot/alerts/3' \
+  'gh api -X=get repos/{owner}/{repo}/code-scanning/alerts/12 -f ref=refs/heads/main' \
+  "gh api graphql -f query='{ repository(owner: \"jtmpl\", name: \"app\") { vulnerabilityAlerts(first: 10) { nodes { number } } } }'" \
+  'gh api --method POST repos/{owner}/{repo}/code-scanning/alerts/12/autofix'; do
+  expect_allow Bash "$command"
+done
+
 finish_tests
