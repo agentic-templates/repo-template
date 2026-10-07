@@ -475,7 +475,7 @@ required_check_from_a_workflow_that_doesnt_run_on_pull_requests() {
   write_workflow pull_request_review lint
 }
 
-run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: check, title, label. Rename a job to lint, or change the check in scripts/configure-github."
+run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: linux, bash-3-2, check, title, label. Rename a job to lint, or change the check in scripts/configure-github."
 run_case required_check_from_a_job_name pass
 run_case required_check_from_a_step_name fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
 run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
