@@ -46,6 +46,7 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 
 - Test what the code does through its public interface, not how it does it.
 - In every test, check the result against what the requirement says: a fixed expected value, or a rule that must hold for every input, such as "reading a saved expense back gives the same expense". Don't take the expected value from the code's own output, and don't compute it the way the code does, because then the test repeats the code instead of checking it. The tests may still compare optimized code with a plain version of it, because the plain version computes the result another way.
+- When you write a test, don't check what the requirement leaves open, such as the order of a list when the requirement doesn't ask for a particular order.
 - Test the edges of each requirement as well as a typical case: empty input, and the values on both sides of each limit, such as files of 50,000 and 50,001 rows.
 - Before you change what the code does, write or change the tests for the behavior that your issue adds, changes or fixes. Take the expected results from the issue, and run the tests to see them fail. Then change the code until they pass. If a test for any other requirement fails, fix the code, not the test.
 - Name each test for the behavior and the condition, such as "leaves an expense in a foreign currency out of the total".
