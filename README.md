@@ -118,7 +118,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 ## What you get
 
 - `AGENTS.md`: the rules for agents and people, from making a change to publishing a release.
-- `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments and error messages.
+- `docs/writing.md`: how to write docs, issues, pull requests, commit messages, comments, error messages, and replies and reports to you.
 - `docs/pages.md`: how to organize a page and write a README, and how to check that a changed page reads clearly.
 - `docs/rules.md`: how to change AGENTS.md, the guides and the labels.
 - `docs/code.md`: how to write code in any language, covering design and tests.
