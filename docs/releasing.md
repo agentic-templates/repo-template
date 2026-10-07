@@ -20,7 +20,7 @@ When a maintainer asks you to publish a release:
 5. Tell the maintainer about each advisory from step 1 that isn't published or closed.
 6. If you told the maintainer about any advisories in step 5, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
-Fixing a mistake in a published release's tag or files takes a new release, but its notes stay editable.
+A published release's notes stay editable, but fixing a mistake in its tag or files takes a new release.
 
 ## Protect the credentials that publish and deploy
 
@@ -36,7 +36,7 @@ When a maintainer asks you to check the security advisories, check them against 
 1. List the advisories that aren't published or closed, as step 1 of "Publish a release" describes.
 2. For each advisory on that list, check whether its problem is still in the release. If the advisory's private fork holds a fix, check whether the release includes that fix, and check the fix closely, because a fix can be incomplete.
 3. For each advisory on the list, tell the maintainer whether you're sure the release fixes it, and how you checked.
-4. Publish an advisory only when the maintainer asks you to, and only once users can install the release that fixes it, because publishing shows attackers where the problem is. If a workflow that publishes a package or deploys hasn't succeeded for the release, which `gh run list` shows, or you can't tell whether users can install it, such as when an app store makes it available later, tell the maintainer and don't publish the advisory.
+4. Publish an advisory only when the maintainer asks you to, and only once users can install the release that fixes it, because publishing shows attackers where the problem is. If a workflow that publishes a package or deploys hasn't succeeded for the release, which `gh run list` shows, tell the maintainer and don't publish the advisory. Do the same if you can't tell whether users can install the release, such as when an app store makes it available later.
 
    Before you publish it, set the release's version as its fixed version, and the versions before it as affected. If the project publishes a package, also set the package's ecosystem and name.
 5. Once an advisory is published, add a line to the release notes that links it.
