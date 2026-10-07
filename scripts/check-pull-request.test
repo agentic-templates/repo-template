@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Tests scripts/check-pull-request with a stand-in for gh, on bodies made from .github/pull_request_template.md.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+case_count=0
+failed_cases=0
+
+stand_in=$(mktemp -d)
+trap 'rm -rf "$stand_in"' EXIT
+# A stand-in for gh, first on the PATH, that answers the command that looks up an issue, as GitHub would:
+# #12 is an open issue, #13 a closed issue and #14 a pull request, and no other number exists.
+# With TEST_GH=fail, it fails, as gh does without the network.
+cat >"$stand_in/gh" <<'STAND_IN'
+#!/usr/bin/env bash
+if [[ $# != 4 || $1 != api || $2 != "repos/{owner}/{repo}/issues/"* || $3 != --jq || $4 != '[.state, (.pull_request != null)] | @tsv' ]]; then
+  echo "The stand-in for gh doesn't answer: gh $*" >&2
+  exit 1
+fi
+if [[ ${TEST_GH:-} == fail ]]; then
+  echo "error connecting to api.github.com" >&2
+  exit 1
+fi
+case ${2##*/} in
+  12) printf 'open\tfalse\n' ;;
+  13) printf 'closed\tfalse\n' ;;
+  14) printf 'open\ttrue\n' ;;
+  *)
+    echo '{"message":"Not Found","documentation_url":"https://docs.github.com/rest/issues/issues#get-an-issue","status":"404"}'
+    echo "gh: Not Found (HTTP 404)" >&2
+    exit 1
+    ;;
+esac
+STAND_IN
+chmod +x "$stand_in/gh"
+
+template=$(<.github/pull_request_template.md)
+# The template with each part filled in, as a pull request for #12
+filled_in=${template/"Closes #"/Closes #12}
+filled_in=${filled_in/"## How it was checked"/The app skips the expenses that it has already imported.$'\n\n'## How it was checked}
+filled_in+=$'\n'"scripts/check passes."
+
+# Runs the script on a body, and sets status and output: run_check <body>
+run_check() {
+  status=0
+  output=$(BODY=$1 PATH=$stand_in:$PATH scripts/check-pull-request 2>&1) || status=$?
+}
+
+# Checks that the script passes a body: expect_pass <description> <body>
+expect_pass() {
+  case_count=$((case_count + 1))
+  run_check "$2"
+  if [[ $status != 0 || -n $output ]]; then
+    echo "error: $1, scripts/check-pull-request must pass and print nothing, but it exited with code $status and printed: $output" >&2
+    failed_cases=$((failed_cases + 1))
+  fi
+}
+
+# Checks that the script fails on a body with these errors, and no others: expect_errors <description> <body> <error>...
+expect_errors() {
+  local description=$1 body=$2 expected
+  shift 2
+  expected=$(printf '::error::%s\n' "$@")
+  case_count=$((case_count + 1))
+  run_check "$body"
+  if [[ $status != 1 || $output != "$expected" ]]; then
+    echo "error: $description, scripts/check-pull-request must exit with code 1 and print:" >&2
+    printf '%s\n' "$expected" >&2
+    echo "It exited with code $status and printed:" >&2
+    printf '%s\n' "$output" >&2
+    failed_cases=$((failed_cases + 1))
+  fi
+}
+
+# Each part of the error that the script reports about a closing line
+edit_the_line="Edit the line to name the open issue that the pull request closes."
+no_closing_line="The body has no line that says which issue the pull request closes. Edit the body and add a line such as \"Closes #12\", with the number of the issue."
+
+# Prints the error about a missing heading: no_heading <heading>
+no_heading() {
+  echo "The body has no heading \"$1\". Add it as .github/pull_request_template.md has it, and write under it what the template's comment asks for."
+}
+
+# Prints the error about a section with no text: no_text <heading>
+no_text() {
+  echo "The body has no text under the heading \"$1\", apart from HTML comments. Write under it what the template's comment asks for."
+}
+
+expect_pass "With the template filled in" "$filled_in"
+expect_pass "With the template filled in and \\r\\n at each line's end" "${filled_in//$'\n'/$'\r\n'}"
+expect_pass "With other closing words, and headings at other levels with #s or spaces at their end" \
+  $'fixes: #12\nResolved #12\n\n### What changed and why ###\nThe app skips imported expenses.\n# How it was checked  \nscripts/check passes.'
+
+# The issues that closing lines name
+expect_errors "With no closing line" "${filled_in/"Closes #12"/See #12}" "$no_closing_line"
+expect_errors "With a closed issue" "${filled_in/"Closes #12"/Closes #13}" \
+  "The line \"Closes #13\" names #13, which is closed. $edit_the_line"
+expect_errors "With a pull request's number" "${filled_in/"Closes #12"/Fixes #14}" \
+  "The line \"Fixes #14\" names #14, which is a pull request, not an issue. $edit_the_line"
+expect_errors "With a number that no issue has" "${filled_in/"Closes #12"/Closes #99}" \
+  "The line \"Closes #99\" names #99, which isn't an issue in this repository. $edit_the_line"
+expect_errors "With an open issue and a closed one" "${filled_in/"Closes #12"/Closes #12$'\n'Closes #13}" \
+  "The line \"Closes #13\" names #13, which is closed. $edit_the_line"
+crlf_body=${filled_in//$'\n'/$'\r\n'}
+expect_errors "With a closed issue and \\r\\n at each line's end" "${crlf_body/"Closes #12"/Closes #13}" \
+  "The line \"Closes #13\" names #13, which is closed. $edit_the_line"
+TEST_GH=fail expect_errors "When gh fails" "$filled_in" \
+  "Can't look up #12, because gh failed: error connecting to api.github.com. Run the job again to try again."
+
+# The template's headings, and the text under them
+expect_errors "Without the heading \"What changed and why\"" "${filled_in/"## What changed and why"/## What changed}" \
+  "$(no_heading "What changed and why")"
+expect_errors "With a section that's empty" \
+  $'Closes #12\n\n## What changed and why\n\n## How it was checked\nscripts/check passes.' \
+  "$(no_text "What changed and why")"
+expect_errors "With the template as it is, apart from the closing line" "${template/"Closes #"/Closes #12}" \
+  "$(no_text "What changed and why")" "$(no_text "How it was checked")"
+expect_errors "With a section whose text is all in a comment over two lines" \
+  $'Closes #12\n## What changed and why\n<!-- The app skips\nimported expenses. -->\n## How it was checked\nscripts/check passes.' \
+  "$(no_text "What changed and why")"
+expect_errors "With a heading in a comment" \
+  $'Closes #12\n<!--\n## What changed and why\n-->\nThe app skips imported expenses.\n## How it was checked\nscripts/check passes.' \
+  "$(no_heading "What changed and why")"
+expect_errors "With an empty body" "" \
+  "$no_closing_line" "$(no_heading "What changed and why")" "$(no_heading "How it was checked")"
+
+if ((failed_cases > 0)); then
+  echo "error: $failed_cases of the $case_count cases in scripts/check-pull-request.test failed. The errors above say which." >&2
+  exit 1
+fi
+echo "scripts/check-pull-request.test passed. Cases: $case_count."

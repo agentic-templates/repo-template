@@ -11,6 +11,10 @@ jobs:
   title:
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    # scripts/check-pull-request reads the issues that the body closes.
+    permissions:
+      contents: read
+      issues: read
     steps:
       - name: Check that the title follows the rules for a commit subject
         env:
@@ -24,19 +28,19 @@ jobs:
           echo "::error::The title \"$TITLE\" doesn't follow the format \"<type>: <what changed>\". Edit the title to match. The types are ${types//|/, }."
           exit 1
 
-      # Dependabot's pull requests have no issue, so this step skips them.
-      - name: Check that the body says which issue the pull request closes
+      # Dependabot's pull requests have no issue and no template, so these two steps skip them.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        with:
+          persist-credentials: false
+
+      - name: Check that the body closes an open issue and fills in the template
         if: github.event.pull_request.user.login != 'dependabot[bot]'
         env:
           BODY: ${{ github.event.pull_request.body }}
-        run: |
-          # These are the words that GitHub treats as closing an issue.
-          pattern='^(close[sd]?|fix(es|ed)?|resolve[sd]?):? +#[0-9]+'
-          if grep -Eiq "$pattern" <<< "$BODY"; then
-            exit 0
-          fi
-          echo "::error::The body has no line that says which issue the pull request closes. Edit the body and add a line such as \"Closes #12\", with the number of the issue."
-          exit 1
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: scripts/check-pull-request
 
   # Release notes group pull requests by this label, as .github/release.yml sets out.
   # Pull requests from forks and from Dependabot get a read-only token, so this job skips them.
