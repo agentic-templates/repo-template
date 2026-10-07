@@ -6,7 +6,7 @@ This guide covers everything written for the project: docs, issues, pull request
 
 - Write for a reader who is new to the project but not to its field, and who reads once. For someone who uses the project, the field is the kind of work it helps with, such as keeping track of spending. For a developer, the field also includes the project's language and tools.
 - Leave out what the reader already knows and what the code already shows.
-- Leave out how something works inside, and how other tools differ, unless the reader must act on it.
+- Leave out how something works inside, and how one tool differs from another, unless the reader must act on it.
 - Start with what the reader came for: what they can do, what changed or what went wrong.
 
 ## Use plain words
