@@ -43,7 +43,7 @@ When a maintainer asks you to check the security advisories, check them against 
 
 ## Record a vulnerability privately
 
-As soon as you find a vulnerability that isn't public yet, write its summary and its description to two files outside the repository. If you have admin access, open a draft security advisory with them: `gh api --method POST repos/{owner}/{repo}/security-advisories -F summary=@<summary file> -F description=@<description file> -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -F summary=@<summary file> -F description=@<description file>`.
+As soon as you find a vulnerability that isn't public yet, write its summary and its description to two files outside the repository with your tool for writing files, not with a shell command. If you have admin access, open a draft security advisory with them: `gh api --method POST repos/{owner}/{repo}/security-advisories -F summary=@<summary file> -F description=@<description file> -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -F summary=@<summary file> -F description=@<description file>`.
 
 ## Fix a security vulnerability
 
