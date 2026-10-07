@@ -751,9 +751,11 @@ if has_section AGENTS.md Labels; then
   done
 fi
 
+# shellcheck source=scripts/title-types
+source scripts/title-types
 if has_section AGENTS.md Commits && [[ -f .github/workflows/pr-title.yml ]]; then
   agents_md_types=$(listed_types)
-  title_check_types=$(sed -n 's/^[[:space:]]*types="\([^"]*\)".*/\1/p' .github/workflows/pr-title.yml | tr '|' '\n')
+  title_check_types=$(allowed_title_types)
   while IFS= read -r type; do
     report_difference "\"Commits\" in AGENTS.md lists the type $type, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
   done < <(lines_missing_from "$agents_md_types" "$title_check_types")
