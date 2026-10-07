@@ -253,6 +253,163 @@ project_check_that_fails() {
 
 run_case project_check_that_fails pass
 
+# Cases for the check that the files agree on the facts that they repeat.
+
+# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
+# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
+replace_text() {
+  local file=$1 text=$2 new_text=$3 content replaced=""
+  content=$(<"$copy/$file")
+  if [[ $content != *"$text"* ]]; then
+    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
+    exit 1
+  fi
+  while [[ $content == *"$text"* ]]; do
+    replaced+=${content%%"$text"*}$new_text
+    content=${content#*"$text"}
+  done
+  printf '%s\n' "$replaced$content" > "$copy/$file"
+}
+
+label_that_configure_github_doesnt_create() {
+  replace_text AGENTS.md "## Labels" $'## Labels\n\nClose an issue that no one will build with `wontfix`.'
+}
+
+label_that_agents_md_doesnt_name() {
+  replace_text scripts/configure-github "<<'LABELS'" "<<'LABELS'"$'\n'"wontfix|ffffff|No one will build this"
+}
+
+dependabot_label_that_agents_md_doesnt_name() {
+  replace_text .github/dependabot.yml "labels: [dependencies]" "labels: [deps]"
+}
+
+labels_in_a_block_list() {
+  replace_text .github/release.yml "labels: [bug]" $'labels:\n        - bug'
+}
+
+unknown_label_in_a_block_list() {
+  replace_text .github/release.yml "labels: [bug]" $'labels:\n        - bug\n        - "regression"'
+}
+
+unknown_label_in_a_string_with_commas() {
+  replace_text .github/ISSUE_TEMPLATE/bug.yml "labels: [bug, needs-triage]" "labels: bug, wontfix"
+}
+
+star_label_outside_release_notes() {
+  replace_text .github/dependabot.yml "labels: [dependencies]" 'labels: ["*"]'
+}
+
+# Renames the section, and the names that quote it, so that the check of section names still passes.
+agents_md_without_labels() {
+  replace_text AGENTS.md "## Labels" "## Label rules"
+  replace_text AGENTS.md '"Labels"' '"Label rules"'
+  replace_text docs/rules.md '"Labels"' '"Label rules"'
+}
+
+run_case label_that_configure_github_doesnt_create fail "error: \"Labels\" in AGENTS.md names wontfix, and scripts/configure-github doesn't create it. Add it to scripts/configure-github, or remove it from AGENTS.md."
+run_case label_that_agents_md_doesnt_name fail "error: scripts/configure-github creates the label wontfix, and \"Labels\" in AGENTS.md doesn't name it. Add it to AGENTS.md, or remove it from scripts/configure-github."
+run_case dependabot_label_that_agents_md_doesnt_name fail "error: .github/dependabot.yml names the label deps, and \"Labels\" in AGENTS.md doesn't name it. Use a label that AGENTS.md names, or add deps to AGENTS.md and scripts/configure-github."
+run_case labels_in_a_block_list pass
+run_case unknown_label_in_a_block_list fail "error: .github/release.yml names the label regression, and \"Labels\" in AGENTS.md doesn't name it."
+run_case unknown_label_in_a_string_with_commas fail "error: .github/ISSUE_TEMPLATE/bug.yml names the label wontfix, and \"Labels\" in AGENTS.md doesn't name it."
+run_case star_label_outside_release_notes fail "error: .github/dependabot.yml names the label *, and \"Labels\" in AGENTS.md doesn't name it."
+run_case agents_md_without_labels fail "error: AGENTS.md has no section \"Labels\", and scripts/check compares that section with other files. Add it, with the heading \"## Labels\"."
+
+title_check_without_a_type() {
+  replace_text .github/workflows/pr-title.yml "|perf|" "|"
+}
+
+title_check_with_an_extra_type() {
+  replace_text .github/workflows/pr-title.yml "|chore\"" "|chore|wip\""
+}
+
+run_case title_check_without_a_type fail "error: \"Commits\" in AGENTS.md lists the type perf, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
+run_case title_check_with_an_extra_type fail "error: the title check in .github/workflows/pr-title.yml allows the type wip, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in .github/workflows/pr-title.yml."
+
+# Writes .github/workflows/lint.yml, with one job that has a step named lint: write_workflow <event> <job key> [<job name>]
+write_workflow() {
+  local event=$1 key=$2 name=${3:-}
+  {
+    printf '%s\n' "name: Lint" "on: $event" "permissions: {}" "jobs:" "  $key:"
+    if [[ -n $name ]]; then
+      printf '%s\n' "    name: $name"
+    fi
+    printf '%s\n' "    runs-on: ubuntu-latest" "    steps:" "      - name: lint" "        run: echo \"The style is fine.\""
+  } > "$copy/.github/workflows/lint.yml"
+}
+
+required_check_that_no_job_reports() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+}
+
+required_check_from_a_job_name() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow "[push, pull_request]" style lint
+}
+
+required_check_from_a_step_name() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow pull_request style
+}
+
+required_check_from_a_workflow_that_doesnt_run_on_pull_requests() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow pull_request_review lint
+}
+
+run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: check, title, label. Rename a job to lint, or change the check in scripts/configure-github."
+run_case required_check_from_a_job_name pass
+run_case required_check_from_a_step_name fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+
+hook_that_asks_for_another_gh_version() {
+  replace_text scripts/hooks/session-start "minimum_gh_minor=98" "minimum_gh_minor=99"
+}
+
+readme_that_asks_for_another_gh_version() {
+  replace_text README.md "The GitHub CLI 2.98 or later" "The GitHub CLI 2.97 or later"
+}
+
+agents_md_without_the_gh_version() {
+  replace_text AGENTS.md "need gh 2.98 or later" "need a recent gh"
+}
+
+hook_without_the_gh_version() {
+  replace_text scripts/hooks/session-start "minimum_gh_minor" "needed_gh_minor"
+}
+
+readme_of_a_new_project() {
+  printf '%s\n' "# expense-tracker" "" "Records what you spend. It can't do anything yet." > "$copy/README.md"
+}
+
+run_case hook_that_asks_for_another_gh_version fail "error: scripts/hooks/session-start asks for gh 2.99, and AGENTS.md says gh 2.98. Use the same version in both."
+run_case readme_that_asks_for_another_gh_version fail "error: README.md asks for the GitHub CLI 2.97, and AGENTS.md says gh 2.98. Use the same version in both."
+run_case agents_md_without_the_gh_version fail "error: AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\"."
+run_case hook_without_the_gh_version fail "error: scripts/hooks/session-start doesn't set both minimum_gh_major and minimum_gh_minor, so it can't ask for gh 2.98, as AGENTS.md does."
+run_case readme_of_a_new_project pass
+
+guide_in_neither_list() {
+  printf '%s\n' "# Notes guide" "" "Ideas for later." > "$copy/docs/notes.md"
+}
+
+page_whose_title_doesnt_end_in_guide() {
+  printf '%s\n' "# Notes" "" "Ideas for later." > "$copy/docs/notes.md"
+}
+
+missing_page_in_what_you_get() {
+  replace_text README.md "## What you get" $'## What you get\n\n- `docs/missing.md`: a page that doesn\'t exist.'
+}
+
+missing_page_in_read_the_guides() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/missing.md](docs/missing.md) and [docs/writing.md](docs/writing.md),"
+}
+
+run_case guide_in_neither_list fail "error: \"Read the guides\" in AGENTS.md doesn't link to docs/notes.md, which is a guide because its title ends in \"guide\". Link to it there, and say when to read it."
+run_case guide_in_neither_list fail "error: \"What you get\" in README.md doesn't name docs/notes.md, which is a guide because its title ends in \"guide\". Name it there, and say what it covers."
+run_case page_whose_title_doesnt_end_in_guide pass
+run_case missing_page_in_what_you_get fail "error: \"What you get\" in README.md names docs/missing.md, which doesn't exist. Fix the path, or remove it from README.md."
+run_case missing_page_in_read_the_guides fail "error: \"Read the guides\" in AGENTS.md links to docs/missing.md, which doesn't exist. Fix the link, or remove it from AGENTS.md."
+
 # Add a case for each check in scripts/check here.
 
 if ((failed_cases > 0)); then
