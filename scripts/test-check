@@ -169,6 +169,31 @@ run_case long_page_that_is_no_guide pass
 run_case agents_md_files_of_32000_bytes_on_one_path fail "error: the AGENTS.md files from the root down to src/api have 32000 bytes together, and the limit is 31999."
 run_case agents_md_files_of_32000_bytes_on_two_paths pass
 
+# Case for the place where setup adds the project's checks, which the copies skip.
+
+# The last line of the comment in scripts/check that marks the place.
+project_checks_comment="# Keep this comment after setup, because a case in scripts/test-check finds the place by it."
+
+# Puts a command that fails right after the comment.
+project_check_that_fails() {
+  local line found_comment=""
+  local -a lines=()
+  while IFS= read -r line; do
+    lines+=("$line")
+    if [[ $line == *"$project_checks_comment"* ]]; then
+      lines+=(false)
+      found_comment=yes
+    fi
+  done < "$copy/scripts/check"
+  if [[ -z "$found_comment" ]]; then
+    echo "error: in the case project_check_that_fails, can't find the line \"$project_checks_comment\" in scripts/check. Put the comment that ends with this line back at the top of the block that runs only when CHECK_UNDER_TEST is unset." >&2
+    exit 1
+  fi
+  printf '%s\n' "${lines[@]}" > "$copy/scripts/check"
+}
+
+run_case project_check_that_fails pass
+
 # Add a case for each check in scripts/check here.
 
 if ((failed_cases > 0)); then
