@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Tests that .claude/settings.json and .codex/hooks.json run the hooks. Each file must be one JSON object, and one of
+# its PreToolUse commands, run as written, must block a command that reads .env. The hooks let an action through
+# when they fail on their own, so a broken file or command turns them off in every agent without an error.
+set -euo pipefail
+# shellcheck source=scripts/hooks/testing.bash
+source "${BASH_SOURCE[0]%/*}/testing.bash"
+
+# The agents run the commands from the repository's root.
+cd "$hooks_folder/../.."
+copies=$(mktemp -d)
+trap 'rm -rf "$copies"' EXIT
+
+# Prints why a settings file doesn't run the hooks, or nothing if it does: settings_problem <file> <tool>
+# The commands get the tool's form of input, as sample_input writes it.
+settings_problem() {
+  local file=$1 tool=$2 input encoded_command command status
+  if [[ ! -f $file ]]; then
+    echo "$file doesn't exist, so the agents that read it run no hooks. Restore it."
+    return 0
+  fi
+  if ! jq -e --slurp 'length == 1 and (.[0] | type == "object")' "$file" >/dev/null 2>&1; then
+    echo "$file isn't one JSON object, so the agents that read it run no hooks. Fix its JSON."
+    return 0
+  fi
+  input=$(sample_input "$tool" Bash 'cat .env')
+  # jq prints each command as a JSON string, so that a command with line breaks stays on one line.
+  while IFS= read -r encoded_command; do
+    command=$(jq -r . <<<"$encoded_command")
+    status=0
+    HOME=$test_home sh -c "$command" <<<"$input" >/dev/null 2>&1 || status=$?
+    if ((status == 2)); then
+      return 0
+    fi
+  done < <(jq -c '.hooks.PreToolUse[]?.hooks[]?.command? | strings' "$file")
+  echo "No PreToolUse command in $file exits with code 2 on a command that reads .env, so the agents that read it run no hooks. Fix the commands, which the agents run with sh -c from the repository's root."
+}
+
+# Checks that the test finds a problem in a broken settings file: expect_problem <file> <tool> <problem>
+expect_problem() {
+  local file=$1 tool=$2 expected=$3 problem
+  case_count=$((case_count + 1))
+  problem=$(settings_problem "$file" "$tool")
+  if [[ $problem != "$expected" ]]; then
+    echo "error: for $file, the test must find \"$expected\", but it found \"$problem\"." >&2
+    failed_cases=$((failed_cases + 1))
+  fi
+}
+
+# Checks a settings file, and copies of it that break it: check_settings <file> <tool>
+check_settings() {
+  local file=$1 tool=$2 broken=$copies/${1##*/} problem content
+  case_count=$((case_count + 1))
+  problem=$(settings_problem "$file" "$tool")
+  if [[ -n $problem ]]; then
+    echo "error: $problem" >&2
+    failed_cases=$((failed_cases + 1))
+    # The copies are made from the file, so they can't show anything while the file itself is broken.
+    return 0
+  fi
+
+  content=$(<"$file")
+  printf '%s\n' "${content%\}}" >"$broken"
+  expect_problem "$broken" "$tool" "$broken isn't one JSON object, so the agents that read it run no hooks. Fix its JSON."
+
+  jq '.hooks.PreToolUse[].hooks[].command = "exit 0"' "$file" >"$broken"
+  expect_problem "$broken" "$tool" "No PreToolUse command in $broken exits with code 2 on a command that reads .env, so the agents that read it run no hooks. Fix the commands, which the agents run with sh -c from the repository's root."
+
+  rm "$broken"
+  expect_problem "$broken" "$tool" "$broken doesn't exist, so the agents that read it run no hooks. Restore it."
+}
+
+check_settings .claude/settings.json claude-code
+check_settings .codex/hooks.json codex
+
+# Files that hold two JSON objects, or a value that isn't an object
+printf '{}\n{}\n' >"$copies/two.json"
+expect_problem "$copies/two.json" claude-code "$copies/two.json isn't one JSON object, so the agents that read it run no hooks. Fix its JSON."
+echo '[]' >"$copies/array.json"
+expect_problem "$copies/array.json" codex "$copies/array.json isn't one JSON object, so the agents that read it run no hooks. Fix its JSON."
+
+finish_tests
