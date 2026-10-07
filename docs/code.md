@@ -7,7 +7,7 @@ Write code that a reader understands the first time they read it. If a rule here
 - Build the simplest design that meets what the project needs now, including any accuracy or speed that the issue asks for.
 - Add a layer, an option or a general version of something only when the project needs it now. For example, add a storage interface only once the project has a second storage backend, not in case it gets one.
 - If you find code that was already dead before your change, open an issue to remove it rather than removing it in your change.
-- Follow the conventions the code already uses for naming style, file layout and error handling, even where this guide would choose differently. To change a convention, open an issue for it, and change it everywhere in a pull request of its own.
+- Follow the conventions the code already uses for naming style, file layout and error handling, even where this guide would choose differently. But don't follow a convention that hides errors, as "Fail with a clear error" describes. To change a convention, open an issue for it, and change it everywhere in a pull request of its own.
 - Write shell scripts for bash 3.2, which macOS ships. CI runs their tests with it.
 - Keep each decision the code makes, such as a limit or how a total is rounded, in one place, so that changing it takes one edit. Before you write code that makes a decision, check whether other code already makes it, and use that code if it does. But two pieces of code or two values can look alike and still be separate decisions. Keep those apart. For example, if the limit on a description and the limit on a category name are both 50 characters, don't use one constant for both, because either limit can change without the other.
 - Keep the code that calculates a result apart from the code that reads input or writes output. Pass every value that can differ from one run to the next, such as today's date, to the calculating code as an argument. The calculating code reads nothing but its arguments, and does nothing but return its result. Files, the network, the screen, the clock, random numbers and environment variables all count as input or output, so the calculating code leaves them to the code that calls it. For example, the function that totals this month's expenses takes the expenses and today's date as arguments and returns the total. The code that calls it reads the expense file and the clock, and prints the result.
@@ -27,7 +27,7 @@ Write code that a reader understands the first time they read it. If a rule here
 
 Keep the complex code in one place behind a plain interface, so that the code that calls it doesn't need to know how it works.
 
-- Complexity is required when a simpler version would fail a requirement. Examples are code that must reach the accuracy an issue asks for, and the fix for a reported bug. Name the requirement in a comment.
+- Complexity is required when a simpler version would fail a requirement. Examples are code that must reach the accuracy or speed an issue asks for, and code that a bug fix adds and that a reader might later think is unnecessary, such as a special case. Name the requirement in a comment. A bug fix that adds no such code adds no complexity, and needs no comment that names the requirement.
 - Complexity is a choice when a simpler version already meets the requirements and the complex one does better, such as running faster, using less memory or giving more accurate results. Make that choice only where a measurement shows what the complex version gains. Say in a comment what the code gains and where the measurement is, such as a benchmark name or an issue.
 - Keep tests that check the complex code's results. For speed or memory, keep a plain version in the test code, such as the code before you optimized it, and check that both give the same results. For accuracy, keep the test cases that measure it, so that a later change can't make the results worse without anyone noticing.
 
@@ -42,6 +42,7 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 
 - Check input where it enters the program: command-line arguments, files, network traffic and, in a library, the arguments to its public functions. Trust values that come from inside the program.
 - Catch an error only where you can recover from it or add useful context. Never hide an error, such as by returning an empty list when the expense file can't be read.
+- If the code around yours hides errors by convention, don't hide them in the code you add. Your code may still call that code. Leave it as it is, and open an issue to change the convention everywhere.
 
 ## Test behavior
 
