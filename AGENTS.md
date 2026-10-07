@@ -11,6 +11,7 @@ Read each guide before you first do its kind of work in a session, even when the
 - [docs/rules.md](docs/rules.md), before you change AGENTS.md, a guide or the labels.
 - [docs/code.md](docs/code.md), before you write or review code.
 - [docs/dependencies.md](docs/dependencies.md), before you add or update a tool, a package or a GitHub Action.
+- [docs/languages.md](docs/languages.md), before you add a language to the project, at setup or later.
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work.
 - [docs/building.md](docs/building.md), before you build the ready issues. That work is called a build run. Read the guide too before you build one ready issue as a helper in a build run, or work on a ready issue outside a build run.
 - [docs/reviewing.md](docs/reviewing.md), before you review a pull request or review the code for security problems.
@@ -39,7 +40,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 ## Commands
 
 - `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
-- `scripts/configure-github`: the agent that sets up the project runs it once, as the setup list in the README describes. After a change to the script merges, a maintainer with admin access runs it again.
+- `scripts/configure-github`: the agent that sets up the project runs it once. After a change to the script merges, a maintainer with admin access runs it again.
 
 Keep the checks on a pull request within ten minutes. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
