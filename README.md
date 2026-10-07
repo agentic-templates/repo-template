@@ -29,14 +29,9 @@ Optional: to keep your email address out of the project's commits, set git's `us
 
 
    - First, run `gh api "repos/{owner}/{repo}/rulesets?includes_parents=false"`, as written, because gh fills in the owner and the repository. If it lists no ruleset named `main`, the repository's settings haven't been applied yet, so run `scripts/configure-github` to apply them. Run the script before you open the setup's pull request, so that the rules that protect main apply to it. When the script finishes, tell the person who asked for the setup to turn on Dependabot malware alerts at the link that the script prints.
-   - In `AGENTS.md`, rewrite the section "What this project is": what the project is for, and which kinds of change belong in it. Then update the "Where things are" and "Commands" sections with the project's files and its install, run and test commands.
-   - Pin the version of each language, framework and database that the project uses, such as Python in `.python-version`. Commit the lockfile for the project's packages, and add steps to `.github/workflows/ci.yml` that install those versions and the packages.
-   - Add the formatter, the linter, the type checker if the language has one, and the tests to `scripts/check`.
-   - Add a hook to `.claude/settings.json` and `.codex/hooks.json` that runs the project's formatter on each file the agent edits.
-   - If the language's coverage tool can mark single lines as excluded, add a coverage check to `scripts/check`. The check fails when a line never runs in a test. Where the tool measures branches, the check also fails when a branch is never taken. Lines marked as excluded don't count, but the check fails on an exclusion marker that gives no reason. Measure coverage with the tests that `scripts/check` runs, and with no others. If the tool can't mark lines as excluded, add no coverage check.
-   - If the project publishes a library and its language has a tool that finds breaking changes, such as cargo-semver-checks for Rust, add a check to CI that looks for a break in the library's public interface. If a pull request breaks the interface, the check fails, unless the pull request's title marks the change with `!` before the colon, as in `feat!: rename the import command`. Have the check compare the pull request with the commit on main that it branched from, not with the last release. Once a breaking change has merged, main itself differs from the last release, so a comparison with that release would fail every later pull request.
+   - In `AGENTS.md`, rewrite the section "What this project is": what the project is for, and which kinds of change belong in it. Then update the "Where things are" and "Commands" sections with the files and commands that belong to the whole project rather than to one language, such as a Docker Compose file.
+   - For each language the project uses, follow `docs/languages.md`.
    - If the project's output is visual, such as a web page or a 3D scene, add a command that saves a picture of that output, such as a screenshot of the page or a render of the scene. List the command under "Commands" in `AGENTS.md`. The command has to run without anyone at the screen. Save the pictures outside the repository, such as in a temporary folder.
-   - Add the project's package manager, such as pip or npm, to `.github/dependabot.yml`, so that Dependabot updates its packages too.
    - If the project publishes a package or deploys, add a workflow that does it when a release is published.
    - Set the year and the copyright holder in `LICENSE`.
    - Last, replace this README with one for the project, as `docs/pages.md` describes. Until users can do something with the project, the new README says what the project is for, and that it can't do anything yet.
@@ -121,6 +116,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `docs/rules.md`: how to change AGENTS.md, the guides and the labels.
 - `docs/code.md`: how to write code in any language, covering design and tests.
 - `docs/dependencies.md`: how to choose, pin and update tools, packages and GitHub Actions.
+- `docs/languages.md`: how an agent gives each language in your project pinned versions, checks and Dependabot updates, at setup or when you add the language later.
 - `docs/planning.md`: how an agent turns ideas into issues that are ready to build, and how you choose which ones get built.
 - `docs/building.md`: how an agent builds the issues you approved, alone or with helpers.
 - `docs/reviewing.md`: how an agent reviews a pull request, and reviews the code for security problems.
