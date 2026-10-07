@@ -346,6 +346,77 @@ run_case section_name_in_a_file_that_doesnt_exist fail "error: docs/notes.md:1 n
 run_case form_field_named_with_says pass
 run_case section_names_that_match_headings pass
 
+# Cases for the check of the prose in Markdown files.
+
+# The lines that break a rule come after two code blocks, so that a code block that doesn't end would hide them.
+prose_that_breaks_each_rule() {
+  cat > "$copy/docs/page.md" <<'EOF'
+# Page
+
+```bash
+total=0; echo "pages 10 - 20"
+```
+
+1. Add the expenses:
+
+   ```bash
+   total=0; echo "pages 10 - 20"
+   ```
+
+The app totals the month; it also exports it.
+The app totals the month — it also exports it.
+The app totals the month – it also exports it.
+pages 10 - 20
+[Click here](https://example.com)
+Read the guide: [CLICK HERE][guide].
+
+[guide]: https://example.com
+EOF
+}
+
+markdown_that_follows_the_prose_rules() {
+  cat > "$copy/docs/page.md" <<'EOF'
+# Page
+
+- A list item that starts with a dash.
+  - A list item in a list item.
+
+Run `total=0; echo "$total"` or ``echo "pages 10 - 20 `30`"``, as [the guide](https://example.com/totals?month=1;year=2026 "Totals [2026]; pages 10 - 20") says.
+Two&nbsp;words, an <span title="a; b">HTML tag</span> and a comment. <!-- Totals; pages 10 - 20 -->
+Don't write "click here" as a link's text.
+
+1. Add the expenses:
+
+   ```bash
+   total=0; echo "pages 10 - 20"
+   ```
+
+~~~~text
+```
+total=0; echo "pages 10 - 20"
+```
+~~~~
+
+[guide]: https://example.com/totals?month=1;year=2026 "Totals; pages 10 - 20"
+EOF
+}
+
+semicolons_in_generated_and_vendored_files() {
+  printf '%s\n' 'CHANGELOG.md linguist-generated' 'vendor/** linguist-vendored' >> "$copy/.gitattributes"
+  mkdir -p "$copy/vendor/chart"
+  echo "The app totals the month; it also exports it." > "$copy/CHANGELOG.md"
+  echo "The app totals the month; it also exports it." > "$copy/vendor/chart/README.md"
+}
+
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:13 has a semicolon in prose. Write two sentences, as "Write clear sentences" in docs/writing.md says.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:14 has a dash between words in prose. If it joins two sentences, write two sentences, as "Write clear sentences" in docs/writing.md says. Otherwise, replace it with a word, as in "pages 10 to 20".'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:15 has a dash between words in prose.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:16 has a dash between words in prose.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:17 has a link whose text is "click here". Make the link text name the page it opens, as "Organize a page" in docs/pages.md says.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:18 has a link whose text is "click here".'
+run_case markdown_that_follows_the_prose_rules pass
+run_case semicolons_in_generated_and_vendored_files pass
+
 # Case for the place where setup adds the project's checks, which the copies skip.
 
 # The last line of the comment in scripts/check that marks the place.

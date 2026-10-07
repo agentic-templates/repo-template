@@ -353,6 +353,146 @@ if [[ -n "$broken_name" ]]; then
   exit 1
 fi
 
+# The prose in the Markdown files follows three rules that a check can find by matching text.
+# "Write clear sentences" in docs/writing.md bans semicolons and dashes that join two sentences.
+# "Organize a page" in docs/pages.md bans links whose text is "click here".
+# A dash that joins two sentences looks like any other dash between words, so the check fails on each dash
+# that has a space on each side and a letter or digit beyond each space, as in "pages 10 - 20".
+# Only ASCII letters and digits count, so that the check gives the same result in every locale.
+dash_between_words='[A-Za-z0-9] (—|–|-) [A-Za-z0-9]'
+# A link's text in brackets, then its target in parentheses or a reference in brackets. An image, which starts with "!",
+# isn't a link.
+click_here_link='(^|[^!])\[[[:space:]]*click[[:space:]]+here[[:space:]]*\](\(|\[)'
+# A fence starts or ends a code block. It's three or more backticks or tildes, after any indentation, as in a list item.
+code_fence="^[[:space:]]*(\`{3,}|~{3,})(.*)$"
+# A run of backticks, with the text before it and the text after it.
+backtick_run="^([^\`]*)(\`+)(.*)$"
+html_comment_start='<!--'
+html_comment_end='-->'
+# An HTML tag, as in <br> or </details>, or a link in angle brackets, as in <https://example.com>.
+html_tag='<[A-Za-z/][^>]*>'
+# An HTML entity, as in &nbsp;, &#160; or &#xA0;.
+html_entity='&([A-Za-z][A-Za-z0-9]*|#[0-9]+|#[xX][0-9A-Fa-f]+);'
+# A link's target, in parentheses after the link's text.
+link_target='\]\([^)]+\)'
+# A line that gives the target of a reference link, as in [guide]: https://example.com.
+# A footnote, as in [^1]: text, is prose.
+link_definition='^ {0,3}\[[^]^][^]]*\]:'
+
+# Prints each line of a Markdown file that's outside its code blocks: its line number, a tab and the line.
+# A code block ends at a fence of the same character that's at least as long and holds nothing else,
+# or at the end of the file. An indented code block, which has no fences, counts as prose,
+# because telling it apart from the text of a list item takes a Markdown parser: lines_outside_code_blocks <file>
+lines_outside_code_blocks() {
+  local line line_number=0 fence=""
+  # The test after || also reads a last line that has no line break.
+  while IFS= read -r line || [[ -n $line ]]; do
+    line_number=$((line_number + 1))
+    if [[ $line =~ $code_fence ]]; then
+      if [[ -z $fence ]]; then
+        fence=${BASH_REMATCH[1]}
+        continue
+      fi
+      # A fence of the same character that's at least as long starts with the fence that opened the block.
+      if [[ ${BASH_REMATCH[1]} == "$fence"* && -z ${BASH_REMATCH[2]//[[:space:]]/} ]]; then
+        fence=""
+        continue
+      fi
+    fi
+    if [[ -z $fence ]]; then
+      printf '%s\t%s\n' "$line_number" "$line"
+    fi
+  done < "$1"
+}
+
+# Prints the prose in a line of Markdown: the line with each code span, HTML comment, HTML tag and HTML entity
+# replaced by an underscore, and each link's target left out, so that [text](target) becomes [text]().
+# A line that gives the target of a reference link becomes a single underscore.
+# An HTML comment over several lines counts as prose, because the check reads one line at a time: prose_in <line>
+prose_in() {
+  local rest=$1 prose="" opening after is_closed comment_and_after empty_target=']()'
+  if [[ $rest =~ $link_definition ]]; then
+    echo _
+    return 0
+  fi
+  # A run of backticks starts a code span, which ends at the next run of as many backticks.
+  # A run that no such run follows is text, as in CommonMark.
+  while [[ $rest =~ $backtick_run ]]; do
+    prose+=${BASH_REMATCH[1]}
+    opening=${BASH_REMATCH[2]}
+    rest=${BASH_REMATCH[3]}
+    after=$rest
+    is_closed=""
+    while [[ $after =~ $backtick_run ]]; do
+      after=${BASH_REMATCH[3]}
+      if [[ ${BASH_REMATCH[2]} == "$opening" ]]; then
+        is_closed=yes
+        break
+      fi
+    done
+    if [[ -n $is_closed ]]; then
+      prose+=_
+      rest=$after
+    else
+      prose+=$opening
+    fi
+  done
+  prose+=$rest
+  while [[ $prose == *"$html_comment_start"*"$html_comment_end"* ]]; do
+    comment_and_after=${prose#*"$html_comment_start"}
+    prose=${prose%%"$html_comment_start"*}_${comment_and_after#*"$html_comment_end"}
+  done
+  while [[ $prose =~ $html_tag || $prose =~ $html_entity ]]; do
+    prose=${prose/"${BASH_REMATCH[0]}"/_}
+  done
+  while [[ $prose =~ $link_target ]]; do
+    prose=${prose/"${BASH_REMATCH[0]}"/$empty_target}
+  done
+  printf '%s\n' "$prose"
+}
+
+# Succeeds if a line has a link whose text is "click here", in any case: has_click_here_link <line>
+has_click_here_link() {
+  local result=1
+  shopt -s nocasematch
+  if [[ $1 =~ $click_here_link ]]; then
+    result=0
+  fi
+  shopt -u nocasematch
+  return "$result"
+}
+
+found_prose_error=""
+while IFS= read -r -d '' file; do
+  # -f skips the deleted files that git ls-files also lists.
+  if [[ ! -f $file ]]; then
+    continue
+  fi
+  while IFS=$'\t' read -r line_number line; do
+    # prose_in only replaces parts of a line, and what it puts in their place can't break a rule.
+    # So a line that breaks no rule as it is passes, and the check skips prose_in, which is slower.
+    if [[ $line != *\;* && ! $line =~ $dash_between_words ]] && ! has_click_here_link "$line"; then
+      continue
+    fi
+    prose=$(prose_in "$line")
+    if [[ $prose == *\;* ]]; then
+      echo "error: $file:$line_number has a semicolon in prose. Write two sentences, as \"Write clear sentences\" in docs/writing.md says." >&2
+      found_prose_error=yes
+    fi
+    if [[ $prose =~ $dash_between_words ]]; then
+      echo "error: $file:$line_number has a dash between words in prose. If it joins two sentences, write two sentences, as \"Write clear sentences\" in docs/writing.md says. Otherwise, replace it with a word, as in \"pages 10 to 20\"." >&2
+      found_prose_error=yes
+    fi
+    if has_click_here_link "$prose"; then
+      echo "error: $file:$line_number has a link whose text is \"click here\". Make the link text name the page it opens, as \"Organize a page\" in docs/pages.md says." >&2
+      found_prose_error=yes
+    fi
+  done < <(lines_outside_code_blocks "$file")
+done < <(git ls-files -z -- '*.md' "${not_generated_or_vendored[@]}")
+if [[ -n "$found_prose_error" ]]; then
+  exit 1
+fi
+
 # Several files repeat the labels, the commit types, the checks that main requires, the gh version and the guides.
 # A file that no longer agrees with the others breaks something without an error, so these checks compare them.
 # They report every difference, then fail. They leave out a file that doesn't exist.
