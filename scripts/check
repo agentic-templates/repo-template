@@ -636,17 +636,8 @@ listed_types() {
   done < <(section AGENTS.md Commits)
 }
 
-# Prints the checks that scripts/configure-github requires on main from GitHub Actions, whose integration ID is 15368.
-# Each one is a JSON object with a context, written on one line or on several.
-required_checks() {
-  local rule context_pattern='"context"[[:space:]]*:[[:space:]]*"([^"]*)"'
-  local actions_pattern='"integration_id"[[:space:]]*:[[:space:]]*15368([^0-9]|$)'
-  while IFS= read -r rule; do
-    if [[ $rule =~ $actions_pattern ]] && [[ $rule =~ $context_pattern ]]; then
-      printf '%s\n' "${BASH_REMATCH[1]}"
-    fi
-  done < <(tr '\n' ' ' < scripts/configure-github | { grep -o '{[^{}]*"context"[^{}]*}' || true; })
-}
+# shellcheck source=scripts/required-checks
+source scripts/required-checks
 
 # Prints the check of each job in a workflow that runs on pull_request, and nothing for any other workflow.
 # A job's check has the job's name, or its key when it has no name.
