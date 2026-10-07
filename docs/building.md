@@ -33,4 +33,8 @@ If the maintainer asks for helpers, such as "with up to 3 helpers", and you can 
 
 ## Work on a ready issue outside a build run
 
-When a maintainer asks you to work on an issue that has `ready` outside a build run, first check whether the issue is assigned. If it has any assignee, count it as taken by a build run, so leave it, and tell the maintainer that a build run has it. If it has none, remove `ready`, so that no build run takes it, and go on with step 2 of "Make a change" in AGENTS.md. If you give up on the issue and leave no open pull request for it, add `ready` back.
+1. Remove `ready`, so that no build run takes the issue from now on.
+2. Then check whether the issue is assigned, with `gh issue view <issue> --json assignees`. If it is, count it as taken by a build run: add `ready` back, leave the issue, and tell the maintainer that a build run has it.
+3. Otherwise, go on with step 2 of "Make a change" in AGENTS.md.
+
+If you give up on the issue and leave no open pull request for it, add `ready` back.
