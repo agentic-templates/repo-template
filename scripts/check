@@ -835,7 +835,8 @@ if [[ -n "$files_disagree" ]]; then
 fi
 
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
-# so that they don't start it again. They skip the tests of the hooks too, because the copies don't change the hooks.
+# so that they don't start it again. They skip the tests in scripts/ and scripts/hooks/ too, because the copies
+# don't change the scripts that those tests run.
 if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
   # Add the project's formatter check, linter, type checker, tests and coverage check here.
   # The copies that scripts/test-check makes skip these checks, because the copies hold only the tracked files.
@@ -847,6 +848,12 @@ if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
       "$hook_test"
     done
   fi
+  # -f skips the pattern itself, which the loop gets when no test matches it.
+  for script_test in scripts/*.test; do
+    if [[ -f $script_test ]]; then
+      "$script_test"
+    fi
+  done
 fi
 
 if [[ -n "$skipped" ]]; then
