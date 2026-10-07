@@ -1,6 +1,6 @@
 # Code guide
 
-Write code that a reader understands the first time they read it. If a rule here would make a piece of code harder to read, choose the clearer code and explain why in the pull request.
+Write code that a reader understands the first time they read it. If a rule here would make a piece of code harder to read, choose the clearer code and explain why in the pull request. But the conventions that the code already uses for naming style, file layout and error handling win over clearer code, as "Keep the design simple" describes. For example, if the code abbreviates its names, abbreviate the names you add in the same way. When such a convention makes a piece of code harder to read, open an issue to change it everywhere, unless one is open already.
 
 ## Keep the design simple
 
