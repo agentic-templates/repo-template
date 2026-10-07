@@ -207,6 +207,72 @@ if [[ -n "$too_big" ]]; then
   exit 1
 fi
 
+# Succeeds if a line of the input is exactly the text: has_line <text>
+# With -q, grep would stop reading at the first match. The command that writes to grep could then fail
+# on the closed pipe, and pipefail would fail the whole pipeline.
+has_line() {
+  grep -F -x -- "$1" >/dev/null
+}
+
+# Each tracked text file stays at 1,000 lines or fewer, because an agent reads a whole file into its context.
+max_file_lines=1000
+# The list of files that may be longer, if the project has one. Each line holds a file's path from the repository's root,
+# a space and the reason. The errors don't mention the list, because adding a file to it loosens the check,
+# which docs/code.md allows only when the issue asks for it.
+long_files_list=scripts/long-files
+
+# Succeeds if a file has a lockfile's name: is_lockfile <path>
+# A package manager writes each lockfile, so the project can't split one. A project whose lockfile isn't here adds its name.
+is_lockfile() {
+  case ${1##*/} in
+    package-lock.json | pnpm-lock.yaml | yarn.lock | bun.lock | uv.lock | poetry.lock | Pipfile.lock | Cargo.lock | \
+      go.sum | Gemfile.lock | composer.lock | pubspec.lock | Package.resolved | mix.lock)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+long_file_error=""
+listed_files=""
+if [[ -f $long_files_list ]]; then
+  while read -r path reason || [[ -n $path ]]; do
+    # A blank line leaves path empty.
+    if [[ -z $path ]]; then
+      continue
+    fi
+    listed_files+=$path$'\n'
+    if [[ -z $reason ]]; then
+      echo "error: $long_files_list lists $path without a reason. Add a space and the reason after the path." >&2
+      long_file_error=yes
+    fi
+  done < "$long_files_list"
+fi
+
+files_over_the_limit=""
+# -I skips the files that git counts as binary. The empty pattern matches every line, so -c counts each file's lines.
+# git grep prints the file, NUL and the count.
+while IFS= read -r -d '' file && IFS= read -r line_count; do
+  if ((line_count <= max_file_lines)) || is_lockfile "$file"; then
+    continue
+  fi
+  files_over_the_limit+=$file$'\n'
+  if ! has_line "$file" <<<"$listed_files"; then
+    echo "error: $file has $line_count lines, and the limit is $max_file_lines. Move a part with its own responsibility into a file of its own." >&2
+    long_file_error=yes
+  fi
+done < <(git grep --null -I -c '' -- "${not_generated_or_vendored[@]}")
+
+while IFS= read -r path; do
+  if [[ -n $path ]] && ! has_line "$path" <<<"$files_over_the_limit"; then
+    echo "error: $long_files_list lists $path, which scripts/check accepts without the list. Remove its line, or fix the path." >&2
+    long_file_error=yes
+  fi
+done <<<"$listed_files"
+if [[ -n "$long_file_error" ]]; then
+  exit 1
+fi
+
 # The Markdown files refer to sections by their headings, in quotes. Each name must match a heading in its file,
 # so that a renamed or removed section doesn't leave a name that leads nowhere.
 # A name is written as "<heading>" in <file>, or as "<heading>" describes or "<heading>" says for a section of its own file.
@@ -232,13 +298,6 @@ form_field_labels() {
       sed -n 's/^[[:space:]]*label:[[:space:]]*//p' "$form"
     fi
   done
-}
-
-# Succeeds if a line of the input is exactly the text: has_line <text>
-# With -q, grep would stop reading at the first match. The command that writes to grep could then fail
-# on the closed pipe, and pipefail would fail the whole pipeline.
-has_line() {
-  grep -F -x -- "$1" >/dev/null
 }
 
 # Prints each section name in a Markdown file on a line of its own: its line number, the name and the file
