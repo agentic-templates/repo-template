@@ -50,7 +50,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     # With this PATH, the scripts' #!/usr/bin/env bash lines find /bin/bash, and the copies that scripts/test-check
-    # makes skip the runner's own shellcheck, actionlint and zizmor. macOS 15 has jq and git in /usr/bin.
+    # makes skip the runner's own shellcheck, actionlint and zizmor. macOS 15 and later have jq and git in /usr/bin.
     env:
       PATH: /usr/bin:/bin:/usr/sbin:/sbin
     steps:
