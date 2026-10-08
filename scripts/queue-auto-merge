@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Adds to the merge queue each open pull request that auto-merge should have added and hasn't: auto-merge is on, its
+# merge state is CLEAN, so its checks have passed, and it isn't in the queue. GitHub usually adds such a pull request
+# within a minute, but sometimes never does. Turning auto-merge off and running gh pr merge again adds it at once.
+# It skips pull requests from forks, which a maintainer merges. It asks gh about the repository of this checkout,
+# or the one in GH_REPO. Step 2 of "Build the ready issues" in docs/building.md runs it.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# The hook that blocks a merge while the rules for main no longer require a check doesn't see the gh commands
+# that this script runs, so the script asks the same question first. Like the hook, it goes on when it can't tell.
+main_rules_status=0
+main_rules_problem=$(scripts/check-main-rules 2>&1) || main_rules_status=$?
+if ((main_rules_status == 1)); then
+  printf '%s\n' "$main_rules_problem" >&2
+  echo "error: scripts/queue-auto-merge added no pull request to the merge queue, because of the error above. Go on with the other work, and list this in your report for the maintainer." >&2
+  exit 1
+fi
+
+query=$(cat <<'GRAPHQL'
+query($owner: String!, $repo: String!, $endCursor: String) {
+  repository(owner: $owner, name: $repo) {
+    pullRequests(states: OPEN, first: 100, after: $endCursor) {
+      nodes { number isCrossRepository isInMergeQueue mergeStateStatus autoMergeRequest { enabledAt } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}
+GRAPHQL
+)
+# Prints each open pull request on a line: its number, whether it comes from a fork, whether it's in the queue,
+# its merge state and whether auto-merge is on, separated by tabs.
+jq_filter='.data.repository.pullRequests.nodes[]
+  | [.number, .isCrossRepository, .isInMergeQueue, .mergeStateStatus, (.autoMergeRequest != null)] | @tsv'
+if ! pull_requests=$(gh api graphql --paginate -F owner='{owner}' -F repo='{repo}' -f query="$query" --jq "$jq_filter" 2>&1); then
+  echo "error: can't list the open pull requests, because gh failed: $pull_requests" >&2
+  exit 1
+fi
+
+# Succeeds if auto-merge should have added a pull request to the queue and hasn't:
+# is_waiting_for_the_queue <from a fork> <in the queue> <merge state> <auto-merge on>
+is_waiting_for_the_queue() {
+  [[ $1 == false && $2 == false && $3 == CLEAN && $4 == true ]]
+}
+
+while IFS=$'\t' read -r number is_from_fork is_in_queue merge_state has_auto_merge; do
+  if [[ -z $number ]] || ! is_waiting_for_the_queue "$is_from_fork" "$is_in_queue" "$merge_state" "$has_auto_merge"; then
+    continue
+  fi
+  if ! answer=$(gh pr merge "$number" --disable-auto 2>&1); then
+    echo "error: can't turn off auto-merge on pull request $number, because gh failed: $answer" >&2
+    exit 1
+  fi
+  # With checks that have passed, gh pr merge adds the pull request to the queue.
+  if ! answer=$(gh pr merge "$number" 2>&1); then
+    echo "error: turned off auto-merge on pull request $number, but can't add it to the merge queue, because gh failed: $answer. Run gh pr merge $number to add it." >&2
+    exit 1
+  fi
+  echo "Added pull request $number to the merge queue. Its checks had passed, but auto-merge hadn't added it."
+done <<<"$pull_requests"
