@@ -15,20 +15,22 @@ You need:
 
 Optional: to keep your email address out of the project's commits, set git's `user.email` to the noreply address in your GitHub email settings.
 
-1. Create a repository from the template, clone it, and go into the clone. Make the repository public, because the template supports only public repositories.
+1. The template merges pull requests through GitHub's merge queue, which only an organization's repositories can use. If you don't have a GitHub organization yet, create a free one in your browser, at https://github.com/account/organizations/new, because GitHub has no command for it.
+
+2. Create a repository in the organization from the template, clone it, and go into the clone. Make the repository public, because the template supports only public repositories.
 
    ```bash
-   gh repo create expense-tracker --public --template jtmpl/repo-template --clone
+   gh repo create <organization>/expense-tracker --public --template agentic-templates/repo-template --clone
    cd expense-tracker
    ```
 
-2. Start your agent in the clone, and ask it to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Add any notes or spec you have about the project to your request. The agent asks you whatever else the setup needs, such as which languages, frameworks or database to use.
+3. Start your agent in the clone, and ask it to set up the project, for example: "Set up this repository for expense-tracker, a command-line tool in Python that records what you spend. Follow the setup list in README.md." Add any notes or spec you have about the project to your request. The agent asks you whatever else the setup needs, such as which languages, frameworks or database to use.
 
    <details>
    <summary>The setup list, for your agent</summary>
 
 
-   - First, run `gh api "repos/{owner}/{repo}/rulesets?includes_parents=false"`, as written, because gh fills in the owner and the repository. If it lists no ruleset named `main`, the repository's settings haven't been applied yet, so run `scripts/configure-github` to apply them. Run the script before you open the setup's pull request, so that the rules that protect main apply to it. When the script finishes, tell the person who asked for the setup to turn on Dependabot malware alerts at the link that the script prints.
+   - First, run `gh api "repos/{owner}/{repo}/rulesets?includes_parents=false"`, as written, because gh fills in the owner and the repository. If it lists no ruleset named `main`, the repository's settings haven't been applied yet, so run `scripts/configure-github` to apply them. Run the script before you open the setup's pull request, so that the rules that protect main apply to it. If the script stops with an error, stop the setup, and pass the error on to the person who asked for it. When the script finishes, tell the person who asked for the setup to turn on Dependabot malware alerts at the link that the script prints.
    - In `AGENTS.md`, rewrite the section "What this project is": what the project is for, and which kinds of change belong in it. Then update the "Where things are" and "Commands" sections with the files and commands that belong to the whole project rather than to one language, such as a Docker Compose file.
    - For each language the project uses, follow `docs/languages.md`.
    - If the project's output is visual, such as a web page or a 3D scene, add a command that saves a picture of that output, such as a screenshot of the page or a render of the scene. List the command under "Commands" in `AGENTS.md`. The command has to run without anyone at the screen. Save the pictures outside the repository, such as in a temporary folder.
@@ -38,7 +40,7 @@ Optional: to keep your email address out of the project's commits, set git's `us
 
    </details>
 
-   The setup replaces this README with one for your project. To read the rest of this page later, open [the template's README](https://github.com/jtmpl/repo-template#example-from-idea-to-first-release).
+   The setup replaces this README with one for your project. To read the rest of this page later, open [the template's README](https://github.com/agentic-templates/repo-template#example-from-idea-to-first-release).
 
 ## Example: from idea to first release
 
@@ -99,11 +101,11 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 
 ## Limits
 
-- The template supports only public repositories on GitHub. A repository made private after setup no longer works with the template.
+- The template supports only public GitHub repositories that an organization owns. A repository made private, or moved to a personal account, after setup no longer works with the template.
 - Codex runs the hooks only after you review them with `/hooks`.
 - The hook for secret files checks only the commands on its list, such as `cat`, `grep` and `cp`. Another command can still read a `.env` file, and so can a script, or a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes.
-- On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
+- People with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
 - An agent merges the pull request for each ready issue and for each change you ask for, without anyone reviewing it. When it builds the ready issues, it also merges Dependabot's pull requests. If a change passes the tests, the linters, the type checker and the check of new dependencies, it merges, whatever else is wrong with it. Code scanning reports security problems, but it doesn't stop a merge.
 - If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them. So a release can miss a breaking change and raise the version number too little.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. That agent's helpers don't count, and they need an agent that can launch other agents.

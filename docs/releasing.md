@@ -85,5 +85,5 @@ As soon as you find a vulnerability that isn't public yet, write its summary and
    done
    ```
 2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
-3. The fix's issue, pull request and commits say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it.
+3. The fix's issue, pull request and commits say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it as step 7 of "Make a change" in AGENTS.md describes. Go on to step 4 below only once the merge queue has merged it, so that the release includes the fix.
 4. Publish the release in the same session.
