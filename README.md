@@ -15,9 +15,9 @@ You need:
 
 Optional: to keep your email address out of the project's commits, set git's `user.email` to the noreply address in your GitHub email settings.
 
-1. Create a free GitHub organization in your browser, at https://github.com/account/organizations/new, because GitHub has no command for it. Skip this step if you already have one.
+1. The template merges pull requests through GitHub's merge queue, which only an organization's repositories can use. If you don't have a GitHub organization yet, create a free one in your browser, at https://github.com/account/organizations/new, because GitHub has no command for it.
 
-2. Create a repository in the organization from the template, clone it, and go into the clone. Make the repository public, because the template supports only public repositories that an organization owns.
+2. Create a repository in the organization from the template, clone it, and go into the clone. Make the repository public, because the template supports only public repositories.
 
    ```bash
    gh repo create <organization>/expense-tracker --public --template agentic-templates/repo-template --clone
