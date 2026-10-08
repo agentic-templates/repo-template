@@ -83,6 +83,22 @@ run_case() {
   fi
 }
 
+# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
+# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
+replace_text() {
+  local file=$1 text=$2 new_text=$3 content replaced=""
+  content=$(<"$copy/$file")
+  if [[ $content != *"$text"* ]]; then
+    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
+    exit 1
+  fi
+  while [[ $content == *"$text"* ]]; do
+    replaced+=${content%%"$text"*}$new_text
+    content=${content#*"$text"}
+  done
+  printf '%s\n' "$replaced$content" > "$copy/$file"
+}
+
 repository_as_it_is() {
   :
 }
@@ -235,6 +251,16 @@ guide_of_24999_bytes() {
   printf '%s\n' "$(printf '%248s' '' | tr ' ' x)" >> "$copy/docs/writing.md"
 }
 
+guide_of_25000_bytes_as_the_first_of_two_links_on_a_line() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md) and [docs/pages.md](docs/pages.md),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
+guide_of_25000_bytes_linked_with_an_anchor() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md#write-error-messages),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
 long_page_that_is_no_guide() {
   write_lines "$copy/docs/notes.md" 300 100
 }
@@ -251,10 +277,12 @@ agents_md_files_of_32000_bytes_on_two_paths() {
 }
 
 run_case agents_md_of_200_lines fail "error: src/AGENTS.md has 200 lines, and the limit is 199."
-run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own, as docs/rules.md describes."
+run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own."
 run_case agents_md_of_199_lines pass
 run_case guide_of_25000_bytes fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case guide_of_24999_bytes pass
+run_case guide_of_25000_bytes_as_the_first_of_two_links_on_a_line fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
+run_case guide_of_25000_bytes_linked_with_an_anchor fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case long_page_that_is_no_guide pass
 run_case agents_md_files_of_32000_bytes_on_one_path fail "error: the AGENTS.md files from the root down to src/api have 32000 bytes together, and the limit is 31999."
 run_case agents_md_files_of_32000_bytes_on_two_paths pass
@@ -494,22 +522,6 @@ project_check_that_fails() {
 run_case project_check_that_fails pass
 
 # Cases for the check that the files agree on the facts that they repeat.
-
-# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
-# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
-replace_text() {
-  local file=$1 text=$2 new_text=$3 content replaced=""
-  content=$(<"$copy/$file")
-  if [[ $content != *"$text"* ]]; then
-    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
-    exit 1
-  fi
-  while [[ $content == *"$text"* ]]; do
-    replaced+=${content%%"$text"*}$new_text
-    content=${content#*"$text"}
-  done
-  printf '%s\n' "$replaced$content" > "$copy/$file"
-}
 
 label_that_configure_github_doesnt_create() {
   replace_text AGENTS.md "## Labels" $'## Labels\n\nClose an issue that no one will build with `wontfix`.'

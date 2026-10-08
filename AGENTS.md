@@ -19,7 +19,7 @@ Read each guide before you first do its kind of work in a session, even when the
 
 ## What this project is
 
-repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
+repo-template gives a new GitHub project the rules, hooks, checks and settings that people and coding agents follow to plan, build and release it. It works with any language, and with any coding tool that runs the project's hooks. Each project adds its own language tools during setup.
 
 When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction.
 
@@ -42,8 +42,8 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 ## Commands
 
-- `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
-- `scripts/configure-github`: the agent that sets up the project runs it once. After a change to the script merges, a maintainer with admin access runs it again.
+- `scripts/check`: run it before you push. CI also fails a pull request that adds a dependency with a known vulnerability.
+- `scripts/configure-github`: the agent that sets up the project runs it once.
 
 Keep the checks on a pull request within ten minutes. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
@@ -71,8 +71,6 @@ The `ready` label marks the issues that a maintainer wants built, and isn't a st
 Dependabot adds `dependencies` to its own pull requests.
 
 ## Make a change
-
-Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue.
 
 If a maintainer asks for something that's bigger than one pull request or needs a decision along the way, triage it first, as "Triage new ideas" in `docs/planning.md` describes.
 
@@ -110,7 +108,6 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject.
 - The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. The `title` check fails unless `Closes #<issue>` names an open issue, and the template's headings "What changed and why" and "How it was checked" each have text under them.
-- A workflow labels each pull request from its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Dependabot's pull requests get `dependencies`. The workflow can't label a pull request from a fork, so a maintainer labels it by hand and then merges it.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
 ## Definition of done

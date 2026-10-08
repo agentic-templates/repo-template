@@ -148,12 +148,19 @@ section() {
   done < "$file"
 }
 
-# Instruction files stay small, as docs/rules.md describes.
+# Prints each page that "Read the guides" in AGENTS.md links to, once. A link with an anchor,
+# as in docs/planning.md#triage-new-ideas, counts as a link to the page.
+# The size check and the check that every guide is linked there both use it, so that they agree on the guides.
+linked_guides() {
+  section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u
+}
+
+# Instruction files stay small.
 # The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
 max_lines=199
 max_bytes=24999
 max_bytes_on_one_path=31999
-advice='Move a procedure that only one kind of request needs into a guide of its own, as docs/rules.md describes.'
+advice='Move a procedure that only one kind of request needs into a guide of its own.'
 too_big=""
 
 agents_files=()
@@ -168,13 +175,11 @@ instruction_files=()
 if ((${#agents_files[@]} > 0)); then
   instruction_files=("${agents_files[@]}")
 fi
-if [[ -f AGENTS.md ]]; then
-  while IFS= read -r guide; do
-    if [[ -f $guide ]]; then
-      instruction_files+=("$guide")
-    fi
-  done < <(section AGENTS.md "Read the guides" | sed -n 's/.*](\(docs\/[^)#]*\)).*/\1/p' | sort -u)
-fi
+while IFS= read -r guide; do
+  if [[ -f $guide ]]; then
+    instruction_files+=("$guide")
+  fi
+done < <(linked_guides)
 
 if ((${#instruction_files[@]} > 0)); then
   for file in "${instruction_files[@]}"; do
@@ -798,10 +803,7 @@ else
 fi
 
 # A guide that "Read the guides" doesn't link to is a guide that no agent reads.
-guide_links=""
-if has_section AGENTS.md "Read the guides"; then
-  guide_links=$(section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u)
-fi
+guide_links=$(linked_guides)
 # Setup replaces the template's README with the project's, which may have no section "What you get".
 readme_docs=""
 if has_section README.md "What you get"; then
