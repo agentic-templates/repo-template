@@ -596,7 +596,7 @@ required_check_that_no_job_reports() {
 
 required_check_from_a_job_name() {
   replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
-  write_workflow "[push, pull_request]" style lint
+  write_workflow "[push, pull_request, merge_group]" style lint
 }
 
 required_check_from_a_step_name() {
@@ -609,10 +609,21 @@ required_check_from_a_workflow_that_doesnt_run_on_pull_requests() {
   write_workflow pull_request_review lint
 }
 
+required_check_from_a_workflow_that_runs_on_both_events() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow "[pull_request, merge_group]" lint
+}
+
+required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue() {
+  replace_text .github/workflows/pr-title.yml "  merge_group:" ""
+}
+
 run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: linux, bash-3-2, check, title, label. Rename a job to lint, or change the check in scripts/configure-github."
 run_case required_check_from_a_job_name pass
 run_case required_check_from_a_step_name fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
 run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+run_case required_check_from_a_workflow_that_runs_on_both_events pass
+run_case required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue fail "error: scripts/configure-github requires the check title on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports title on pull_request: .github/workflows/pr-title.yml."
 
 hook_that_asks_for_another_gh_version() {
   replace_text scripts/hooks/session-start "minimum_gh_minor=98" "minimum_gh_minor=99"
