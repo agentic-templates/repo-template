@@ -251,6 +251,16 @@ guide_of_24999_bytes() {
   printf '%s\n' "$(printf '%248s' '' | tr ' ' x)" >> "$copy/docs/writing.md"
 }
 
+guide_of_25000_bytes_as_the_first_of_two_links_on_a_line() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md) and [docs/pages.md](docs/pages.md),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
+guide_of_25000_bytes_linked_with_an_anchor() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md#write-error-messages),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
 long_page_that_is_no_guide() {
   write_lines "$copy/docs/notes.md" 300 100
 }
@@ -271,6 +281,8 @@ run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that on
 run_case agents_md_of_199_lines pass
 run_case guide_of_25000_bytes fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case guide_of_24999_bytes pass
+run_case guide_of_25000_bytes_as_the_first_of_two_links_on_a_line fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
+run_case guide_of_25000_bytes_linked_with_an_anchor fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case long_page_that_is_no_guide pass
 run_case agents_md_files_of_32000_bytes_on_one_path fail "error: the AGENTS.md files from the root down to src/api have 32000 bytes together, and the limit is 31999."
 run_case agents_md_files_of_32000_bytes_on_two_paths pass
