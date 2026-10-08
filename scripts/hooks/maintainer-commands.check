@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Blocks the commands that wait for a maintainer:
-# - running scripts/configure-github again, once the repository's settings were applied, because a build run
-#   can merge a change to the script that nobody read
+# - running scripts/configure-github again on a repository whose settings were applied, because a build run
+#   can merge a change to the script that nobody read. The repository is the one that the script would change.
 # - checking out, fetching or merging a pull request from a fork, because a checkout brings in the pull
 #   request's hook scripts and AGENTS.md, and only a maintainer decides to put a fork's code on main
 # - merging a pull request while the rules for main no longer require a check that scripts/configure-github
@@ -21,11 +21,48 @@ block_checkout() {
   block "Blocked: pull request $1 comes from a fork. Read it with gh pr diff $* instead, because a checkout brings in its hook scripts and its AGENTS.md."
 }
 
-# Succeeds if the repository's settings were applied before, because scripts/configure-github creates a ruleset named main.
+# Succeeds if a repository's settings were applied before, because scripts/configure-github creates a ruleset
+# named main: settings_applied_before <owner/repository>
 settings_applied_before() {
   local rulesets
-  rulesets=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" 2>/dev/null) || return 1
+  rulesets=$(gh api "repos/$1/rulesets?includes_parents=false" 2>/dev/null) || return 1
   jq -e 'any(.[]; .name == "main")' >/dev/null <<<"$rulesets"
+}
+
+# Prints the repository that scripts/configure-github would change, which the script gets from gh repo view.
+# The hook asks gh the same way: in the folder that the script runs in, and with GH_REPO if the command sets it
+# for the script: script_repository <folder> [<value of GH_REPO>]
+script_repository() {
+  local answer
+  if (($# == 2)); then
+    answer=$(cd -- "$1" 2>/dev/null && GH_REPO=$2 gh repo view --json nameWithOwner 2>/dev/null) || return 1
+  else
+    answer=$(cd -- "$1" 2>/dev/null && gh repo view --json nameWithOwner 2>/dev/null) || return 1
+  fi
+  jq -r .nameWithOwner <<<"$answer"
+}
+
+# Changes script_folder as a cd command would, or empties it when the hook can't tell the folder, such as when
+# the target doesn't exist yet or has a $ or a backtick.
+follow_cd() {
+  local target
+  if [[ ${command_words[0]} != cd ]]; then
+    return 0
+  fi
+  target=${command_words[1]:-}
+  if ((${#command_words[@]} != 2)) || [[ $target == -* || $target == *[\$\`]* ]]; then
+    script_folder=""
+    return 0
+  fi
+  # The command's words come as written, so ~ is matched before the shell expands it.
+  # shellcheck disable=SC2088
+  case $target in
+    "~") target=$HOME ;;
+    "~/"*) target=$HOME/${target#"~/"} ;;
+  esac
+  if [[ -n $script_folder ]]; then
+    script_folder=$(CDPATH='' cd -- "$script_folder" 2>/dev/null && CDPATH='' cd -- "$target" 2>/dev/null && pwd) || script_folder=""
+  fi
 }
 
 # Succeeds if a pull request comes from a fork: is_from_fork [<pull request>] [--repo <repository>]
@@ -53,7 +90,10 @@ block_if_main_lacks_checks() {
   fi
 }
 
+# Blocks a run of scripts/configure-github on a repository whose settings were applied before:
+# check_configure_github [<sudo, env or NAME=value word before the command's name>]...
 check_configure_github() {
+  local word repository sets_gh_repo=false gh_repo=""
   local -a words=("${command_words[@]}")
   # bash or sh, with any flags, can run the script too.
   if [[ ${words[0]##*/} == bash || ${words[0]##*/} == sh ]]; then
@@ -68,7 +108,21 @@ check_configure_github() {
   if [[ ${words[0]} != scripts/configure-github && ${words[0]} != */scripts/configure-github ]]; then
     return 0
   fi
-  if settings_applied_before; then
+  for word in "$@"; do
+    if [[ $word == GH_REPO=* ]]; then
+      sets_gh_repo=true
+      gh_repo=${word#GH_REPO=}
+    fi
+  done
+  if [[ -z $script_folder || $gh_repo == *[\$\`]* ]]; then
+    block "Blocked: can't tell which repository scripts/configure-github would change. Clone the repository first. Then run cd <folder> && scripts/configure-github as a command of its own, with the folder written out."
+  fi
+  if $sets_gh_repo; then
+    repository=$(script_repository "$script_folder" "$gh_repo") || return 0
+  else
+    repository=$(script_repository "$script_folder") || return 0
+  fi
+  if settings_applied_before "$repository"; then
     block "Blocked: this repository's settings were applied before, so a maintainer with admin access runs scripts/configure-github again. $report"
   fi
 }
@@ -156,16 +210,23 @@ check_git_fetch() {
 }
 
 check_simple_command() {
+  local prefix_count
   drop_command_prefixes "$@"
   if ((${#command_words[@]} == 0)); then
     return 0
   fi
-  check_configure_github
+  # The words that drop_command_prefixes dropped, such as GH_REPO=<repository>
+  prefix_count=$(($# - ${#command_words[@]}))
+  follow_cd
+  check_configure_github "${@:1:prefix_count}"
   check_gh_pr
   check_git_fetch
 }
 
 read_input
+# The folder that scripts/configure-github would run in, which follow_cd changes, or empty when the hook can't tell.
+# Cursor doesn't send the folder the agent works in, so for Cursor the hook's own folder counts.
+script_folder=${cwd:-$PWD}
 if [[ $tool_name == Bash ]]; then
   for_each_simple_command check_simple_command "$shell_command"
 fi
