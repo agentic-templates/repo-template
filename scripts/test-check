@@ -83,6 +83,22 @@ run_case() {
   fi
 }
 
+# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
+# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
+replace_text() {
+  local file=$1 text=$2 new_text=$3 content replaced=""
+  content=$(<"$copy/$file")
+  if [[ $content != *"$text"* ]]; then
+    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
+    exit 1
+  fi
+  while [[ $content == *"$text"* ]]; do
+    replaced+=${content%%"$text"*}$new_text
+    content=${content#*"$text"}
+  done
+  printf '%s\n' "$replaced$content" > "$copy/$file"
+}
+
 repository_as_it_is() {
   :
 }
@@ -494,22 +510,6 @@ project_check_that_fails() {
 run_case project_check_that_fails pass
 
 # Cases for the check that the files agree on the facts that they repeat.
-
-# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
-# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
-replace_text() {
-  local file=$1 text=$2 new_text=$3 content replaced=""
-  content=$(<"$copy/$file")
-  if [[ $content != *"$text"* ]]; then
-    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
-    exit 1
-  fi
-  while [[ $content == *"$text"* ]]; do
-    replaced+=${content%%"$text"*}$new_text
-    content=${content#*"$text"}
-  done
-  printf '%s\n' "$replaced$content" > "$copy/$file"
-}
 
 label_that_configure_github_doesnt_create() {
   replace_text AGENTS.md "## Labels" $'## Labels\n\nClose an issue that no one will build with `wontfix`.'
