@@ -645,11 +645,12 @@ listed_types() {
 # shellcheck source=scripts/required-checks
 source scripts/required-checks
 
-# Prints the check of each job in a workflow that runs on pull_request, and nothing for any other workflow.
+# Prints the check of each job in a workflow that runs on an event, and nothing for a workflow that doesn't:
+# job_checks_on <event> <workflow>
 # A job's check has the job's name, or its key when it has no name.
-pull_request_job_checks() {
-  local line spaces content block="" block_indent="" job_check="" property_indent="" checks="" runs_on_pull_request=""
-  local event_pattern='(^|[^[:alnum:]_])pull_request([^[:alnum:]_]|$)' job_pattern='^([[:alnum:]_-]+):' name_pattern='^name:(.*)$'
+job_checks_on() {
+  local line spaces content block="" block_indent="" job_check="" property_indent="" checks="" runs_on_event=""
+  local event_pattern="(^|[^[:alnum:]_])$1([^[:alnum:]_]|\$)" job_pattern='^([[:alnum:]_-]+):' name_pattern='^name:(.*)$'
   while IFS= read -r line || [[ -n $line ]]; do
     line=${line%%[[:space:]]#*}
     if [[ $line == "#"* || -z ${line//[[:space:]]/} ]]; then
@@ -664,7 +665,7 @@ pull_request_job_checks() {
       block=${block//\'/}
       block_indent=""
       if [[ $block == on && ${content#*:} =~ $event_pattern ]]; then
-        runs_on_pull_request=yes
+        runs_on_event=yes
       fi
       continue
     fi
@@ -672,7 +673,7 @@ pull_request_job_checks() {
       block_indent=${#spaces}
     fi
     if [[ $block == on ]] && ((${#spaces} == block_indent)) && [[ $content =~ $event_pattern ]]; then
-      runs_on_pull_request=yes
+      runs_on_event=yes
     elif [[ $block == jobs ]] && ((${#spaces} == block_indent)) && [[ $content =~ $job_pattern ]]; then
       if [[ -n $job_check ]]; then
         checks+=$job_check$'\n'
@@ -688,11 +689,11 @@ pull_request_job_checks() {
         job_check=$(yaml_value "${BASH_REMATCH[1]}")
       fi
     fi
-  done < "$1"
+  done < "$2"
   if [[ -n $job_check ]]; then
     checks+=$job_check$'\n'
   fi
-  if [[ -n $runs_on_pull_request ]]; then
+  if [[ -n $runs_on_event ]]; then
     printf '%s' "$checks"
   fi
 }
@@ -769,17 +770,42 @@ if has_section AGENTS.md Commits && [[ -f .github/workflows/pr-title.yml ]]; the
 fi
 
 # A required check that no job reports never passes, so no pull request can merge.
+# The merge queue waits for each required check too, and removes the pull request once the check times out.
 if [[ -f scripts/configure-github ]]; then
-  job_checks=""
+  pull_request_checks=""
+  merge_group_checks=""
+  # Each line holds a check that a workflow reports on pull_request, a tab and the workflow.
+  pull_request_workflows=""
   for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
-    if [[ -f $workflow ]]; then
-      job_checks+=$(pull_request_job_checks "$workflow")$'\n'
+    if [[ ! -f $workflow ]]; then
+      continue
     fi
+    workflow_checks=$(job_checks_on pull_request "$workflow")
+    pull_request_checks+=$workflow_checks$'\n'
+    while IFS= read -r check; do
+      if [[ -n $check ]]; then
+        pull_request_workflows+=$check$'\t'$workflow$'\n'
+      fi
+    done <<<"$workflow_checks"
+    merge_group_checks+=$(job_checks_on merge_group "$workflow")$'\n'
   done
-  job_check_list=$(sed '/^$/d' <<<"$job_checks" | paste -sd ',' - | sed 's/,/, /g')
+  required=$(required_checks)
+  job_check_list=$(sed '/^$/d' <<<"$pull_request_checks" | paste -sd ',' - | sed 's/,/, /g')
   while IFS= read -r check; do
     report_difference "scripts/configure-github requires the check $check on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: ${job_check_list:-no checks}. Rename a job to $check, or change the check in scripts/configure-github."
-  done < <(lines_missing_from "$(required_checks)" "$job_checks")
+  done < <(lines_missing_from "$required" "$pull_request_checks")
+  # A check that no job reports on pull_request has the error above already.
+  while IFS= read -r check; do
+    workflows=""
+    while IFS=$'\t' read -r reported_check workflow; do
+      if [[ $reported_check == "$check" ]]; then
+        workflows+="${workflows:+, }$workflow"
+      fi
+    done <<<"$pull_request_workflows"
+    if [[ -n $workflows ]]; then
+      report_difference "scripts/configure-github requires the check $check on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports $check on pull_request: $workflows."
+    fi
+  done < <(lines_missing_from "$required" "$merge_group_checks")
 fi
 
 agents_md_gh_version=$(gh_version AGENTS.md gh)
