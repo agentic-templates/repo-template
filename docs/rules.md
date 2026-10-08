@@ -3,11 +3,23 @@
 This guide holds the rules for changing AGENTS.md, the guides in `docs/` and the labels on issues and pull requests.
 
 - Put a rule in the guide that matches its subject, and a rule for one folder in an AGENTS.md in that folder. Don't add instruction files for one tool, such as `.cursorrules` or `.github/copilot-instructions.md`. Some tools read such a file instead of AGENTS.md, so one file can switch off the rules in AGENTS.md for that tool.
-- Add a rule only when a maintainer asks for one. Before you add it, say whether a check, a setting or a change to an existing rule would prevent the mistake instead. Remove a rule once it no longer applies.
-- Keep a rule only if, without it, an agent would do something the maintainer doesn't want. Leave out what agents already do right, what the files show and how a mechanism works.
-- Before you remove a rule, find out why it was added, with `git log -S "<words>"`. Keep it if it prevents a mistake that happened, or records a decision that would be costly to make again.
+- Add a rule only when a maintainer asks for one and it passes its trial, as "Try a rule on agents" describes. Before you add it, say whether a check, a setting or a change to an existing rule would prevent the mistake instead. Remove a rule once it no longer applies, such as when the file or command that it names is gone.
+- Leave out what the files show and how a mechanism works.
+- Before you remove a rule that still applies, find out why it was added, with `git log -S "<words>"`. Keep it if its issue or pull request records a trial that it passed. Otherwise run the trial, and keep the rule only if it passes.
 - Write a rule for the common case. When a rare case would need an exception, don't write one. Change the rule so that it covers that case too, or leave the case to the agent's judgment.
 - Prefer a check or a setting to a rule. When `scripts/check` or a GitHub setting enforces something with a message that says what to do, don't restate it in a rule. A hook helps too, but keep its rule written, because some agents run no hooks. If a check runs only in CI, state what it expects, so that nobody fails CI to learn it.
-- Agents follow rules less reliably as the number of rules grows. Aim to keep the rules that one session reads to about 250 sentences, but never remove a rule that passes the test above just to get there.
+- Agents follow rules less reliably as the number of rules grows. Aim to keep the rules that one session reads to about 250 sentences, but never remove a rule that passes its trial just to get there.
 - Keep each AGENTS.md and each guide in `docs/` under 200 lines and 25 KB. On the path from the repository's root down to any one folder, keep the AGENTS.md files under 32 KB together. When a file grows past a limit, move a procedure that only one kind of request needs into a guide of its own.
 - To add, rename or remove a label, change "Labels" in AGENTS.md, `scripts/configure-github` and every other file that names the label, in the same pull request.
+
+## Try a rule on agents
+
+A rule is anything in AGENTS.md or a guide that asks agents to do something. A rule passes its trial when agents make a costly mistake without it, and make it less often with it. A quote from the fresh reader in `docs/pages.md`, or anyone's view of what agents would do, isn't evidence for a rule. Run one trial for each rule that you add or change. A change that asks for the same thing in other words or in another place needs no trial. Neither does a fix to a step or command that gives a wrong result when you run it, or that a tool's docs show to be wrong.
+
+1. Write the mistake as a question with a yes-or-no answer about what an agent did, such as "Does the pull request weaken a test?" Ask about the harm, not about which of two ways the agent chose. A mistake is costly only if someone has to fix it after the agent's session ends, a person has to step in during the session, or it can't be undone, such as a leaked secret. If the harm needs an event that a run can't cause, such as a session that stops at a usage limit, ask whether the run left its work open to that harm. If no such question fits, the rule fails without a trial.
+2. Take a task from the project's real work where the rule applies, such as the one in which the mistake happened. Write it as a prompt for an agent, such as an issue to build. If the rule applies partway through the task, describe in the prompt what has happened so far, such as the state of a build run at the step that the rule changes.
+3. Make two clones of the repository at the same commit, one with the rule and one without it, with no other difference. For a change to a rule, the clone without it has the old wording. Remove each clone's remote, so that no run can push.
+4. In each clone, start 10 new agents with the prompt and no other context. Tell each one to say what it would run instead of anything that would change GitHub. Use the same agent and model for all 20 runs. In Claude Code, run `claude -p` in the clone rather than a subagent, because a subagent gets the AGENTS.md of the session that starts it.
+5. Answer the question for each run, from the files it changed, the commands it ran and its answer.
+6. The rule passes when the runs without it make the mistake at least 4 more times than the runs with it. For example, 6 times against 2 passes, and 5 times against 2 fails.
+7. Record the question, the prompt, the agent and model, and each run's answer in the issue for the change.
