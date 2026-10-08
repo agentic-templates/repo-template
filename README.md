@@ -2,7 +2,7 @@
 
 Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. You don't need to review each pull request. You approve the issues before agents build them, or ask an agent for a change yourself. Either way, the agent's pull request merges once its checks pass.
 
-The template works with any language, and with any coding agent whose harness runs the hooks that `.claude/settings.json` or `.codex/hooks.json` sets up. Agents follow `AGENTS.md` and the guides it links to in `docs/`.
+The template works with any language, and with any coding tool that runs the hooks set up in `.claude/settings.json` or `.codex/hooks.json`. Agents follow `AGENTS.md` and the guides it links to in `docs/`.
 
 ## Start a project
 
