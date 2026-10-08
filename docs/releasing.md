@@ -64,7 +64,7 @@ As soon as you find a vulnerability that isn't public yet, write its summary and
 
 ## Fix a security vulnerability
 
-1. Build the fix in the advisory's temporary private fork. If the advisory has no fork yet, an admin can create it with the commands below. GitHub copies each of the repository's branches into the fork, and step 1 of "Publish a release" would report a copy as a waiting fix. GitHub makes the copies after it creates the fork, so the commands wait until the fork has `main`, and then delete every other branch from the fork:
+1. Build the fix in the advisory's temporary private fork. Push each commit of the fix to the fork, not to the repository. `scripts/check` must pass on the fix before step 3 pushes it to the repository. If the advisory has no fork yet, an admin can create it with the commands below. GitHub copies each of the repository's branches into the fork, and step 1 of "Publish a release" would report a copy as a waiting fix. GitHub makes the copies after it creates the fork, so the commands wait until the fork has `main`, and then delete every other branch from the fork:
 
    ```bash
    fork=$(gh api --method POST "repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks" --jq .full_name)

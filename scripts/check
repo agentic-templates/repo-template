@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs the checks that CI runs on the code. Run it before you push.
+# Runs the checks that CI runs on the code. Run it before you open a pull request, and before each push to a branch
+# that has an open pull request.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
