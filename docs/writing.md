@@ -55,7 +55,7 @@ An error message says what failed and what the reader can do about it. When a li
 
 ## Write issues, pull requests and commit messages
 
-- Write for a reader who hasn't seen your conversation, notes or session. Don't refer to any of them. Except for the checks you ran on the change, don't tell what happened in a session, such as a build run on a given date.
+- Write for a reader who hasn't seen your conversation, notes or session. Don't refer to any of them, or to what happened in an earlier session, such as a build run on a given date.
 - Write a pull request for a developer who joins the project later, not only for today's reviewer. Say what changed and why. Don't list the changed files.
 - Say how you checked the change: the checks you ran and what they showed. That includes the review described under "Review a changed page with a fresh reader" in [docs/pages.md](pages.md). Name any check from AGENTS.md that you skipped, and say why.
 
