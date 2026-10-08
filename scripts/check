@@ -155,12 +155,12 @@ linked_guides() {
   section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u
 }
 
-# Instruction files stay small, as docs/rules.md describes.
+# Instruction files stay small.
 # The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
 max_lines=199
 max_bytes=24999
 max_bytes_on_one_path=31999
-advice='Move a procedure that only one kind of request needs into a guide of its own, as docs/rules.md describes.'
+advice='Move a procedure that only one kind of request needs into a guide of its own.'
 too_big=""
 
 agents_files=()
