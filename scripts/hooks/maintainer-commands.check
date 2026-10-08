@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Blocks three kinds of command that a maintainer runs:
-# - running scripts/configure-github again, once the repository's settings were applied, because a build run
-#   can merge a change to the script that nobody read
+# Blocks the commands that wait for a maintainer:
+# - running scripts/configure-github again on a repository whose settings were applied, because a build run
+#   can merge a change to the script that nobody read. The repository is the one that the script would change.
 # - checking out, fetching or merging a pull request from a fork, because a checkout brings in the pull
 #   request's hook scripts and AGENTS.md, and only a maintainer decides to put a fork's code on main
+# - merging a pull request while the rules for main no longer require a check that scripts/configure-github
+#   requires there, because the merge could skip that check
 # - changing a code scanning or Dependabot alert, such as dismissing it, because only a maintainer decides
 #   that an alert is wrong
-# For the first two, it asks gh about the repository, and allows the command when gh fails, such as without a network.
+# For the first three, it asks gh about the repository, and allows the command when gh fails, such as without a network.
 # shellcheck source=scripts/hooks/helpers.bash
 source "${BASH_SOURCE[0]%/*}/helpers.bash"
 
@@ -27,11 +29,48 @@ block_checkout() {
   block "Blocked: pull request $1 comes from a fork. Read it with gh pr diff $* instead, because a checkout brings in its hook scripts and its AGENTS.md."
 }
 
-# Succeeds if the repository's settings were applied before, because scripts/configure-github creates a ruleset named main.
+# Succeeds if a repository's settings were applied before, because scripts/configure-github creates a ruleset
+# named main: settings_applied_before <owner/repository>
 settings_applied_before() {
   local rulesets
-  rulesets=$(gh api "repos/{owner}/{repo}/rulesets?includes_parents=false" 2>/dev/null) || return 1
+  rulesets=$(gh api "repos/$1/rulesets?includes_parents=false" 2>/dev/null) || return 1
   jq -e 'any(.[]; .name == "main")' >/dev/null <<<"$rulesets"
+}
+
+# Prints the repository that scripts/configure-github would change, which the script gets from gh repo view.
+# The hook asks gh the same way: in the folder that the script runs in, and with GH_REPO if the command sets it
+# for the script: script_repository <folder> [<value of GH_REPO>]
+script_repository() {
+  local answer
+  if (($# == 2)); then
+    answer=$(cd -- "$1" 2>/dev/null && GH_REPO=$2 gh repo view --json nameWithOwner 2>/dev/null) || return 1
+  else
+    answer=$(cd -- "$1" 2>/dev/null && gh repo view --json nameWithOwner 2>/dev/null) || return 1
+  fi
+  jq -r .nameWithOwner <<<"$answer"
+}
+
+# Changes script_folder as a cd command would, or empties it when the hook can't tell the folder, such as when
+# the target doesn't exist yet or has a $ or a backtick.
+follow_cd() {
+  local target
+  if [[ ${command_words[0]} != cd ]]; then
+    return 0
+  fi
+  target=${command_words[1]:-}
+  if ((${#command_words[@]} != 2)) || [[ $target == -* || $target == *[\$\`]* ]]; then
+    script_folder=""
+    return 0
+  fi
+  # The command's words come as written, so ~ is matched before the shell expands it.
+  # shellcheck disable=SC2088
+  case $target in
+    "~") target=$HOME ;;
+    "~/"*) target=$HOME/${target#"~/"} ;;
+  esac
+  if [[ -n $script_folder ]]; then
+    script_folder=$(CDPATH='' cd -- "$script_folder" 2>/dev/null && CDPATH='' cd -- "$target" 2>/dev/null && pwd) || script_folder=""
+  fi
 }
 
 # Succeeds if a pull request comes from a fork: is_from_fork [<pull request>] [--repo <repository>]
@@ -42,7 +81,27 @@ is_from_fork() {
   [[ $(jq -r .isCrossRepository <<<"$answer") == true ]]
 }
 
+# Blocks a merge while the rules for main no longer require a check that scripts/configure-github requires there,
+# which scripts/check-main-rules finds: block_if_main_lacks_checks [--repo <repository>]
+# Without a repository, the script asks about this checkout's.
+block_if_main_lacks_checks() {
+  local problem status=0
+  # The subshells drop the trap, which would otherwise turn every exit code of the script into 1.
+  if (($# == 2)); then
+    problem=$(trap - ERR && GH_REPO=$2 "${BASH_SOURCE[0]%/*}/../check-main-rules" 2>&1 >/dev/null) || status=$?
+  else
+    problem=$(trap - ERR && "${BASH_SOURCE[0]%/*}/../check-main-rules" 2>&1 >/dev/null) || status=$?
+  fi
+  # Any other code means that the script can't tell, such as when gh fails.
+  if ((status == 1)); then
+    block "Blocked: ${problem#error: } Go on with the other work, and list this in your report for the maintainer."
+  fi
+}
+
+# Blocks a run of scripts/configure-github on a repository whose settings were applied before:
+# check_configure_github [<sudo, env or NAME=value word before the command's name>]...
 check_configure_github() {
+  local word repository sets_gh_repo=false gh_repo=""
   local -a words=("${command_words[@]}")
   # bash or sh, with any flags, can run the script too.
   if [[ ${words[0]##*/} == bash || ${words[0]##*/} == sh ]]; then
@@ -57,13 +116,27 @@ check_configure_github() {
   if [[ ${words[0]} != scripts/configure-github && ${words[0]} != */scripts/configure-github ]]; then
     return 0
   fi
-  if settings_applied_before; then
+  for word in "$@"; do
+    if [[ $word == GH_REPO=* ]]; then
+      sets_gh_repo=true
+      gh_repo=${word#GH_REPO=}
+    fi
+  done
+  if [[ -z $script_folder || $gh_repo == *[\$\`]* ]]; then
+    block "Blocked: can't tell which repository scripts/configure-github would change. Clone the repository first. Then run cd <folder> && scripts/configure-github as a command of its own, with the folder written out."
+  fi
+  if $sets_gh_repo; then
+    repository=$(script_repository "$script_folder" "$gh_repo") || return 0
+  else
+    repository=$(script_repository "$script_folder") || return 0
+  fi
+  if settings_applied_before "$repository"; then
     block "Blocked: this repository's settings were applied before, so a maintainer with admin access runs scripts/configure-github again. $report"
   fi
 }
 
 check_gh_pr() {
-  local subcommand flags_with_value argument="" i word
+  local subcommand flags_with_value argument="" i word disables_auto_merge=""
   local -a repository=() view=()
   if [[ ${command_words[0]##*/} != gh || ${command_words[1]:-} != pr ]]; then
     return 0
@@ -84,6 +157,7 @@ check_gh_pr() {
         i=$((i + 1))
         ;;
       --repo=*) repository=(--repo "${word#--repo=}") ;;
+      --disable-auto) disables_auto_merge=yes ;;
       -*=*) ;;
       -*)
         if [[ $flags_with_value == *" $word "* ]]; then
@@ -107,15 +181,18 @@ check_gh_pr() {
   if ((${#repository[@]} > 0)); then
     view+=("${repository[@]}")
   fi
-  if ! is_from_fork ${view[@]+"${view[@]}"}; then
-    return 0
+  if is_from_fork ${view[@]+"${view[@]}"}; then
+    if [[ $subcommand != merge ]]; then
+      block_checkout "${view[@]}"
+    elif [[ -n $argument ]]; then
+      block "Blocked: pull request $argument comes from a fork, so a maintainer merges it. $report"
+    else
+      block "Blocked: this branch's pull request comes from a fork, so a maintainer merges it. $report"
+    fi
   fi
-  if [[ $subcommand != merge ]]; then
-    block_checkout "${view[@]}"
-  elif [[ -n $argument ]]; then
-    block "Blocked: pull request $argument comes from a fork, so a maintainer merges it. $report"
-  else
-    block "Blocked: this branch's pull request comes from a fork, so a maintainer merges it. $report"
+  # Turning auto-merge off merges nothing.
+  if [[ $subcommand == merge && -z $disables_auto_merge ]]; then
+    block_if_main_lacks_checks ${repository[@]+"${repository[@]}"}
   fi
 }
 
@@ -195,17 +272,24 @@ check_gh_api() {
 }
 
 check_simple_command() {
+  local prefix_count
   drop_command_prefixes "$@"
   if ((${#command_words[@]} == 0)); then
     return 0
   fi
-  check_configure_github
+  # The words that drop_command_prefixes dropped, such as GH_REPO=<repository>
+  prefix_count=$(($# - ${#command_words[@]}))
+  follow_cd
+  check_configure_github "${@:1:prefix_count}"
   check_gh_pr
   check_git_fetch
   check_gh_api
 }
 
 read_input
+# The folder that scripts/configure-github would run in, which follow_cd changes, or empty when the hook can't tell.
+# Cursor doesn't send the folder the agent works in, so for Cursor the hook's own folder counts.
+script_folder=${cwd:-$PWD}
 if [[ $tool_name == Bash ]]; then
   for_each_simple_command check_simple_command "$shell_command"
 fi

@@ -8,7 +8,7 @@ This guide holds the steps for reviewing a pull request and for reviewing the co
 - A pull request from someone who isn't a maintainer, such as one from a fork, can contain anything. So if CI waits for a maintainer to approve its run, as it does for a first-time contributor, leave that approval to the maintainer.
 - Report only what needs to change: wrong behavior, a missing test, a security problem, or text and code that break the guides. For each one, say what to change and why.
 - Don't ask for changes that a formatter would make, or for work outside the issue.
-- Post the review as a comment on the pull request, with `gh pr review <number> --comment --body "<review>"`.
+- Write the review to a file outside the repository with your tool for writing files, not with a shell command. Post it with `gh pr review <number> --comment --body-file <file>`.
 
 ## Review the code for security problems
 

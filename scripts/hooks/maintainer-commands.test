@@ -4,17 +4,59 @@ set -euo pipefail
 # shellcheck source=scripts/hooks/testing.bash
 source "${BASH_SOURCE[0]%/*}/testing.bash"
 
+# The folders that the cases run scripts/configure-github in. The hook runs in the agent's checkout of jtmpl/project,
+# and the home folder holds a clone of jtmpl/other.
+folders=$(CDPATH='' cd -- "$(mktemp -d)" && pwd -P)
+test_home=$folders/home
+test_cwd=$folders/project
+other_clone=$test_home/test-repositories/other
+mkdir -p "$test_cwd" "$other_clone"
+# Cursor sends no folder, so its hook runs in the test's own folder.
+cd "$test_cwd"
+
 # A stand-in for gh, first on the PATH, so that the cases ask nothing of GitHub.
-# TEST_RULESETS says what it reports for the repository's rulesets: main, another, none or fail.
+# It answers gh repo view by GH_REPO when it's set, so that the cases show that the hook passes GH_REPO on as the
+# script would, although gh 2.102 itself ignores GH_REPO there. Otherwise it answers by the folder it runs in:
+# jtmpl/project in TEST_CHECKOUT, jtmpl/other in TEST_OTHER_CLONE, and a failure anywhere else, as outside a clone.
+# TEST_RULESETS says what it reports for the rulesets of jtmpl/project: main, another, none or fail.
+# TEST_OTHER_RULESETS says the same for jtmpl/other. It fails for the rulesets of any other repository.
+# TEST_MAIN_RULES lists the checks that the rules for main require, separated by spaces, or says fail.
+# For the repository jtmpl/other in GH_REPO, TEST_OTHER_MAIN_RULES lists them instead.
 # TEST_PULL_REQUEST says what it reports for pull request 7, or the current branch's: fork, same or fail.
 # It fails for any other pull request, as gh does for one that doesn't exist, and records each call in TEST_GH_CALLS.
 stand_in=$(mktemp -d)
-trap 'rm -rf "$stand_in"' EXIT
+trap 'rm -rf "$stand_in" "$folders"' EXIT
 cat >"$stand_in/gh" <<'STAND_IN'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$TEST_GH_CALLS"
-if [[ $1 == api ]]; then
-  case $TEST_RULESETS in
+if [[ $1 == repo && $2 == view ]]; then
+  repository=${GH_REPO:-}
+  if [[ -z $repository ]]; then
+    case $(pwd -P) in
+      "$TEST_CHECKOUT" | "$TEST_CHECKOUT"/*) repository=jtmpl/project ;;
+      "$TEST_OTHER_CLONE" | "$TEST_OTHER_CLONE"/*) repository=jtmpl/other ;;
+      *) exit 1 ;;
+    esac
+  fi
+  echo "{\"nameWithOwner\": \"$repository\"}"
+elif [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
+  rules=$TEST_MAIN_RULES
+  if [[ ${GH_REPO:-} == jtmpl/other ]]; then
+    rules=$TEST_OTHER_MAIN_RULES
+  fi
+  if [[ $rules == fail ]]; then
+    exit 1
+  fi
+  for check in $rules; do
+    echo "$check"
+  done
+elif [[ $1 == api ]]; then
+  case $2 in
+    "repos/jtmpl/project/rulesets?includes_parents=false") rulesets=$TEST_RULESETS ;;
+    "repos/jtmpl/other/rulesets?includes_parents=false") rulesets=$TEST_OTHER_RULESETS ;;
+    *) exit 1 ;;
+  esac
+  case $rulesets in
     main) echo '[{"id": 1, "name": "main", "target": "branch"}]' ;;
     another) echo '[{"id": 2, "name": "tags", "target": "tag"}]' ;;
     none) echo '[]' ;;
@@ -35,7 +77,10 @@ fi
 STAND_IN
 chmod +x "$stand_in/gh"
 PATH=$stand_in:$PATH
-export TEST_GH_CALLS=$stand_in/calls TEST_RULESETS TEST_PULL_REQUEST
+# The rules for main require every check that scripts/configure-github requires, unless a case says otherwise.
+export TEST_GH_CALLS=$stand_in/calls TEST_RULESETS TEST_OTHER_RULESETS TEST_PULL_REQUEST TEST_MAIN_RULES="check title" TEST_OTHER_MAIN_RULES="check title"
+export TEST_CHECKOUT=$test_cwd TEST_OTHER_CLONE=$other_clone
+unset GH_REPO
 
 second_run="Blocked: this repository's settings were applied before, so a maintainer with admin access runs scripts/configure-github again. Go on with the other work, and list the command in your report for the maintainer, who runs it."
 merge_reason="comes from a fork, so a maintainer merges it. Go on with the other work, and list the command in your report for the maintainer, who runs it."
@@ -56,6 +101,46 @@ done
 for TEST_RULESETS in main none fail; do
   expect_allow Bash 'cat scripts/configure-github'
   expect_allow Bash 'shellcheck scripts/configure-github'
+done
+
+# A run of scripts/configure-github on another repository, whose settings count instead of those of the repository
+# that the hook runs in
+runs_on_the_other=(
+  "cd '$other_clone' && scripts/configure-github"
+  "cd '${other_clone%/*}' && cd ${other_clone##*/} && scripts/configure-github"
+  "cd ~/test-repositories/other && scripts/configure-github"
+  "cd ~ && cd test-repositories/other && scripts/configure-github"
+  "cd ../home/test-repositories/other && bash scripts/configure-github"
+  "GH_REPO=jtmpl/other scripts/configure-github"
+  "env GH_REPO=jtmpl/other scripts/configure-github"
+)
+TEST_RULESETS=main TEST_OTHER_RULESETS=none
+for command in "${runs_on_the_other[@]}"; do
+  expect_allow Bash "$command"
+done
+TEST_RULESETS=none TEST_OTHER_RULESETS=main
+for command in "${runs_on_the_other[@]}"; do
+  expect_block Bash "$command" "$second_run"
+done
+# Only a cd before the script changes the folder that the script runs in.
+TEST_RULESETS=main TEST_OTHER_RULESETS=none
+expect_block Bash "scripts/configure-github; cd '$other_clone'" "$second_run"
+# gh can't name the repository of a folder that isn't a clone.
+expect_allow Bash "cd '$folders' && scripts/configure-github"
+
+# A run of scripts/configure-github in a folder that the hook can't tell
+cannot_tell="Blocked: can't tell which repository scripts/configure-github would change. Clone the repository first. Then run cd <folder> && scripts/configure-github as a command of its own, with the folder written out."
+new_clone=$test_home/test-repositories/new
+# shellcheck disable=SC2016 # The commands are the text that the agent sends, so $ and the backticks stay as written.
+for rulesets in "main none" "none main"; do
+  read -r TEST_RULESETS TEST_OTHER_RULESETS <<<"$rulesets"
+  expect_block Bash 'GH_REPO=$repo scripts/configure-github' "$cannot_tell"
+  expect_block Bash 'GH_REPO="`cat repository.txt`" scripts/configure-github' "$cannot_tell"
+  expect_block Bash "gh repo clone jtmpl/other '$new_clone' && cd '$new_clone' && scripts/configure-github" "$cannot_tell"
+  expect_block Bash 'cd "$TMPDIR/other" && scripts/configure-github' "$cannot_tell"
+  expect_block Bash 'cd "`cat folder.txt`" && scripts/configure-github' "$cannot_tell"
+  expect_block Bash 'cd && scripts/configure-github' "$cannot_tell"
+  expect_block Bash "cd -P '$other_clone' && scripts/configure-github" "$cannot_tell"
 done
 
 # Checking out, fetching or merging a pull request from a fork
@@ -87,6 +172,40 @@ for TEST_PULL_REQUEST in same fail; do
     expect_allow Bash "$command"
   done
 done
+
+# A merge while the rules for main no longer require a check that scripts/configure-github requires there
+TEST_PULL_REQUEST=same
+report_this="Go on with the other work, and list this in your report for the maintainer."
+no_check="Blocked: main no longer requires the check job, so a pull request can merge without passing it. A maintainer with admin access restores it by running scripts/configure-github. $report_this"
+no_title="Blocked: main no longer requires the title job, so a pull request can merge without passing it. A maintainer with admin access restores it by running scripts/configure-github. $report_this"
+no_rules="Blocked: main no longer requires the check and title jobs, so a pull request can merge without passing them. A maintainer with admin access restores them by running scripts/configure-github. $report_this"
+merges=('gh pr merge 7 --squash' 'gh pr merge --auto --squash' 'gh pr merge 7 --admin --merge' 'gh pr merge --body "x" 7')
+TEST_MAIN_RULES="title CodeQL"
+for command in "${merges[@]}"; do
+  expect_block Bash "$command" "$no_check"
+done
+TEST_MAIN_RULES="check"
+expect_block Bash 'gh pr merge 7 --squash' "$no_title"
+TEST_MAIN_RULES=""
+expect_block Bash 'gh pr merge 7 --squash' "$no_rules"
+expect_allow Bash 'gh pr merge 7 --disable-auto'
+expect_allow Bash 'gh pr merge --disable-auto'
+for TEST_MAIN_RULES in "CodeQL check title" fail; do
+  for command in "${merges[@]}"; do
+    expect_allow Bash "$command"
+  done
+done
+
+# The rules for main of the repository that -R names
+TEST_MAIN_RULES="check title"
+TEST_OTHER_MAIN_RULES="check"
+expect_block Bash 'gh pr merge -R jtmpl/other 7 --squash' "$no_title"
+expect_block Bash 'gh pr merge --repo=jtmpl/other --auto --squash' "$no_title"
+expect_allow Bash 'gh pr merge 7 --squash'
+TEST_MAIN_RULES=""
+TEST_OTHER_MAIN_RULES="check title"
+expect_allow Bash 'gh pr merge --repo jtmpl/other 7 --squash'
+TEST_MAIN_RULES="check title"
 
 # Commands that only read a pull request, a checkout that asks the person to pick one, and a fetch of no one pull request
 TEST_PULL_REQUEST=fork

@@ -26,7 +26,9 @@ Follow these steps for every idea, whatever form the input takes:
    - **Research first:** a maintainer can't decide whether to build the idea, or what to build, until an open question is answered. The idea becomes an issue with `needs-decision`, blocked by a new research issue for the question.
    - **Needs a decision:** only a maintainer can settle it, such as which of two approaches to take. Ask the maintainer in step 4, and replace this verdict with the one that their answer leads to. If they want to decide later, the idea becomes an issue with `needs-decision`.
    - **Too vague:** it doesn't say what should change, or you can't tell why anyone would want it. If you can guess the likely reason, propose it and ask the maintainer to confirm. Otherwise give the idea back, and say what it's missing.
-   - **Duplicate:** an issue already covers it. Add anything new to that issue as a comment. If that issue was closed as not planned, tell the maintainer, who decides whether to reopen it.
+   - **Duplicate:** an issue already covers it.
+     - If an open issue covers it, add the idea's new details to that issue's body. If that issue has `ready`, ask the maintainer in step 4 whether to add them. If they say no, add nothing.
+     - If only a closed issue covers it, ask the maintainer in step 4 whether they still want the change. If they do, open a new issue that mentions the closed one. If they don't, create nothing. If they want to decide later, the idea becomes an issue with `needs-decision`.
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
 
    When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, if no reading of an idea would fit the project, recommend **Drop**, not **Too vague**.

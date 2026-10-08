@@ -62,7 +62,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 ### Build several issues at once
 
-Ask for helpers: "Build the ready issues, with up to 3 helpers." A helper is another agent that builds one issue in its own copy of the repository. If your agent can't launch other agents, it builds one issue at a time.
+When you ask your agent to build the ready issues, it uses up to 4 helpers at the same time, so that it builds several issues at once. A helper is another agent that builds one issue in its own copy of the repository. To change how many helpers work at the same time, name the number: "Build the ready issues, with up to 3 helpers." To build one issue at a time, ask "Build the ready issues, without helpers." If your agent can't launch other agents, it builds one issue at a time.
 
 Helpers use the same model and reasoning effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus."
 
@@ -123,7 +123,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `docs/releasing.md`: how an agent publishes a release, writes a workflow that publishes or deploys the project, checks the security advisories, and records and fixes a security problem that isn't public yet.
 - `scripts/check`: runs the same checks on your machine and in CI.
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template.
-- `.github/`: CI, a check of each pull request's title and body, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
+- `.github/`: CI, a check of each pull request's title and body, a weekly check that the rules for main still require CI and the title and body check before a merge, issue forms, a pull request template, weekly Dependabot updates, release notes settings, and the contributing and security pages.
 - `scripts/hooks/`: hooks that block risky actions of the agent, such as reading a `.env` file or checking out a pull request from a fork.
 - `.claude/settings.json`: runs the hooks in Claude Code, Copilot CLI and Cursor, and stops Claude Code from adding its name to commits and pull requests.
 - `.codex/hooks.json`: has Codex run the hooks.

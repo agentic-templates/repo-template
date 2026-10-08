@@ -3,6 +3,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# When the checks pass, the script records the tree of the files it checked, which a hook compares with the files
+# of a pull request. It takes the tree before the checks start, so that a file changed during the checks doesn't
+# count as checked. If git can't give the tree, the checks still run, and the script fails at the end.
+# shellcheck source=scripts/hooks/check-passed.bash
+source scripts/hooks/check-passed.bash
+checked_tree=$(tree_on_disk) || checked_tree=""
+
 # CI installs every tool, so a missing tool there is an error.
 # On your machine the check is skipped, and CI still runs it.
 skipped=""
@@ -68,6 +75,79 @@ if git grep -n -w -I -e "$todo" -e "$fixme" -- ':!*.md' >&2; then
   exit 1
 fi
 
+# Paths into a person's home folder stay out of the files, as "Keep the repository clean" in AGENTS.md says.
+# A path counts only at the start of a line or after a character other than a letter, a digit, ".", "_" or "-".
+# So the path of a URL, as in https://example.com/home/docs/, doesn't count, and neither does a relative path, as in src/home/<name>/.
+home_path_start='(^|[^A-Za-z0-9._-])'
+# A Windows path can have either slash, and JSON doubles each backslash.
+separator='[\/]+'
+# /users/ in lower case is also a path in GitHub's API, so only /Users/ counts. A Windows path can have any case.
+home_folders="(/(home|Users)/|[A-Za-z]:${separator}[Uu][Ss][Ee][Rr][Ss]${separator})"
+# A name can't hold whitespace, so that "/home/ or /Users/" doesn't count. Nor can it hold the characters of a placeholder,
+# so that /home/<name>/, /home/$USER/ and C:\Users\%USERNAME%\ don't count.
+home_folder_name='([^/\<>$%{}[:space:]]+)'
+# Group 2 holds the path, and group 5 the name.
+home_path="$home_path_start($home_folders$home_folder_name$separator)"
+
+# Succeeds if a home folder belongs to an account that no person uses: is_shared_home_folder <name>
+is_shared_home_folder() {
+  case $1 in
+    # GitHub's runners, then containers, then macOS and Windows.
+    runner | runneradmin | node | linuxbrew | vscode | Shared | Public) return 0 ;;
+  esac
+  return 1
+}
+
+# Prints each path into a person's home folder in a line, one to a line: home_paths_in <line>
+home_paths_in() {
+  local rest=$1 path name
+  while [[ $rest =~ $home_path ]]; do
+    path=${BASH_REMATCH[2]}
+    name=${BASH_REMATCH[5]}
+    rest=${rest#*"${BASH_REMATCH[0]}"}
+    if ! is_shared_home_folder "$name"; then
+      printf '%s\n' "$path"
+    fi
+  done
+}
+
+# Files that .gitattributes marks as generated or vendored don't count.
+not_generated_or_vendored=(
+  ':(exclude,attr:linguist-generated)'
+  ':(exclude,attr:linguist-generated=true)'
+  ':(exclude,attr:linguist-vendored)'
+  ':(exclude,attr:linguist-vendored=true)'
+)
+found_home_path=""
+# git grep prints the file, NUL, the line number, NUL and the line, for each line that may hold such a path.
+while IFS= read -r -d '' file && IFS= read -r -d '' line_number && IFS= read -r line; do
+  while IFS= read -r path; do
+    echo "error: $file:$line_number holds a path into a home folder, $path. Use a path relative to the repository, or ~ or \$HOME." >&2
+    found_home_path=yes
+  done < <(home_paths_in "$line")
+done < <(git grep --null -n -I -E -e "$home_path" -- "${not_generated_or_vendored[@]}")
+if [[ -n "$found_home_path" ]]; then
+  exit 1
+fi
+
+# Prints the lines of a section of a Markdown file, between its "## " heading and the next one: section <file> <heading>
+section() {
+  local file=$1 heading=$2 line is_in_section=""
+  if [[ ! -f $file ]]; then
+    return 0
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == "## "* ]]; then
+      is_in_section=""
+      if [[ $line == "## $heading" ]]; then
+        is_in_section=yes
+      fi
+    elif [[ -n $is_in_section ]]; then
+      printf '%s\n' "$line"
+    fi
+  done < "$file"
+}
+
 # Instruction files stay small, as docs/rules.md describes.
 # The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
 max_lines=199
@@ -93,7 +173,7 @@ if [[ -f AGENTS.md ]]; then
     if [[ -f $guide ]]; then
       instruction_files+=("$guide")
     fi
-  done < <(sed -n '/^## Read the guides$/,/^## /p' AGENTS.md | sed -n 's/.*](\(docs\/[^)#]*\)).*/\1/p' | sort -u)
+  done < <(section AGENTS.md "Read the guides" | sed -n 's/.*](\(docs\/[^)#]*\)).*/\1/p' | sort -u)
 fi
 
 if ((${#instruction_files[@]} > 0)); then
@@ -134,6 +214,106 @@ if [[ -n "$too_big" ]]; then
   exit 1
 fi
 
+# Succeeds if a line of the input is exactly the text: has_line <text>
+# With -q, grep would stop reading at the first match. The command that writes to grep could then fail
+# on the closed pipe, and pipefail would fail the whole pipeline.
+has_line() {
+  grep -F -x -- "$1" >/dev/null
+}
+
+# Each tracked text file stays at 1,000 lines or fewer, because an agent reads a whole file into its context.
+max_file_lines=1000
+# The list of files that may be longer, if the project has one. Each line holds a file's path from the repository's root,
+# a space and the reason. The errors don't mention the list, because adding a file to it loosens the check,
+# which docs/code.md allows only when the issue asks for it.
+long_files_list=scripts/long-files
+
+# Succeeds if a file has a lockfile's name: is_lockfile <path>
+# A package manager writes each lockfile, so the project can't split one. A project whose lockfile isn't here adds its name.
+is_lockfile() {
+  case ${1##*/} in
+    package-lock.json | pnpm-lock.yaml | yarn.lock | bun.lock | uv.lock | poetry.lock | Pipfile.lock | Cargo.lock | \
+      go.sum | Gemfile.lock | composer.lock | pubspec.lock | Package.resolved | mix.lock)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+long_file_error=""
+listed_files=""
+if [[ -f $long_files_list ]]; then
+  while read -r path reason || [[ -n $path ]]; do
+    # A blank line leaves path empty.
+    if [[ -z $path ]]; then
+      continue
+    fi
+    listed_files+=$path$'\n'
+    if [[ -z $reason ]]; then
+      echo "error: $long_files_list lists $path without a reason. Add a space and the reason after the path." >&2
+      long_file_error=yes
+    fi
+  done < "$long_files_list"
+fi
+
+files_over_the_limit=""
+# -I skips the files that git counts as binary. The empty pattern matches every line, so -c counts each file's lines.
+# git grep prints the file, NUL and the count.
+while IFS= read -r -d '' file && IFS= read -r line_count; do
+  if ((line_count <= max_file_lines)) || is_lockfile "$file"; then
+    continue
+  fi
+  files_over_the_limit+=$file$'\n'
+  if ! has_line "$file" <<<"$listed_files"; then
+    echo "error: $file has $line_count lines, and the limit is $max_file_lines. Move a part with its own responsibility into a file of its own." >&2
+    long_file_error=yes
+  fi
+done < <(git grep --null -I -c '' -- "${not_generated_or_vendored[@]}")
+
+while IFS= read -r path; do
+  if [[ -n $path ]] && ! has_line "$path" <<<"$files_over_the_limit"; then
+    echo "error: $long_files_list lists $path, which scripts/check accepts without the list. Remove its line, or fix the path." >&2
+    long_file_error=yes
+  fi
+done <<<"$listed_files"
+if [[ -n "$long_file_error" ]]; then
+  exit 1
+fi
+
+# Each tracked file that starts with #! is executable in git, because a clone can't run it otherwise,
+# and scripts/hooks/before-tool skips a check that isn't executable.
+found_mode_error=""
+# git ls-files -s prints each file's mode, object and stage, then a tab and its path. A regular file that isn't
+# executable has mode 100644. Symlinks and submodules have modes of their own.
+while IFS= read -r -d '' entry; do
+  file=${entry#*$'\t'}
+  if [[ ${entry%% *} != 100644 || ! -f $file ]]; then
+    continue
+  fi
+  first_line=""
+  IFS= read -r first_line < "$file" || true
+  if [[ $first_line == '#!'* ]]; then
+    echo "error: $file starts with #!, and git doesn't record it as executable. Run chmod +x $file, and commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x $file instead." >&2
+    found_mode_error=yes
+  fi
+done < <(git ls-files -s -z)
+if [[ -n "$found_mode_error" ]]; then
+  exit 1
+fi
+
+# Each check of the hooks has a test, as the comment at the top of scripts/hooks/before-tool asks,
+# because a check that fails on its own error lets every action through, and only its test shows that.
+found_untested_check=""
+while IFS= read -r -d '' hook_check; do
+  if [[ -f $hook_check && ! -f ${hook_check%.check}.test ]]; then
+    echo "error: $hook_check has no test. Add ${hook_check%.check}.test, which runs the check through scripts/hooks/before-tool, as the other tests in scripts/hooks/ do." >&2
+    found_untested_check=yes
+  fi
+done < <(git ls-files -z -- 'scripts/hooks/*.check')
+if [[ -n "$found_untested_check" ]]; then
+  exit 1
+fi
+
 # The Markdown files refer to sections by their headings, in quotes. Each name must match a heading in its file,
 # so that a renamed or removed section doesn't leave a name that leads nowhere.
 # A name is written as "<heading>" in <file>, or as "<heading>" describes or "<heading>" says for a section of its own file.
@@ -159,13 +339,6 @@ form_field_labels() {
       sed -n 's/^[[:space:]]*label:[[:space:]]*//p' "$form"
     fi
   done
-}
-
-# Succeeds if a line of the input is exactly the text: has_line <text>
-# With -q, grep would stop reading at the first match. The command that writes to grep could then fail
-# on the closed pipe, and pipefail would fail the whole pipeline.
-has_line() {
-  grep -F -x -- "$1" >/dev/null
 }
 
 # Prints each section name in a Markdown file on a line of its own: its line number, the name and the file
@@ -221,8 +394,447 @@ if [[ -n "$broken_name" ]]; then
   exit 1
 fi
 
+# The prose in the Markdown files follows three rules that a check can find by matching text.
+# "Write clear sentences" in docs/writing.md bans semicolons and dashes that join two sentences.
+# "Organize a page" in docs/pages.md bans links whose text is "click here".
+# A dash that joins two sentences looks like any other dash between words, so the check fails on each dash
+# that has a space on each side and a letter or digit beyond each space, as in "pages 10 - 20".
+# Only ASCII letters and digits count, so that the check gives the same result in every locale.
+dash_between_words='[A-Za-z0-9] (—|–|-) [A-Za-z0-9]'
+# A link's text in brackets, then its target in parentheses or a reference in brackets. An image, which starts with "!",
+# isn't a link.
+click_here_link='(^|[^!])\[[[:space:]]*click[[:space:]]+here[[:space:]]*\](\(|\[)'
+# A fence starts or ends a code block. It's three or more backticks or tildes, after any indentation, as in a list item.
+code_fence="^[[:space:]]*(\`{3,}|~{3,})(.*)$"
+# A run of backticks, with the text before it and the text after it.
+backtick_run="^([^\`]*)(\`+)(.*)$"
+html_comment_start='<!--'
+html_comment_end='-->'
+# An HTML tag, as in <br> or </details>, or a link in angle brackets, as in <https://example.com>.
+html_tag='<[A-Za-z/][^>]*>'
+# An HTML entity, as in &nbsp;, &#160; or &#xA0;.
+html_entity='&([A-Za-z][A-Za-z0-9]*|#[0-9]+|#[xX][0-9A-Fa-f]+);'
+# A link's target, in parentheses after the link's text.
+link_target='\]\([^)]+\)'
+# A line that gives the target of a reference link, as in [guide]: https://example.com.
+# A footnote, as in [^1]: text, is prose.
+link_definition='^ {0,3}\[[^]^][^]]*\]:'
+
+# Prints each line of a Markdown file that's outside its code blocks: its line number, a tab and the line.
+# A code block ends at a fence of the same character that's at least as long and holds nothing else,
+# or at the end of the file. An indented code block, which has no fences, counts as prose,
+# because telling it apart from the text of a list item takes a Markdown parser: lines_outside_code_blocks <file>
+lines_outside_code_blocks() {
+  local line line_number=0 fence=""
+  # The test after || also reads a last line that has no line break.
+  while IFS= read -r line || [[ -n $line ]]; do
+    line_number=$((line_number + 1))
+    if [[ $line =~ $code_fence ]]; then
+      if [[ -z $fence ]]; then
+        fence=${BASH_REMATCH[1]}
+        continue
+      fi
+      # A fence of the same character that's at least as long starts with the fence that opened the block.
+      if [[ ${BASH_REMATCH[1]} == "$fence"* && -z ${BASH_REMATCH[2]//[[:space:]]/} ]]; then
+        fence=""
+        continue
+      fi
+    fi
+    if [[ -z $fence ]]; then
+      printf '%s\t%s\n' "$line_number" "$line"
+    fi
+  done < "$1"
+}
+
+# Prints the prose in a line of Markdown: the line with each code span, HTML comment, HTML tag and HTML entity
+# replaced by an underscore, and each link's target left out, so that [text](target) becomes [text]().
+# A line that gives the target of a reference link becomes a single underscore.
+# An HTML comment over several lines counts as prose, because the check reads one line at a time: prose_in <line>
+prose_in() {
+  local rest=$1 prose="" opening after is_closed comment_and_after empty_target=']()'
+  if [[ $rest =~ $link_definition ]]; then
+    echo _
+    return 0
+  fi
+  # A run of backticks starts a code span, which ends at the next run of as many backticks.
+  # A run that no such run follows is text, as in CommonMark.
+  while [[ $rest =~ $backtick_run ]]; do
+    prose+=${BASH_REMATCH[1]}
+    opening=${BASH_REMATCH[2]}
+    rest=${BASH_REMATCH[3]}
+    after=$rest
+    is_closed=""
+    while [[ $after =~ $backtick_run ]]; do
+      after=${BASH_REMATCH[3]}
+      if [[ ${BASH_REMATCH[2]} == "$opening" ]]; then
+        is_closed=yes
+        break
+      fi
+    done
+    if [[ -n $is_closed ]]; then
+      prose+=_
+      rest=$after
+    else
+      prose+=$opening
+    fi
+  done
+  prose+=$rest
+  while [[ $prose == *"$html_comment_start"*"$html_comment_end"* ]]; do
+    comment_and_after=${prose#*"$html_comment_start"}
+    prose=${prose%%"$html_comment_start"*}_${comment_and_after#*"$html_comment_end"}
+  done
+  while [[ $prose =~ $html_tag || $prose =~ $html_entity ]]; do
+    prose=${prose/"${BASH_REMATCH[0]}"/_}
+  done
+  while [[ $prose =~ $link_target ]]; do
+    prose=${prose/"${BASH_REMATCH[0]}"/$empty_target}
+  done
+  printf '%s\n' "$prose"
+}
+
+# Succeeds if a line has a link whose text is "click here", in any case: has_click_here_link <line>
+has_click_here_link() {
+  local result=1
+  shopt -s nocasematch
+  if [[ $1 =~ $click_here_link ]]; then
+    result=0
+  fi
+  shopt -u nocasematch
+  return "$result"
+}
+
+found_prose_error=""
+while IFS= read -r -d '' file; do
+  # -f skips the deleted files that git ls-files also lists.
+  if [[ ! -f $file ]]; then
+    continue
+  fi
+  while IFS=$'\t' read -r line_number line; do
+    # prose_in only replaces parts of a line, and what it puts in their place can't break a rule.
+    # So a line that breaks no rule as it is passes, and the check skips prose_in, which is slower.
+    if [[ $line != *\;* && ! $line =~ $dash_between_words ]] && ! has_click_here_link "$line"; then
+      continue
+    fi
+    prose=$(prose_in "$line")
+    if [[ $prose == *\;* ]]; then
+      echo "error: $file:$line_number has a semicolon in prose. Write two sentences, as \"Write clear sentences\" in docs/writing.md says." >&2
+      found_prose_error=yes
+    fi
+    if [[ $prose =~ $dash_between_words ]]; then
+      echo "error: $file:$line_number has a dash between words in prose. If it joins two sentences, write two sentences, as \"Write clear sentences\" in docs/writing.md says. Otherwise, replace it with a word, as in \"pages 10 to 20\"." >&2
+      found_prose_error=yes
+    fi
+    if has_click_here_link "$prose"; then
+      echo "error: $file:$line_number has a link whose text is \"click here\". Make the link text name the page it opens, as \"Organize a page\" in docs/pages.md says." >&2
+      found_prose_error=yes
+    fi
+  done < <(lines_outside_code_blocks "$file")
+done < <(git ls-files -z -- '*.md' "${not_generated_or_vendored[@]}")
+if [[ -n "$found_prose_error" ]]; then
+  exit 1
+fi
+
+# Several files repeat the labels, the commit types, the checks that main requires, the gh version and the guides.
+# A file that no longer agrees with the others breaks something without an error, so these checks compare them.
+# They report every difference, then fail. They leave out a file that doesn't exist.
+files_disagree=""
+
+# Prints an error, and fails the checks once every difference is reported: report_difference <message>
+report_difference() {
+  echo "error: $1" >&2
+  files_disagree=yes
+}
+
+# Succeeds if a Markdown file has a section with this heading: has_section <file> <heading>
+has_section() {
+  [[ -f $1 ]] && has_line "## $2" < "$1"
+}
+
+# Prints each line of the first list that the second list doesn't hold: lines_missing_from <list> <other list>
+lines_missing_from() {
+  local line
+  while IFS= read -r line; do
+    if [[ -n $line ]] && ! has_line "$line" <<<"$2"; then
+      printf '%s\n' "$line"
+    fi
+  done <<<"$1"
+}
+
+# Prints a YAML value without the spaces and the quotes around it, or nothing if it's empty.
+yaml_value() {
+  local value=$1 trimmed='^[[:space:]]*(.*[^[:space:]])[[:space:]]*$' double_quoted='^"(.*)"$' single_quoted="^'(.*)'$"
+  if [[ ! $value =~ $trimmed ]]; then
+    return 0
+  fi
+  value=${BASH_REMATCH[1]}
+  if [[ $value =~ $double_quoted || $value =~ $single_quoted ]]; then
+    value=${BASH_REMATCH[1]}
+  fi
+  printf '%s\n' "$value"
+}
+
+# Prints the labels in the labels: lists of a YAML file. A list is written as [a, b], as lines that start with "- ",
+# or as a string with commas, which issue forms also allow.
+yaml_labels() {
+  local line value item key_column=""
+  local key_pattern='^([[:space:]]*(-[[:space:]]+)?)labels:(.*)$' item_pattern='^([[:space:]]*)-[[:space:]]+(.*)$'
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%%[[:space:]]#*}
+    if [[ $line == "#"* || -z ${line//[[:space:]]/} ]]; then
+      continue
+    fi
+    # The items of a list under labels: are indented at least as far as the key.
+    if [[ -n $key_column ]]; then
+      if [[ $line =~ $item_pattern ]] && ((${#BASH_REMATCH[1]} >= key_column)); then
+        yaml_value "${BASH_REMATCH[2]}"
+        continue
+      fi
+      key_column=""
+    fi
+    if [[ ! $line =~ $key_pattern ]]; then
+      continue
+    fi
+    value=$(yaml_value "${BASH_REMATCH[3]}")
+    if [[ -z $value ]]; then
+      key_column=${#BASH_REMATCH[1]}
+      continue
+    fi
+    value=${value#\[}
+    value=${value%\]}
+    while IFS= read -r item; do
+      yaml_value "$item"
+    done < <(tr ',' '\n' <<<"$value")
+  done < "$1"
+}
+
+# Prints the labels that scripts/configure-github creates: the first field of each line between <<'LABELS' and LABELS.
+created_labels() {
+  local line is_in_list=""
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == *"<<'LABELS'" ]]; then
+      is_in_list=yes
+    elif [[ $line == LABELS ]]; then
+      is_in_list=""
+    elif [[ -n $is_in_list ]]; then
+      printf '%s\n' "${line%%|*}"
+    fi
+  done < scripts/configure-github
+}
+
+# Prints the types under "Use one of these types" in "Commits" in AGENTS.md: the word in backticks that starts each item.
+listed_types() {
+  local line is_in_list="" pattern="^[[:space:]]+- \`([^\`]+)\`"
+  while IFS= read -r line; do
+    if [[ $line == *"Use one of these types"* ]]; then
+      is_in_list=yes
+    elif [[ -n $is_in_list ]]; then
+      if [[ ! $line =~ $pattern ]]; then
+        return 0
+      fi
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done < <(section AGENTS.md Commits)
+}
+
+# shellcheck source=scripts/required-checks
+source scripts/required-checks
+
+# Prints the check of each job in a workflow that runs on pull_request, and nothing for any other workflow.
+# A job's check has the job's name, or its key when it has no name.
+pull_request_job_checks() {
+  local line spaces content block="" block_indent="" job_check="" property_indent="" checks="" runs_on_pull_request=""
+  local event_pattern='(^|[^[:alnum:]_])pull_request([^[:alnum:]_]|$)' job_pattern='^([[:alnum:]_-]+):' name_pattern='^name:(.*)$'
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%%[[:space:]]#*}
+    if [[ $line == "#"* || -z ${line//[[:space:]]/} ]]; then
+      continue
+    fi
+    spaces=${line%%[! ]*}
+    content=${line#"$spaces"}
+    # A key without indentation, such as on: or jobs:, starts a block. YAML lets on be quoted.
+    if [[ -z $spaces ]]; then
+      block=${content%%:*}
+      block=${block//\"/}
+      block=${block//\'/}
+      block_indent=""
+      if [[ $block == on && ${content#*:} =~ $event_pattern ]]; then
+        runs_on_pull_request=yes
+      fi
+      continue
+    fi
+    if [[ -z $block_indent ]]; then
+      block_indent=${#spaces}
+    fi
+    if [[ $block == on ]] && ((${#spaces} == block_indent)) && [[ $content =~ $event_pattern ]]; then
+      runs_on_pull_request=yes
+    elif [[ $block == jobs ]] && ((${#spaces} == block_indent)) && [[ $content =~ $job_pattern ]]; then
+      if [[ -n $job_check ]]; then
+        checks+=$job_check$'\n'
+      fi
+      job_check=${BASH_REMATCH[1]}
+      property_indent=""
+    elif [[ $block == jobs && -n $job_check ]]; then
+      # The job's own name is indented less than the names of its steps.
+      if [[ -z $property_indent ]]; then
+        property_indent=${#spaces}
+      fi
+      if ((${#spaces} == property_indent)) && [[ $content =~ $name_pattern ]]; then
+        job_check=$(yaml_value "${BASH_REMATCH[1]}")
+      fi
+    fi
+  done < "$1"
+  if [[ -n $job_check ]]; then
+    checks+=$job_check$'\n'
+  fi
+  if [[ -n $runs_on_pull_request ]]; then
+    printf '%s' "$checks"
+  fi
+}
+
+# Prints the version in the first "<phrase> <version> or later" in a file: gh_version <file> <phrase>
+gh_version() {
+  local line pattern="(^|[^[:alnum:]])$2 ([0-9]+\.[0-9]+) or later"
+  if [[ ! -f $1 ]]; then
+    return 0
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line =~ $pattern ]]; then
+      printf '%s\n' "${BASH_REMATCH[2]}"
+      return 0
+    fi
+  done < "$1"
+}
+
+# Prints the title of a Markdown page: its first line that starts with "# ", without the "# " and the spaces at its end.
+page_title() {
+  local line
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == "# "* ]]; then
+      line=${line#"# "}
+      printf '%s\n' "${line%"${line##*[![:space:]]}"}"
+      return 0
+    fi
+  done < "$1"
+}
+
+for heading in Labels Commits "Read the guides"; do
+  if ! has_section AGENTS.md "$heading"; then
+    report_difference "AGENTS.md has no section \"$heading\", and scripts/check compares that section with other files. Add it, with the heading \"## $heading\"."
+  fi
+done
+
+if has_section AGENTS.md Labels; then
+  agents_md_labels=$(section AGENTS.md Labels | { grep -o "\`[^\`]*\`" || true; } | tr -d '`' | sort -u)
+  if [[ -f scripts/configure-github ]]; then
+    created=$(created_labels)
+    while IFS= read -r label; do
+      report_difference "\"Labels\" in AGENTS.md names $label, and scripts/configure-github doesn't create it. Add it to scripts/configure-github, or remove it from AGENTS.md."
+    done < <(lines_missing_from "$agents_md_labels" "$created")
+    while IFS= read -r label; do
+      report_difference "scripts/configure-github creates the label $label, and \"Labels\" in AGENTS.md doesn't name it. Add it to AGENTS.md, or remove it from scripts/configure-github."
+    done < <(lines_missing_from "$created" "$agents_md_labels")
+  fi
+  for file in "$issue_forms"/*.yml "$issue_forms"/*.yaml .github/release.yml .github/dependabot.yml; do
+    if [[ ! -f $file ]]; then
+      continue
+    fi
+    allowed_labels=$agents_md_labels
+    # In release notes, "*" stands for every label.
+    if [[ $file == .github/release.yml ]]; then
+      allowed_labels+=$'\n*'
+    fi
+    while IFS= read -r label; do
+      report_difference "$file names the label $label, and \"Labels\" in AGENTS.md doesn't name it. Use a label that AGENTS.md names, or add $label to AGENTS.md and scripts/configure-github."
+    done < <(lines_missing_from "$(yaml_labels "$file" | sort -u)" "$allowed_labels")
+  done
+fi
+
+# shellcheck source=scripts/title-types
+source scripts/title-types
+if has_section AGENTS.md Commits && [[ -f .github/workflows/pr-title.yml ]]; then
+  agents_md_types=$(listed_types)
+  title_check_types=$(allowed_title_types)
+  while IFS= read -r type; do
+    report_difference "\"Commits\" in AGENTS.md lists the type $type, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
+  done < <(lines_missing_from "$agents_md_types" "$title_check_types")
+  while IFS= read -r type; do
+    report_difference "the title check in .github/workflows/pr-title.yml allows the type $type, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in .github/workflows/pr-title.yml."
+  done < <(lines_missing_from "$title_check_types" "$agents_md_types")
+fi
+
+# A required check that no job reports never passes, so no pull request can merge.
+if [[ -f scripts/configure-github ]]; then
+  job_checks=""
+  for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+    if [[ -f $workflow ]]; then
+      job_checks+=$(pull_request_job_checks "$workflow")$'\n'
+    fi
+  done
+  job_check_list=$(sed '/^$/d' <<<"$job_checks" | paste -sd ',' - | sed 's/,/, /g')
+  while IFS= read -r check; do
+    report_difference "scripts/configure-github requires the check $check on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: ${job_check_list:-no checks}. Rename a job to $check, or change the check in scripts/configure-github."
+  done < <(lines_missing_from "$(required_checks)" "$job_checks")
+fi
+
+agents_md_gh_version=$(gh_version AGENTS.md gh)
+if [[ -z $agents_md_gh_version ]]; then
+  report_difference "AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". scripts/check compares it with other files, so add it."
+else
+  # Setup replaces the template's README with the project's, which may name no gh version.
+  readme_gh_version=$(gh_version README.md "GitHub CLI")
+  if [[ -n $readme_gh_version && $readme_gh_version != "$agents_md_gh_version" ]]; then
+    report_difference "README.md asks for the GitHub CLI $readme_gh_version, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
+  fi
+  if [[ -f scripts/hooks/session-start ]]; then
+    hook_gh_major=$(sed -n 's/^minimum_gh_major=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
+    hook_gh_minor=$(sed -n 's/^minimum_gh_minor=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
+    if [[ -z $hook_gh_major || -z $hook_gh_minor ]]; then
+      report_difference "scripts/hooks/session-start doesn't set both minimum_gh_major and minimum_gh_minor, so it can't ask for gh $agents_md_gh_version, as AGENTS.md does. Set both to that version."
+    elif [[ $hook_gh_major.$hook_gh_minor != "$agents_md_gh_version" ]]; then
+      report_difference "scripts/hooks/session-start asks for gh $hook_gh_major.$hook_gh_minor, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
+    fi
+  fi
+fi
+
+# A guide that "Read the guides" doesn't link to is a guide that no agent reads.
+guide_links=""
+if has_section AGENTS.md "Read the guides"; then
+  guide_links=$(section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u)
+fi
+# Setup replaces the template's README with the project's, which may have no section "What you get".
+readme_docs=""
+if has_section README.md "What you get"; then
+  readme_docs=$(section README.md "What you get" | { grep -o "\`docs/[^\`]*\`" || true; } | tr -d '`' | sort -u)
+fi
+for page in docs/*.md; do
+  if [[ ! -f $page || $(page_title "$page") != *guide ]]; then
+    continue
+  fi
+  if has_section AGENTS.md "Read the guides" && ! has_line "$page" <<<"$guide_links"; then
+    report_difference "\"Read the guides\" in AGENTS.md doesn't link to $page, which is a guide because its title ends in \"guide\". Link to it there, and say when to read it."
+  fi
+  if has_section README.md "What you get" && ! has_line "$page" <<<"$readme_docs"; then
+    report_difference "\"What you get\" in README.md doesn't name $page, which is a guide because its title ends in \"guide\". Name it there, and say what it covers."
+  fi
+done
+while IFS= read -r path; do
+  if [[ -n $path && ! -e $path ]]; then
+    report_difference "\"Read the guides\" in AGENTS.md links to $path, which doesn't exist. Fix the link, or remove it from AGENTS.md."
+  fi
+done <<<"$guide_links"
+while IFS= read -r path; do
+  if [[ -n $path && ! -e $path ]]; then
+    report_difference "\"What you get\" in README.md names $path, which doesn't exist. Fix the path, or remove it from README.md."
+  fi
+done <<<"$readme_docs"
+
+if [[ -n "$files_disagree" ]]; then
+  exit 1
+fi
+
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
-# so that they don't start it again. They skip the tests of the hooks too, because the copies don't change the hooks.
+# so that they don't start it again. They skip the tests in scripts/ and scripts/hooks/ too, because the copies
+# don't change the scripts that those tests run.
 if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
   # Add the project's formatter check, linter, type checker, tests and coverage check here.
   # The copies that scripts/test-check makes skip these checks, because the copies hold only the tracked files.
@@ -234,6 +846,18 @@ if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
       "$hook_test"
     done
   fi
+  # -f skips the pattern itself, which the loop gets when no test matches it.
+  for script_test in scripts/*.test; do
+    if [[ -f $script_test ]]; then
+      "$script_test"
+    fi
+  done
+fi
+
+record=$(pass_record_path)
+if [[ -z $checked_tree ]] || ! printf '%s\n' "$checked_tree" > "$record"; then
+  echo "error: the checks passed, but scripts/check can't record the pass in $record, and a hook blocks opening a pull request without that record. Fix the error above, and run scripts/check again." >&2
+  exit 1
 fi
 
 if [[ -n "$skipped" ]]; then
