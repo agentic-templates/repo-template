@@ -100,7 +100,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 ## Limits
 
 - The template supports only public repositories on GitHub. A repository made private after setup no longer works with the template.
-- The hooks in `scripts/hooks/` check each action of the agent before it happens, such as a command that reads a `.env` file. Codex runs them only after you review them with `/hooks`. The cloud agents of Copilot and Cursor don't run them, so they get only CI and the written rules.
+- The hooks in `scripts/hooks/` check each action of the agent before it happens, such as a command that reads a `.env` file. Claude Code, Codex, Copilot CLI and Cursor run the hooks. Codex runs them only after you review them with `/hooks`. The cloud agents of Copilot and Cursor don't run them, and neither do Gemini CLI and Aider. Only CI and the written rules protect the project from an agent that doesn't run the hooks.
 - The hook for secret files checks only the commands on its list, such as `cat`, `grep` and `cp`. Another command can still read a `.env` file, and so can a script, or a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.
