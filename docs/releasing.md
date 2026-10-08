@@ -64,10 +64,13 @@ As soon as you find a vulnerability that isn't public yet, write its summary and
 
 ## Fix a security vulnerability
 
-1. Build the fix in the advisory's temporary private fork. If the advisory has no fork yet, an admin can create it with the commands below. GitHub copies each of the repository's branches into the fork, and step 1 of "Publish a release" would report a copy as a waiting fix. So the commands also delete every branch except `main` from the fork:
+1. Build the fix in the advisory's temporary private fork. If the advisory has no fork yet, an admin can create it with the commands below. GitHub copies each of the repository's branches into the fork, and step 1 of "Publish a release" would report a copy as a waiting fix. GitHub makes the copies after it creates the fork, so the commands wait until the fork has `main`, and then delete every other branch from the fork:
 
    ```bash
    fork=$(gh api --method POST "repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks" --jq .full_name)
+   until gh api --paginate "repos/$fork/branches" --jq '.[].name' | grep -qx main; do
+     sleep 5
+   done
    for branch in $(gh api --paginate "repos/$fork/branches" --jq '.[].name'); do
      if [ "$branch" != main ]; then
        gh api --method DELETE "repos/$fork/git/refs/heads/$branch" && echo "Deleted $branch"
