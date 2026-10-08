@@ -8,7 +8,7 @@ The steps that list or check security advisories need admin access, which `gh re
 
 When a maintainer asks you to publish a release:
 
-1. Check whether a fix that isn't released yet is waiting in a security advisory's private fork. List the advisories with `gh api "repos/{owner}/{repo}/security-advisories"`. For each one that isn't published or closed and has a `private_fork`, check each branch of the fork. Run these commands, with `<fork>` replaced by the fork's `full_name`:
+1. Check whether a fix that isn't released yet is waiting in a security advisory's private fork. List the advisories with `gh api --paginate "repos/{owner}/{repo}/security-advisories"`. For each one that isn't published or closed and has a `private_fork`, check each branch of the fork. Run these commands, with `<fork>` replaced by the fork's `full_name`:
 
    ```bash
    base=origin/main
