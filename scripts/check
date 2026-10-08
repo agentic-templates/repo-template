@@ -298,7 +298,8 @@ while IFS= read -r -d '' entry; do
   first_line=""
   IFS= read -r first_line < "$file" || true
   if [[ $first_line == '#!'* ]]; then
-    echo "error: $file starts with #!, and git doesn't record it as executable. Run chmod +x $file, and commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x $file instead." >&2
+    # The allow rules for chmod in .claude/settings.json match chmod +x only when it runs as a command of its own.
+    echo "error: $file starts with #!, and git doesn't record it as executable. Run chmod +x $file as a command of its own, and then commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x $file instead." >&2
     found_mode_error=yes
   fi
 done < <(git ls-files -s -z)
