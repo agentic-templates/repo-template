@@ -26,7 +26,14 @@ When a maintainer asks you to publish a release:
    ```
 
    For each branch that holds a fix, or that the commands can't tell about, ask the maintainer whether this release should include its fix. If so, merge it first, as steps 2 and 3 in "Fix a security vulnerability" describe. Then go on to step 2 below, so that the SHA you release includes the fix.
-2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs. If one failed, stop and tell the maintainer. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which `gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists. Do the same if Dependabot has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"` lists. Keep using that SHA even if more pull requests merge while you wait.
+2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs. If one failed, stop and tell the maintainer. Keep using that SHA even if more pull requests merge while you wait. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which this command lists:
+
+   ```bash
+   gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open" \
+     --jq '.[] | select(.rule.security_severity_level == "high" or .rule.security_severity_level == "critical")'
+   ```
+
+   Do the same if Dependabot has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"` lists.
 3. Choose the version with `scripts/next-version <sha>`. If the script prints an error instead of a version, tell the maintainer the error. If the maintainer named a version that differs from the one the script printed, ask which one to publish.
 4. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target <sha> --generate-notes`
