@@ -375,7 +375,7 @@ hook_check_without_a_test() {
   chmod +x "$copy/scripts/hooks/example.check"
 }
 
-run_case script_that_isnt_executable fail "error: scripts/total starts with #!, and git doesn't record it as executable. Run chmod +x scripts/total, and commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x scripts/total instead."
+run_case script_that_isnt_executable fail "error: scripts/total starts with #!, and git doesn't record it as executable. Run chmod +x scripts/total as a command of its own, and then commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x scripts/total instead."
 run_case hook_check_without_a_test fail "error: scripts/hooks/example.check has no test. Add scripts/hooks/example.test, which runs the check through scripts/hooks/before-tool, as the other tests in scripts/hooks/ do."
 
 # Cases for the check that finds section names that match no heading.
