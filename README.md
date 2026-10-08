@@ -62,7 +62,7 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 ### Build several issues at once
 
-When you ask your agent to build the ready issues, it uses up to 4 helpers, so that it builds several issues at once. A helper is another agent that builds one issue in its own copy of the repository. To use another number, name it: "Build the ready issues, with up to 3 helpers." To build one issue at a time, ask "Build the ready issues, without helpers." If your agent can't launch other agents, it builds one issue at a time.
+When you ask your agent to build the ready issues, it uses up to 4 helpers at the same time, so that it builds several issues at once. A helper is another agent that builds one issue in its own copy of the repository. To change how many helpers work at the same time, name the number: "Build the ready issues, with up to 3 helpers." To build one issue at a time, ask "Build the ready issues, without helpers." If your agent can't launch other agents, it builds one issue at a time.
 
 Helpers use the same model and reasoning effort as your agent. To choose another model, name it: "Build the ready issues, with up to 3 helpers on Opus."
 
