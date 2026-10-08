@@ -277,7 +277,7 @@ agents_md_files_of_32000_bytes_on_two_paths() {
 }
 
 run_case agents_md_of_200_lines fail "error: src/AGENTS.md has 200 lines, and the limit is 199."
-run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own, as docs/rules.md describes."
+run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own."
 run_case agents_md_of_199_lines pass
 run_case guide_of_25000_bytes fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case guide_of_24999_bytes pass

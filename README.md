@@ -2,7 +2,7 @@
 
 Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. You don't need to review each pull request. You approve the issues before agents build them, or ask an agent for a change yourself. Either way, the agent's pull request merges once its checks pass.
 
-The template works with any language. Agents follow `AGENTS.md` and the guides it links to in `docs/`. Claude Code, Codex, Cursor, GitHub Copilot and most other coding agents read `AGENTS.md` on their own. Gemini CLI and Aider read it only after you point their settings at it.
+The template works with any language, and with any coding agent whose harness runs the hooks that `.claude/settings.json` or `.codex/hooks.json` sets up. Agents follow `AGENTS.md` and the guides it links to in `docs/`.
 
 ## Start a project
 
@@ -100,7 +100,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 ## Limits
 
 - The template supports only public repositories on GitHub. A repository made private after setup no longer works with the template.
-- The hooks in `scripts/hooks/` check each action of the agent before it happens, such as a command that reads a `.env` file. Claude Code, Codex, Copilot CLI and Cursor run the hooks. Codex runs them only after you review them with `/hooks`. The cloud agents of Copilot and Cursor don't run them, and neither do Gemini CLI and Aider. Only CI and the written rules protect the project from an agent that doesn't run the hooks.
+- Codex runs the hooks only after you review them with `/hooks`.
 - The hook for secret files checks only the commands on its list, such as `cat`, `grep` and `cp`. Another command can still read a `.env` file, and so can a script, or a command that doesn't name the file, such as `grep -r`.
 - A repository made from the template doesn't get the template's later changes.
 - On an organization's repository, people with GitHub's Triage role can add `ready`, so give that role only to people you'd let approve work.

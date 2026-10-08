@@ -7,7 +7,7 @@ This guide holds the rules for the README and the pages in `docs/`: how to organ
 - Headings name what the reader does or learns, in words they would search for. Write "Install on macOS", not "Getting started".
 - Use numbered steps for a procedure, bullets for items of the same kind, and prose for reasoning.
 - Put each command the reader runs in a code block they can copy. Show the output when it helps them check their work.
-- Make link text name the page it opens. Never write "click here".
+- Make link text name the page it opens.
 - Update a page in place when something changes. Don't add notes such as "Updated in May".
 
 ## Write a README
