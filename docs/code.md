@@ -1,6 +1,6 @@
 # Code guide
 
-Write code that a reader understands the first time they read it. If a rule here would make a piece of code harder to read, choose the clearer code and explain why in the pull request.
+Write code that a reader understands the first time they read it. If a rule here would make a piece of code harder to read, choose the clearer code and explain why in the pull request. But the conventions that the code already uses for naming style, file layout and error handling win over clearer code, as "Keep the design simple" describes. For example, if the code abbreviates its names, abbreviate the names you add in the same way. When such a convention makes a piece of code harder to read, open an issue to change it everywhere, unless one is open already.
 
 ## Keep the design simple
 
@@ -27,7 +27,7 @@ Write code that a reader understands the first time they read it. If a rule here
 
 Keep the complex code in one place behind a plain interface, so that the code that calls it doesn't need to know how it works.
 
-- Complexity is required when a simpler version would fail a requirement. Examples are code that must reach the accuracy an issue asks for, and the fix for a reported bug. Name the requirement in a comment.
+- Complexity is required when a simpler version would fail a requirement. Examples are code that must reach the accuracy or speed an issue asks for, and code that a bug fix adds and that a reader might later think is unnecessary, such as a special case. Name the requirement in a comment. A bug fix that adds no such code adds no complexity, and needs no comment that names the requirement.
 - Complexity is a choice when a simpler version already meets the requirements and the complex one does better, such as running faster, using less memory or giving more accurate results. Make that choice only where a measurement shows what the complex version gains. Say in a comment what the code gains and where the measurement is, such as a benchmark name or an issue.
 - Keep tests that check the complex code's results. For speed or memory, keep a plain version in the test code, such as the code before you optimized it, and check that both give the same results. For accuracy, keep the test cases that measure it, so that a later change can't make the results worse without anyone noticing.
 
@@ -47,8 +47,10 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 ## Test behavior
 
 - Test what the code does through its public interface, not how it does it.
-- In every test, check the result against what the requirement says: a fixed expected value, or a rule that must hold for every input, such as "reading a saved expense back gives the same expense". Don't take the expected value from the code's own output, and don't compute it the way the code does, because then the test repeats the code instead of checking it. The tests may still compare optimized code with a plain version of it, because the plain version computes the result another way.
-- When you write a test, don't check what the requirement leaves open, such as the order of a list when the requirement doesn't ask for a particular order.
+- When you write a test before you refactor code that no test runs, take its expected values from the results that the code gives before the refactoring. A result is anything the code gives: what it returns, prints or writes, its exit status and its errors. Check every result, including details that no requirement asks for, such as the order of a list, because a refactoring must keep every result the same.
+- Such a test expects the code's result even where your issue or the project's docs give another value, because a test that expects that value would fail before the refactoring and after it. If your issue changes a result, change the test once the refactoring is done, before you change what the code does. If the docs give a value that the code doesn't give, open a `bug` issue for the difference, unless one is open already. The test keeps the code's result until that issue is fixed.
+- In every other test, check the result against what the requirement says: a fixed expected value, or a rule that must hold for every input, such as "reading a saved expense back gives the same expense". Don't take the expected value from the code's own output, and don't compute it the way the code does, because then the test repeats the code instead of checking it. The tests may still compare optimized code with a plain version of it, because the plain version computes the result another way.
+- When you write a test, other than one before you refactor code that no test runs, don't check what the requirement leaves open, such as the order of a list when the requirement doesn't ask for a particular order.
 - Test the edges of each requirement as well as a typical case: empty input, and the values on both sides of each limit, such as files of 50,000 and 50,001 rows.
 - Before you change what the code does, write or change the tests for the behavior that your issue adds, changes or fixes. Take the expected results from the issue, and run the tests to see them fail. Then change the code until they pass. If a test for any other requirement fails, fix the code, not the test.
 - Name each test for the behavior and the condition, such as "leaves an expense in a foreign currency out of the total".
