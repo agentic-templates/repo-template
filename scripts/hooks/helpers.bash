@@ -197,3 +197,152 @@ for_each_simple_command() {
     fi
   done
 }
+
+# A here-document's delimiter, after << or <<-, and with or without quotes. Group 1 holds the - and group 3 the word.
+quote_characters=\'\"
+heredoc_operator="<<(-?)[[:blank:]]*([$quote_characters\\\\]?)([A-Za-z_][A-Za-z0-9_]*)[$quote_characters]?"
+# split_heredocs puts this character around a here-document's number. Commands don't contain it.
+marker=$'\037'
+heredoc_reference="$marker([0-9]+)$marker"
+
+# Takes the bodies of the here-documents out of a command, because a body holds text and not commands, and a quote in
+# the text would end the word that holds it, such as the --body word in --body "$(cat <<'EOF' ... EOF)":
+# split_heredocs <command>
+# Sets command_text to the command without the bodies, with the marker, a number and the marker in place of each
+# delimiter, and heredocs to the bodies, in order. It takes each << as the start of a here-document, also in quoted
+# text outside $( ), where the shell doesn't.
+split_heredocs() {
+  local line rest match prefix body body_line index=0 count j
+  local -a lines=() dashes=() delimiters=()
+  command_text=""
+  heredocs=()
+  while IFS= read -r line; do
+    lines+=("$line")
+  done <<<"$1"
+  count=${#lines[@]}
+  while ((index < count)); do
+    rest=${lines[index]}
+    index=$((index + 1))
+    line=""
+    dashes=()
+    delimiters=()
+    while [[ $rest =~ $heredoc_operator ]]; do
+      match=${BASH_REMATCH[0]}
+      prefix=${rest%%"$match"*}
+      rest=${rest#*"$match"}
+      # <<< starts a string, not a here-document.
+      if [[ $prefix == *"<" ]]; then
+        line+=$prefix$match
+        continue
+      fi
+      line+="$prefix<<${BASH_REMATCH[1]}$marker$((${#heredocs[@]} + ${#delimiters[@]}))$marker"
+      dashes+=("${BASH_REMATCH[1]}")
+      delimiters+=("${BASH_REMATCH[3]}")
+    done
+    command_text+=$line$rest$'\n'
+    # The bodies follow the line, in the order of their operators. <<- removes the tabs at the start of each line.
+    for ((j = 0; j < ${#delimiters[@]}; j++)); do
+      body=""
+      while ((index < count)); do
+        body_line=${lines[index]}
+        index=$((index + 1))
+        if [[ -n ${dashes[j]} ]]; then
+          body_line=${body_line#"${body_line%%[!$'\t']*}"}
+        fi
+        if [[ $body_line == "${delimiters[j]}" ]]; then
+          break
+        fi
+        body+=$body_line$'\n'
+      done
+      heredocs+=("$body")
+    done
+  done
+}
+
+# Adds the files that the redirections of a simple command write to the array written_files, which a check empties
+# before the first simple command of each command. The hook can't read such a file before the command runs.
+record_written_files() {
+  local i
+  # >& joins two outputs.
+  for ((i = 0; i < ${#redirections[@]}; i += 2)); do
+    if [[ ${redirections[i]} == *">"* && ${redirections[i]} != *"&" ]]; then
+      written_files+=("${redirections[i + 1]}")
+    fi
+  done
+}
+
+# Succeeds if an earlier part of the command writes a file, as a redirection names it: is_written <path>
+is_written() {
+  local file
+  for file in ${written_files[@]+"${written_files[@]}"}; do
+    if [[ $file == "$1" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Sets body to the text of a file, or blocks when the hook can't read the file before the command runs:
+# read_body_file <path as the command writes it>
+read_body_file() {
+  local path=$1
+  # The command's words come as written, so ~ is matched before the shell expands it.
+  # shellcheck disable=SC2088
+  case $path in
+    "~/"*) path=$HOME/${path#"~/"} ;;
+  esac
+  if is_written "$1" || [[ ! -f $path || ! -r $path ]]; then
+    block "Blocked: this hook checks the body file before the command runs, and $1 doesn't exist yet or the command writes it. Write the file in a command of its own first, and give its path without variables."
+  fi
+  body=$(<"$path")
+}
+
+give_the_body="Give the body with --body, or write it to a file and give the file with --body-file."
+
+# Sets body to the body that a gh command gives, and body_may_expand to yes if the shell would change it, or blocks
+# when the hook can't read the body: read_body <what the hook checks, such as: the issue's headings>
+# It reads the body as the command writes it, without running $( ) or filling in variables: from --body, from the
+# file that --body-file names, or from a here-document. It reads what the check found in the command's words:
+# body_source (empty, text or file), body_word and body_file. Run split_heredocs on the command first.
+read_body() {
+  local rest i
+  body=""
+  case $body_source in
+    "")
+      block "Blocked: the command gives no body, so this hook can't check $1. $give_the_body"
+      ;;
+    text)
+      if [[ ! $body_word =~ $heredoc_reference ]]; then
+        body=$body_word
+        if [[ $body == *[\$\`]* ]]; then
+          body_may_expand=yes
+        fi
+        return 0
+      fi
+      # The text of each here-document in the word, such as "$(cat <<'EOF' ... EOF)"
+      rest=$body_word
+      while [[ $rest =~ $heredoc_reference ]]; do
+        body+=${heredocs[BASH_REMATCH[1]]}
+        rest=${rest#*"${BASH_REMATCH[0]}"}
+      done
+      ;;
+    file)
+      if [[ $body_file != - ]]; then
+        read_body_file "$body_file"
+        return 0
+      fi
+      # Standard input, from a here-document or a file
+      for ((i = 0; i < ${#redirections[@]}; i += 2)); do
+        if [[ ${redirections[i]} =~ ^0?\<\<-?$ && ${redirections[i + 1]} =~ $heredoc_reference ]]; then
+          body=${heredocs[BASH_REMATCH[1]]}
+          return 0
+        fi
+        if [[ ${redirections[i]} =~ ^0?\<$ ]]; then
+          read_body_file "${redirections[i + 1]}"
+          return 0
+        fi
+      done
+      block "Blocked: this hook can't read a body from standard input, other than from a here-document, so it can't check $1. $give_the_body"
+      ;;
+  esac
+}
