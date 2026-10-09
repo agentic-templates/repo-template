@@ -15,6 +15,10 @@ if [[ "$visibility" != "public" ]]; then
   echo "error: $repo is $visibility, and the template supports only public repositories. Make the repository public, and run this script again." >&2
   exit 1
 fi
+if [[ "$(gh api "repos/$repo" --jq .owner.type)" != "Organization" ]]; then
+  echo "error: $repo belongs to the personal account ${repo%%/*}, and only an organization's repositories can use GitHub's merge queue, which the template merges through. Transfer the repository to an organization in its settings at https://github.com/$repo/settings, and run this script again." >&2
+  exit 1
+fi
 
 echo "Merging: squash only, with the pull request title as the commit subject, auto-merge allowed, and the branch deleted after the merge"
 gh api --method PATCH "repos/$repo" --silent \
@@ -112,13 +116,14 @@ gh api --method PUT "repos/$repo/actions/permissions" --silent \
   -f allowed_actions=all \
   -F sha_pinning_required=true
 
-echo "Main: every change arrives through a pull request that passes CI and code scanning"
+echo "Main: every change arrives through a pull request that passes CI and code scanning, and merges through the merge queue"
 # A pull request records each change, and CI and code scanning decide whether it merges, so no approval is required.
 # GitHub requires an extra approval for pull requests that an app opens, such as Dependabot's,
 # unless require_extra_approval_for_unattributed_changes is false.
 # The required checks are job names in .github/workflows. 15368 is the ID of GitHub Actions,
-# so only a workflow can report them. A pull request must include the latest main before it merges,
-# because agents build several issues at once, and two changes that pass alone can break main together.
+# so only a workflow can report them. Agents build several issues at once, and two changes that pass alone can
+# break main together. So the merge queue runs the checks again on each pull request together with the latest main
+# and the pull requests ahead of it, and a branch doesn't need the latest main before it joins the queue.
 # Nobody reviews the merge, so CodeQL is the only reviewer that looks for security problems. It stops a merge
 # on a security alert of high or critical severity, or an alert at error level, in the pull request's changes.
 ruleset=$(cat <<'JSON'
@@ -146,7 +151,7 @@ ruleset=$(cat <<'JSON'
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": true,
+        "strict_required_status_checks_policy": false,
         "required_status_checks": [
           {"context": "check", "integration_id": 15368},
           {"context": "title", "integration_id": 15368}
@@ -159,6 +164,18 @@ ruleset=$(cat <<'JSON'
         "code_scanning_tools": [
           {"tool": "CodeQL", "security_alerts_threshold": "high_or_higher", "alerts_threshold": "errors"}
         ]
+      }
+    },
+    {
+      "type": "merge_queue",
+      "parameters": {
+        "merge_method": "SQUASH",
+        "grouping_strategy": "ALLGREEN",
+        "max_entries_to_build": 5,
+        "min_entries_to_merge": 1,
+        "max_entries_to_merge": 5,
+        "min_entries_to_merge_wait_minutes": 5,
+        "check_response_timeout_minutes": 60
       }
     }
   ]

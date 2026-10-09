@@ -19,7 +19,7 @@ Read each guide before you first do its kind of work in a session, even when the
 
 ## What this project is
 
-repo-template gives a new GitHub project the rules, checks and settings that people and coding agents follow to plan, build and release it. It works with any language and any coding agent that reads AGENTS.md, and each project adds its own language tools during setup.
+repo-template gives a new GitHub project the rules, hooks, checks and settings that people and coding agents follow to plan, build and release it. It works with any language, and with any coding tool that runs the project's hooks. Each project adds its own language tools during setup.
 
 When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction.
 
@@ -34,6 +34,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.
 - `scripts/check-pull-request`: checks that a pull request's body closes an open issue and fills in the template. The `title` job in `.github/workflows/pr-title.yml` runs it.
 - `scripts/check-main-rules`: fails when the rules for main no longer require a check that `scripts/configure-github` requires there. A hook runs it before each `gh pr merge`, and a workflow runs it each week.
+- `scripts/queue-auto-merge`: adds to the merge queue each open pull request whose checks have passed and whose auto-merge didn't add it. Step 2 of "Build the ready issues" in `docs/building.md` runs it.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
 - `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
@@ -42,8 +43,8 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 ## Commands
 
-- `scripts/check`: run it before you push. CI runs the same script. CI also fails a pull request that adds a dependency with a known vulnerability.
-- `scripts/configure-github`: the agent that sets up the project runs it once. After a change to the script merges, a maintainer with admin access runs it again.
+- `scripts/check`: run it before you push. CI also fails a pull request that adds a dependency with a known vulnerability.
+- `scripts/configure-github`: the agent that sets up the project runs it once.
 
 Keep the checks on a pull request within ten minutes. When the project has tests that run after each merge to main, list their command here, as `docs/code.md` describes.
 
@@ -72,8 +73,6 @@ Dependabot adds `dependencies` to its own pull requests.
 
 ## Make a change
 
-Every change goes through an issue, a branch and a pull request. Dependabot's pull requests are the only exception. They skip the issue.
-
 If a maintainer asks for something that's bigger than one pull request or needs a decision along the way, triage it first, as "Triage new ideas" in `docs/planning.md` describes.
 
 1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If they do, open a new issue with `gh issue create`, and mention the closed one in it. If no issue asks for the change at all, open one too. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. If a maintainer asks you to work on an issue outside a build run, remove `needs-triage` from it. If it has `ready`, also follow "Work on a ready issue outside a build run" in [docs/building.md](docs/building.md).
@@ -82,7 +81,24 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 4. Make the change. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer, and record it as "Record a vulnerability privately" in `docs/releasing.md` describes.
 5. Push the branch and open a pull request with `gh pr create`.
 6. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 4 describes.
-7. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `BEHIND`, update the branch with `gh pr update-branch`. If it reports `DIRTY`, resolve the conflicts with main. After either, go back to step 6. Otherwise, merge with `gh pr merge --squash`.
+7. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `DIRTY`, resolve the conflicts with main, and go back to step 6. Otherwise, add the pull request to the merge queue with `gh pr merge`, which needs no merge method. Then check every minute until it merges or the queue removes it. This command prints the pull request's state, whether it's in the queue, and the reason for each time the queue removed it:
+
+   ```bash
+   gh api graphql -F owner='{owner}' -F repo='{repo}' -F number=<number> -f query='
+     query($owner: String!, $repo: String!, $number: Int!) {
+       repository(owner: $owner, name: $repo) {
+         pullRequest(number: $number) {
+           state
+           isInMergeQueue
+           timelineItems(itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT], last: 10) {
+             nodes { ... on RemovedFromMergeQueueEvent { createdAt reason } }
+           }
+         }
+       }
+     }'
+   ```
+
+   If the queue removes it, fix what the reason says went wrong, if anything, and go back to step 6.
 
 ## Commits
 
@@ -110,7 +126,6 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 - Keep each pull request to one issue, and small enough to review in one sitting.
 - The title follows the rules for a commit subject.
 - The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. The `title` check fails unless `Closes #<issue>` names an open issue, and the template's headings "What changed and why" and "How it was checked" each have text under them.
-- A workflow labels each pull request from its title: `feature` for `feat`, `bug` for `fix` and `maintenance` for the rest. Dependabot's pull requests get `dependencies`. The workflow can't label a pull request from a fork, so a maintainer labels it by hand and then merges it.
 - If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
 
 ## Definition of done

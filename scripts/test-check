@@ -83,6 +83,22 @@ run_case() {
   fi
 }
 
+# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
+# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
+replace_text() {
+  local file=$1 text=$2 new_text=$3 content replaced=""
+  content=$(<"$copy/$file")
+  if [[ $content != *"$text"* ]]; then
+    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
+    exit 1
+  fi
+  while [[ $content == *"$text"* ]]; do
+    replaced+=${content%%"$text"*}$new_text
+    content=${content#*"$text"}
+  done
+  printf '%s\n' "$replaced$content" > "$copy/$file"
+}
+
 repository_as_it_is() {
   :
 }
@@ -235,6 +251,16 @@ guide_of_24999_bytes() {
   printf '%s\n' "$(printf '%248s' '' | tr ' ' x)" >> "$copy/docs/writing.md"
 }
 
+guide_of_25000_bytes_as_the_first_of_two_links_on_a_line() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md) and [docs/pages.md](docs/pages.md),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
+guide_of_25000_bytes_linked_with_an_anchor() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md#write-error-messages),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
 long_page_that_is_no_guide() {
   write_lines "$copy/docs/notes.md" 300 100
 }
@@ -251,10 +277,12 @@ agents_md_files_of_32000_bytes_on_two_paths() {
 }
 
 run_case agents_md_of_200_lines fail "error: src/AGENTS.md has 200 lines, and the limit is 199."
-run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own, as docs/rules.md describes."
+run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own."
 run_case agents_md_of_199_lines pass
 run_case guide_of_25000_bytes fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case guide_of_24999_bytes pass
+run_case guide_of_25000_bytes_as_the_first_of_two_links_on_a_line fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
+run_case guide_of_25000_bytes_linked_with_an_anchor fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case long_page_that_is_no_guide pass
 run_case agents_md_files_of_32000_bytes_on_one_path fail "error: the AGENTS.md files from the root down to src/api have 32000 bytes together, and the limit is 31999."
 run_case agents_md_files_of_32000_bytes_on_two_paths pass
@@ -347,7 +375,7 @@ hook_check_without_a_test() {
   chmod +x "$copy/scripts/hooks/example.check"
 }
 
-run_case script_that_isnt_executable fail "error: scripts/total starts with #!, and git doesn't record it as executable. Run chmod +x scripts/total, and commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x scripts/total instead."
+run_case script_that_isnt_executable fail "error: scripts/total starts with #!, and git doesn't record it as executable. Run chmod +x scripts/total as a command of its own, and then commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x scripts/total instead."
 run_case hook_check_without_a_test fail "error: scripts/hooks/example.check has no test. Add scripts/hooks/example.test, which runs the check through scripts/hooks/before-tool, as the other tests in scripts/hooks/ do."
 
 # Cases for the check that finds section names that match no heading.
@@ -495,22 +523,6 @@ run_case project_check_that_fails pass
 
 # Cases for the check that the files agree on the facts that they repeat.
 
-# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
-# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
-replace_text() {
-  local file=$1 text=$2 new_text=$3 content replaced=""
-  content=$(<"$copy/$file")
-  if [[ $content != *"$text"* ]]; then
-    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
-    exit 1
-  fi
-  while [[ $content == *"$text"* ]]; do
-    replaced+=${content%%"$text"*}$new_text
-    content=${content#*"$text"}
-  done
-  printf '%s\n' "$replaced$content" > "$copy/$file"
-}
-
 label_that_configure_github_doesnt_create() {
   replace_text AGENTS.md "## Labels" $'## Labels\n\nClose an issue that no one will build with `wontfix`.'
 }
@@ -584,7 +596,7 @@ required_check_that_no_job_reports() {
 
 required_check_from_a_job_name() {
   replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
-  write_workflow "[push, pull_request]" style lint
+  write_workflow "[push, pull_request, merge_group]" style lint
 }
 
 required_check_from_a_step_name() {
@@ -597,10 +609,21 @@ required_check_from_a_workflow_that_doesnt_run_on_pull_requests() {
   write_workflow pull_request_review lint
 }
 
+required_check_from_a_workflow_that_runs_on_both_events() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow "[pull_request, merge_group]" lint
+}
+
+required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue() {
+  replace_text .github/workflows/pr-title.yml "  merge_group:" ""
+}
+
 run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: linux, bash-3-2, check, title, label. Rename a job to lint, or change the check in scripts/configure-github."
 run_case required_check_from_a_job_name pass
 run_case required_check_from_a_step_name fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
 run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+run_case required_check_from_a_workflow_that_runs_on_both_events pass
+run_case required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue fail "error: scripts/configure-github requires the check title on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports title on pull_request: .github/workflows/pr-title.yml."
 
 hook_that_asks_for_another_gh_version() {
   replace_text scripts/hooks/session-start "minimum_gh_minor=98" "minimum_gh_minor=99"

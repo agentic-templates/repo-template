@@ -3,12 +3,17 @@ name: PR title
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+  # The merge queue waits for the required check "title" on each group of pull requests that it tests.
+  merge_group:
 
 permissions: {}
 
 jobs:
   # The rules for main require a job named "title". If you rename it, change scripts/configure-github too.
+  # In the merge queue, the job skips, and GitHub counts the skip as a pass. The pull request's own run has already
+  # checked its title and body.
   title:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     # scripts/check-pull-request reads the issues that the body closes.
