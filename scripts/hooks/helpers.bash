@@ -55,7 +55,7 @@ pr_create_flags_with_value=" -a --assignee --attach -B --base -b --body -F --bod
 
 # Succeeds if command_words opens a pull request with gh pr create, or its alias gh pr new, rather than show the
 # command's help or do a dry run. It sets each of these to the value of its flag, or to empty when the command
-# doesn't give the flag: pr_base, pr_head, pr_title, pr_body, pr_body_file and pr_repo. It sets pr_has_title and
+# doesn't give the flag: pr_base, pr_head, pr_title, pr_body and pr_body_file. It sets pr_has_title and
 # pr_has_body to yes when the command gives --title and --body, because their values can be empty.
 # The word after a flag that takes a value is that value, even if it starts with a dash.
 opens_pull_request() {
@@ -66,7 +66,7 @@ opens_pull_request() {
   if [[ ${command_words[2]:-} != create && ${command_words[2]:-} != new ]]; then
     return 1
   fi
-  pr_base="" pr_head="" pr_title="" pr_body="" pr_body_file="" pr_repo="" pr_has_title="" pr_has_body=""
+  pr_base="" pr_head="" pr_title="" pr_body="" pr_body_file="" pr_has_title="" pr_has_body=""
   for ((i = 3; i < ${#command_words[@]}; i++)); do
     word=${command_words[i]}
     case $word in
@@ -91,7 +91,6 @@ opens_pull_request() {
       -t | --title) pr_title=$value pr_has_title=yes ;;
       -b | --body) pr_body=$value pr_has_body=yes ;;
       -F | --body-file) pr_body_file=$value ;;
-      -R | --repo) pr_repo=$value ;;
     esac
   done
 }

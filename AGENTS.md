@@ -32,7 +32,8 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.
-- `scripts/check-pull-request`: checks that a pull request's body closes an open issue and fills in the template. The `title` job in `.github/workflows/pr-title.yml` runs it.
+- `scripts/check-title`: checks that a pull request's title has the form of a commit subject.
+- `scripts/check-pull-request`: checks a pull request's body, the prose of its title, and its commits. The `title` job in `.github/workflows/pr-title.yml` runs it and `scripts/check-title`, and a hook runs both before `gh pr create`.
 - `scripts/check-main-rules`: fails when the rules for main no longer require a check that `scripts/configure-github` requires there. A hook runs it before each `gh pr merge`, and a workflow runs it each week.
 - `scripts/queue-auto-merge`: adds to the merge queue each open pull request whose checks have passed and whose auto-merge didn't add it. Step 2 of "Build the ready issues" in `docs/building.md` runs it.
 - `scripts/try-rule`: runs a rule's trial on Claude Code, as "Try a rule on agents" in `docs/rules.md` describes.
@@ -118,14 +119,10 @@ If a maintainer asks for something that's bigger than one pull request or needs 
   - `revert`: undoes an earlier commit
   - `chore`: anything else
 - A scope is optional, as in `fix(cli): ...`. Add `!` before the colon when the change breaks existing use.
-- Don't add a `Co-Authored-By` trailer or any other attribution to commits or pull requests.
 
 ## Pull requests
 
-- Keep each pull request to one issue, and small enough to review in one sitting.
-- The title follows the rules for a commit subject.
-- The body has the three parts of `.github/pull_request_template.md`: `Closes #<issue>`, what changed and why, and how you checked it. The `title` check fails unless `Closes #<issue>` names an open issue, and the template's headings "What changed and why" and "How it was checked" each have text under them.
-- If the pull request changes `scripts/configure-github`, say in its description that a maintainer with admin access needs to run the script after the merge.
+Keep each pull request small enough to review in one sitting.
 
 ## Definition of done
 

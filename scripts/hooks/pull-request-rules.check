@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Blocks opening a pull request with gh pr create, or its alias gh pr new, when the title job in
+# .github/workflows/pr-title.yml would fail on it: when scripts/check-title fails on its title, or
+# scripts/check-pull-request on its title, body and commits. The message gives the scripts' errors.
+# - The hook reads the title from --title, and the body from --body or from the file that --body-file names. It blocks
+#   a command that gives them in another way, such as with --fill, or with a $ or a backtick in either, because it
+#   can't tell what gh would get.
+# - The pull request's commits are those on its branch, the one that --head names or HEAD, that aren't on the base
+#   branch on GitHub. The base branch is the one that --base names, or the one that origin/HEAD points to, and the
+#   hook fetches it from origin first. It allows the command when it can't find those commits, such as outside a
+#   git repository or before the branch exists here.
+# shellcheck source=scripts/hooks/helpers.bash
+source "${BASH_SOURCE[0]%/*}/helpers.bash"
+
+# The folder of scripts/check-title and scripts/check-pull-request, as an absolute path, because the hook changes
+# to the folder that the agent works in.
+scripts_folder=$(cd "${BASH_SOURCE[0]%/*}/.." && pwd)
+
+unreadable="Blocked: the hook can't read the pull request's title and body from this command, so it can't check them. Give the title with --title, with no \$ or backtick in it. Write the body to a file outside the repository, give it with --body-file <file>, and run gh pr create again."
+
+# Sets base_commit and head_commit to the commits that the pull request compares, or fails when it can't find them.
+find_commits() {
+  local base_branch head_ref=HEAD
+  base_branch=$pr_base
+  if [[ -z $base_branch ]]; then
+    base_branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD) || return 1
+    base_branch=${base_branch#origin/}
+  fi
+  # The local copy of the base branch can be older than GitHub's. The commits that GitHub's has and the local copy
+  # doesn't would then count as the pull request's own, and so would the files that they change.
+  GIT_TERMINAL_PROMPT=0 git fetch --quiet origin "$base_branch" >/dev/null 2>&1 || true
+  base_commit=$(git rev-parse --verify --quiet "refs/remotes/origin/$base_branch^{commit}") || return 1
+  # --head can name the branch as <user>:<branch>.
+  if [[ -n $pr_head ]]; then
+    head_ref=refs/heads/${pr_head#*:}
+  fi
+  head_commit=$(git rev-parse --verify --quiet "$head_ref^{commit}") || return 1
+}
+
+check_gh_pr_create() {
+  local title body problems="" output
+  if ! opens_pull_request; then
+    return 0
+  fi
+  # Cursor doesn't send the folder the agent works in, so for Cursor the hook's own folder counts.
+  cd -- "${cwd:-.}" || return 0
+  if [[ -z $pr_has_title || $pr_title == *[\$\`]* ]]; then
+    block "$unreadable"
+  fi
+  title=$pr_title
+  if [[ -n $pr_body_file ]]; then
+    if [[ $pr_body_file == - || $pr_body_file == *[\$\`]* ]]; then
+      block "$unreadable"
+    fi
+    if [[ ! -f $pr_body_file || ! -r $pr_body_file ]]; then
+      block "Blocked: the hook can't read the file $pr_body_file, which --body-file names, so it can't check the body. Write the body to the file in a command of its own first, and run gh pr create again."
+    fi
+    body=$(<"$pr_body_file")
+  elif [[ -n $pr_has_body && $pr_body != *[\$\`]* ]]; then
+    body=$pr_body
+  else
+    block "$unreadable"
+  fi
+
+  if ! find_commits; then
+    return 0
+  fi
+  # The subshells drop the trap, which would otherwise turn every exit code of the scripts into 1.
+  if ! output=$(trap - ERR && TITLE=$title "$scripts_folder/check-title" 2>&1); then
+    problems+=$output$'\n'
+  fi
+  if ! output=$(trap - ERR && TITLE=$title BODY=$body "$scripts_folder/check-pull-request" "$base_commit" "$head_commit" 2>&1); then
+    problems+=$output$'\n'
+  fi
+  if [[ -n $problems ]]; then
+    # The scripts mark each error for GitHub Actions.
+    problems=${problems//::error::/}
+    block "Blocked: the checks on pull requests in CI would fail on this one:"$'\n'"$problems""Fix each problem, and run gh pr create again."
+  fi
+}
+
+check_simple_command() {
+  drop_command_prefixes "$@"
+  if ((${#command_words[@]} == 0)); then
+    return 0
+  fi
+  check_gh_pr_create
+}
+
+read_input
+if [[ $tool_name == Bash ]]; then
+  for_each_simple_command check_simple_command "$shell_command"
+fi
