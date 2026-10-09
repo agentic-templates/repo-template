@@ -63,5 +63,7 @@ An error message says what failed and what the reader can do about it. When a li
 ## Write replies and reports
 
 - Start with what the maintainer must decide, or with what changed.
+- Show the result, such as the new wording, instead of describing the change.
 - Give each decision with the option you recommend.
 - Leave out the steps you took, unless the maintainer or a guide asks for them.
+- Leave out evidence and details that the maintainer doesn't need to decide. Give them when asked.
