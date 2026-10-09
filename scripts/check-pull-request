@@ -3,8 +3,8 @@
 # <base> is the latest commit of the branch that the pull request merges into, and <head> the pull request's latest
 # commit. The title job in .github/workflows/pr-title.yml passes the title in TITLE and the body in BODY, and so does
 # the hook scripts/hooks/pull-request-rules.check before gh pr create. Run it in the repository's folder.
-# - The body has a line that closes one issue, such as "Closes #12", and no line that closes another. gh looks up
-#   the issue, which is an open issue in this repository, without the label research and without sub-issues.
+# - The body has a line that closes an issue, such as "Closes #12", and no line that closes another issue. The issue,
+#   which gh looks up, is open, is in this repository, and has neither the label research nor sub-issues.
 # - No word that closes an issue comes right before an issue's number in the middle of a line, as in
 #   "the pull request that fixed #12", because GitHub closes that issue too.
 # - The body has the headings of .github/pull_request_template.md, "What changed and why" and "How it was checked",
