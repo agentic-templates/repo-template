@@ -110,7 +110,20 @@ while IFS= read -r -d '' line; do
 done < <(git worktree list --porcelain -z)
 add_worktree
 
-# Sets reason to why a folder must stay as it is, and fails, or succeeds if nothing keeps it: check_folder <index>
+# Prints merge or rebase if a folder is in the middle of one, or nothing: unfinished_operation <path>
+unfinished_operation() {
+  local git_dir
+  git_dir=$(git -C "$1" rev-parse --absolute-git-dir 2>/dev/null) || return 0
+  if [[ -f $git_dir/MERGE_HEAD ]]; then
+    echo merge
+  elif [[ -d $git_dir/rebase-merge || -d $git_dir/rebase-apply ]]; then
+    echo rebase
+  fi
+}
+
+# Sets reason to why a folder must stay as it is, and fails, or succeeds if nothing keeps it. It doesn't look for a
+# merge or a rebase, because the script aborts those in the folder it runs in once nothing else keeps the folder:
+# check_folder <index>
 check_folder() {
   local path=${worktree_paths[$1]} lock=${worktree_locks[$1]} git_dir untracked file secret_files=""
   if [[ $lock == locked ]]; then
@@ -125,14 +138,6 @@ check_folder() {
     reason="git can't read it: $git_dir"
     return 1
   fi
-  if [[ -f $git_dir/MERGE_HEAD ]]; then
-    reason="it's in the middle of a merge."
-    return 1
-  fi
-  if [[ -d $git_dir/rebase-merge || -d $git_dir/rebase-apply ]]; then
-    reason="it's in the middle of a rebase."
-    return 1
-  fi
   if ! untracked=$(git -C "$path" ls-files --others --exclude-standard 2>&1); then
     reason="git can't list its untracked files: $untracked"
     return 1
@@ -144,6 +149,16 @@ check_folder() {
   done <<<"$untracked"
   if [[ -n $secret_files ]]; then
     reason="it has untracked files whose names suggest a secret: $secret_files"
+    return 1
+  fi
+}
+
+# Sets reason and fails if a folder is in the middle of a merge or a rebase: check_merge_or_rebase <path>
+check_merge_or_rebase() {
+  local operation
+  operation=$(unfinished_operation "$1")
+  if [[ -n $operation ]]; then
+    reason="it's in the middle of a $operation."
     return 1
   fi
 }
@@ -172,14 +187,10 @@ save_work() {
 
 # Aborts a merge or a rebase in the folder the script runs in. Sets reason and fails if git refuses.
 abort_merge_or_rebase() {
-  local git_dir output
-  git_dir=$(git rev-parse --absolute-git-dir)
-  if [[ -f $git_dir/MERGE_HEAD ]] && ! output=$(git merge --abort 2>&1); then
-    reason="git refused to abort its merge: $output"
-    return 1
-  fi
-  if [[ -d $git_dir/rebase-merge || -d $git_dir/rebase-apply ]] && ! output=$(git rebase --abort 2>&1); then
-    reason="git refused to abort its rebase: $output"
+  local operation output
+  operation=$(unfinished_operation .)
+  if [[ -n $operation ]] && ! output=$(git "$operation" --abort 2>&1); then
+    reason="git refused to abort its $operation: $output"
     return 1
   fi
 }
@@ -194,7 +205,7 @@ for ((index = 0; index < ${#worktree_paths[@]}; index++)); do
   fi
   reason=""
   if [[ $path == "$current_folder" ]]; then
-    if abort_merge_or_rebase && check_folder "$index" && save_work "$path" "$branch"; then
+    if check_folder "$index" && abort_merge_or_rebase && save_work "$path" "$branch"; then
       if ! output=$(git fetch --quiet origin 2>&1); then
         reason="git refused to fetch origin: $output"
       elif ! output=$(git switch --quiet --detach origin/main 2>&1); then
@@ -212,7 +223,7 @@ for ((index = 0; index < ${#worktree_paths[@]}; index++)); do
   fi
   if ((index == 0)); then
     reason="it's the repository's main folder."
-  elif check_folder "$index" && save_work "$path" "$branch"; then
+  elif check_folder "$index" && check_merge_or_rebase "$path" && save_work "$path" "$branch"; then
     if ! output=$(git worktree remove "$path" 2>&1); then
       reason="git refused to remove it: $output"
     fi

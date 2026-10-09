@@ -314,6 +314,19 @@ run_clear_worktrees "$case_dir/agent-1"
 expect_result 1 "error: can't free $case_dir/agent-1, the folder that scripts/clear-worktrees runs in, which holds the branch of issue #12, because it has untracked files whose names suggest a secret: credentials.json"$'\n'"Save the work in that folder by hand, and switch it to another branch. Then run scripts/clear-worktrees again."
 expect_equal "the folder's checked-out branch" "$(checked_out "$case_dir/agent-1")" 12-fix-totals
 
+begin_case "When the folder it runs in is locked, and in the middle of a merge"
+new_case
+add_worktree agent-1 12-fix-totals
+printf 'January: 125\n' >"$case_dir/agent-1/totals.txt"
+git -C "$case_dir/agent-1" commit --quiet -am "fix: correct January"
+printf 'January: 130\n' >"$case_dir/main/totals.txt"
+git -C "$case_dir/main" commit --quiet -am "fix: count the late receipts"
+git -C "$case_dir/agent-1" merge main >/dev/null 2>&1 || true
+git -C "$case_dir/main" worktree lock --reason "claude agent agent-1 (pid 20928)" "$case_dir/agent-1"
+run_clear_worktrees "$case_dir/agent-1"
+expect_result 1 "error: can't free $case_dir/agent-1, the folder that scripts/clear-worktrees runs in, which holds the branch of issue #12, because it's locked, and the lock gives this reason: claude agent agent-1 (pid 20928)"$'\n'"Save the work in that folder by hand, and switch it to another branch. Then run scripts/clear-worktrees again."
+expect_equal "whether the merge goes on" "$(exists "$(git -C "$case_dir/agent-1" rev-parse --absolute-git-dir)/MERGE_HEAD")" yes
+
 begin_case "When git refuses to push the branch"
 new_case
 add_worktree agent-1 12-fix-totals
