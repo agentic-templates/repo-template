@@ -15,8 +15,8 @@ if [[ -z ${CLAUDECODE:-} ]]; then
   exit 0
 fi
 
-minimum_gh_major=2
-minimum_gh_minor=98
+# shellcheck source=scripts/minimum-gh-version
+source "${BASH_SOURCE[0]%/*}/../minimum-gh-version"
 home=${HOME%/}
 
 # Prints a path with the symlinks in its folder resolved, or nothing if its folder doesn't exist.
@@ -107,14 +107,11 @@ fi
 
 # 2. A gh older than the rules need. If the version can't be read, the hook says nothing about gh.
 if ! command -v gh >/dev/null; then
-  echo "The rules in AGENTS.md need gh $minimum_gh_major.$minimum_gh_minor or later, and gh isn't installed. Tell the person, and that https://github.com/cli/cli#installation says how to install it."
+  echo "The rules in AGENTS.md need gh $minimum_gh_version or later, and gh isn't installed. Tell the person, and that https://github.com/cli/cli#installation says how to install it."
 else
-  gh_version=$(gh --version 2>/dev/null || true)
-  if [[ $gh_version =~ ^gh\ version\ (([0-9]+)\.([0-9]+)[0-9.]*) ]]; then
-    found=${BASH_REMATCH[1]} major=${BASH_REMATCH[2]} minor=${BASH_REMATCH[3]}
-    if ((major < minimum_gh_major || (major == minimum_gh_major && minor < minimum_gh_minor))); then
-      echo "The rules in AGENTS.md need gh $minimum_gh_major.$minimum_gh_minor or later, and this machine has gh $found. Tell the person, and that https://github.com/cli/cli#installation says how to update it."
-    fi
+  found=$(older_gh_version "$(gh --version 2>/dev/null || true)")
+  if [[ -n $found ]]; then
+    echo "The rules in AGENTS.md need gh $minimum_gh_version or later, and this machine has gh $found. Tell the person, and that https://github.com/cli/cli#installation says how to update it."
   fi
 fi
 
