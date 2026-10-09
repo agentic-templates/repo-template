@@ -107,6 +107,17 @@ expect_errors "With a closed issue and \\r\\n at each line's end" "${crlf_body/"
 TEST_GH=fail expect_errors "When gh fails" "$filled_in" \
   "Can't look up #12, because gh failed: error connecting to api.github.com. Run the job again to try again."
 
+# Closing words in the middle of a line
+expect_pass "With a closing word that doesn't come right before an issue's number, and a word that ends in a closing word" \
+  "${filled_in/"already imported."/already imported. It fixes the total that #12 reports, and prefixes #12 to the note.}"
+expect_errors "With a closing word before an issue's number in the middle of a line" \
+  "${filled_in/"already imported."/already imported, as the pull request that fixed #12 asked.}" \
+  "The line \"The app skips the expenses that it has already imported, as the pull request that fixed #12 asked.\" has the words \"fixed #12\", so GitHub closes #12 when the pull request merges. Reword the sentence, such as from \"the pull request that fixed #12\" to \"the pull request for #12\"."
+expect_errors "With closing words in another case, with a colon, after a closing line and after a character other than a space" \
+  "${filled_in/"Closes #12"/Closes #12, and FIXES: #13 (resolves #20)}" \
+  "The line \"Closes #12, and FIXES: #13 (resolves #20)\" has the words \"FIXES: #13\", so GitHub closes #13 when the pull request merges. Reword the sentence, such as from \"the pull request that fixed #13\" to \"the pull request for #13\"." \
+  "The line \"Closes #12, and FIXES: #13 (resolves #20)\" has the words \"resolves #20\", so GitHub closes #20 when the pull request merges. Reword the sentence, such as from \"the pull request that fixed #20\" to \"the pull request for #20\"."
+
 # The template's headings, and the text under them
 expect_errors "Without the heading \"What changed and why\"" "${filled_in/"## What changed and why"/## What changed}" \
   "$(no_heading "What changed and why")"
