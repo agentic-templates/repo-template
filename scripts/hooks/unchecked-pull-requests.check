@@ -9,40 +9,16 @@ source "${BASH_SOURCE[0]%/*}/helpers.bash"
 # shellcheck source=scripts/hooks/check-passed.bash
 source "${BASH_SOURCE[0]%/*}/check-passed.bash"
 
-# The flags that take a value, as gh pr create --help lists them.
-flags_with_value=" -a --assignee --attach -B --base -b --body -F --body-file -H --head -l --label -m --milestone -p --project --recover -r --reviewer -T --template -t --title -R --repo "
-
 not_checked="Blocked: scripts/check hasn't passed on these files. Run it, fix what it reports, and open the pull request again."
 not_committed="Blocked: scripts/check passed on the files on disk, but some of their changes aren't committed. Commit them first, and then run gh pr create in a command of its own."
 
 check_gh_pr_create() {
-  local i word branch="" head_tree pull_request_tree record passed_tree disk_tree
-  if [[ ${command_words[0]##*/} != gh || ${command_words[1]:-} != pr ]]; then
+  local branch head_tree pull_request_tree record passed_tree disk_tree
+  if ! opens_pull_request; then
     return 0
   fi
-  if [[ ${command_words[2]:-} != create && ${command_words[2]:-} != new ]]; then
-    return 0
-  fi
-  # The word after a flag that takes a value is that value, even if it starts with a dash.
-  for ((i = 3; i < ${#command_words[@]}; i++)); do
-    word=${command_words[i]}
-    case $word in
-      -h | --help | --dry-run) return 0 ;;
-      -H | --head)
-        branch=${command_words[i + 1]:-}
-        i=$((i + 1))
-        ;;
-      --head=*) branch=${word#--head=} ;;
-      -*=*) ;;
-      -*)
-        if [[ $flags_with_value == *" $word "* ]]; then
-          i=$((i + 1))
-        fi
-        ;;
-    esac
-  done
   # --head can name the branch as <user>:<branch>.
-  branch=${branch#*:}
+  branch=${pr_head#*:}
 
   # Cursor doesn't send the folder the agent works in, so for Cursor the hook's own folder counts.
   cd -- "${cwd:-.}" || return 0

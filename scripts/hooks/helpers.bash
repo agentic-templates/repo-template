@@ -50,6 +50,52 @@ drop_command_prefixes() {
   done
 }
 
+# The flags of gh pr create that take a value, as gh pr create --help lists them.
+pr_create_flags_with_value=" -a --assignee --attach -B --base -b --body -F --body-file -H --head -l --label -m --milestone -p --project --recover -r --reviewer -T --template -t --title -R --repo "
+
+# Succeeds if command_words opens a pull request with gh pr create, or its alias gh pr new, rather than show the
+# command's help or do a dry run. It sets each of these to the value of its flag, or to empty when the command
+# doesn't give the flag: pr_base, pr_head, pr_title, pr_body, pr_body_file and pr_repo. It sets pr_has_title and
+# pr_has_body to yes when the command gives --title and --body, because their values can be empty.
+# The word after a flag that takes a value is that value, even if it starts with a dash.
+opens_pull_request() {
+  local i word flag value
+  if [[ ${command_words[0]##*/} != gh || ${command_words[1]:-} != pr ]]; then
+    return 1
+  fi
+  if [[ ${command_words[2]:-} != create && ${command_words[2]:-} != new ]]; then
+    return 1
+  fi
+  pr_base="" pr_head="" pr_title="" pr_body="" pr_body_file="" pr_repo="" pr_has_title="" pr_has_body=""
+  for ((i = 3; i < ${#command_words[@]}; i++)); do
+    word=${command_words[i]}
+    case $word in
+      -h | --help | --dry-run) return 1 ;;
+      --*=*)
+        flag=${word%%=*}
+        value=${word#*=}
+        ;;
+      -*)
+        flag=$word
+        value=""
+        if [[ $pr_create_flags_with_value == *" $word "* ]]; then
+          value=${command_words[i + 1]:-}
+          i=$((i + 1))
+        fi
+        ;;
+      *) continue ;;
+    esac
+    case $flag in
+      -B | --base) pr_base=$value ;;
+      -H | --head) pr_head=$value ;;
+      -t | --title) pr_title=$value pr_has_title=yes ;;
+      -b | --body) pr_body=$value pr_has_body=yes ;;
+      -F | --body-file) pr_body_file=$value ;;
+      -R | --repo) pr_repo=$value ;;
+    esac
+  done
+}
+
 # Splits a shell command into simple commands, and calls a function with the words of each one:
 # for_each_simple_command <function> <command>
 # Simple commands end at &&, ||, ;, |, &, a parenthesis and a line break. Words end at spaces and tabs.
