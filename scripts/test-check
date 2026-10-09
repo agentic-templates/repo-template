@@ -625,12 +625,18 @@ run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "e
 run_case required_check_from_a_workflow_that_runs_on_both_events pass
 run_case required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue fail "error: scripts/configure-github requires the check title on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports title on pull_request: .github/workflows/pr-title.yml."
 
+# Writes the README of a new project, followed by the lines given: write_readme [<line>...]
+# The cases that test the README write a README of their own, because the setup replaces the template's README.
+write_readme() {
+  printf '%s\n' "# expense-tracker" "" "Records what you spend. It can't do anything yet." "$@" > "$copy/README.md"
+}
+
 hook_that_asks_for_another_gh_version() {
   replace_text scripts/hooks/session-start "minimum_gh_minor=98" "minimum_gh_minor=99"
 }
 
 readme_that_asks_for_another_gh_version() {
-  replace_text README.md "The GitHub CLI 2.98 or later" "The GitHub CLI 2.97 or later"
+  write_readme "" "You need the GitHub CLI 2.97 or later."
 }
 
 agents_md_without_the_gh_version() {
@@ -642,7 +648,7 @@ hook_without_the_gh_version() {
 }
 
 readme_of_a_new_project() {
-  printf '%s\n' "# expense-tracker" "" "Records what you spend. It can't do anything yet." > "$copy/README.md"
+  write_readme
 }
 
 run_case hook_that_asks_for_another_gh_version fail "error: scripts/hooks/session-start asks for gh 2.99, and AGENTS.md says gh 2.98. Use the same version in both."
@@ -651,7 +657,23 @@ run_case agents_md_without_the_gh_version fail "error: AGENTS.md doesn't name th
 run_case hook_without_the_gh_version fail "error: scripts/hooks/session-start doesn't set both minimum_gh_major and minimum_gh_minor, so it can't ask for gh 2.98, as AGENTS.md does."
 run_case readme_of_a_new_project pass
 
+# Writes the README of a new project, with a section "What you get" that names each page in docs/ and then each path given:
+# write_readme_with_what_you_get [<path>...]
+write_readme_with_what_you_get() {
+  local page
+  local -a lines=("" "## What you get" "")
+  for page in "$copy"/docs/*.md; do
+    lines+=("- \`${page#"$copy/"}\`")
+  done
+  for page in "$@"; do
+    lines+=("- \`$page\`")
+  done
+  write_readme "${lines[@]}"
+}
+
+# The README names the pages in docs/ before the case adds the guide, so its section "What you get" leaves the guide out.
 guide_in_neither_list() {
+  write_readme_with_what_you_get
   printf '%s\n' "# Notes guide" "" "Ideas for later." > "$copy/docs/notes.md"
 }
 
@@ -660,7 +682,7 @@ page_whose_title_doesnt_end_in_guide() {
 }
 
 missing_page_in_what_you_get() {
-  replace_text README.md "## What you get" $'## What you get\n\n- `docs/missing.md`: a page that doesn\'t exist.'
+  write_readme_with_what_you_get docs/missing.md
 }
 
 missing_page_in_read_the_guides() {
