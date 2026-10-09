@@ -42,9 +42,8 @@ person="Ana <ana@example.com>"
 # Makes a new repository with no release, and a copy of the script and the files it reads in a first commit.
 new_repository() {
   rm -rf "$repository"
-  mkdir -p "$repository/scripts" "$repository/.github/workflows"
-  cp -p scripts/next-version scripts/title-types "$repository/scripts/"
-  cp .github/workflows/pr-title.yml "$repository/.github/workflows/"
+  mkdir -p "$repository/scripts"
+  cp -p scripts/next-version scripts/title-types scripts/check-title "$repository/scripts/"
   git -C "$repository" init --quiet
   git -C "$repository" add --all
   git -C "$repository" commit --quiet --author "$person" -m "chore: start the project"

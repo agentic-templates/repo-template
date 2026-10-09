@@ -23,74 +23,12 @@ edit_flags_with_value=" --add-assignee --add-blocked-by --add-blocking --add-lab
 
 type_label_rule="An issue has exactly one of the type labels bug, feature, maintenance and research, chosen by what changes for users, as \"Labels\" in AGENTS.md describes."
 heading_rule="An issue's body has the headings \"What should change\", \"Why\" and \"Done when\", and a research issue's body has \"Question\", \"What depends on the answer\" and \"Done when\" instead."
-give_the_body="Give the body with --body, or write it to a file and give the file with --body-file."
 label_commands="Blocked: scripts/configure-github creates the project's labels, the ones that \"Labels\" in AGENTS.md names. To add, change or remove a label, change both files in a pull request, as docs/rules.md describes, and a maintainer runs the script after the merge."
-
-# A here-document's delimiter, after << or <<-, and with or without quotes. Group 1 holds the - and group 3 the word.
-quote_characters=\'\"
-heredoc_operator="<<(-?)[[:blank:]]*([$quote_characters\\\\]?)([A-Za-z_][A-Za-z0-9_]*)[$quote_characters]?"
-# split_heredocs puts this character around a here-document's number. Commands don't contain it.
-marker=$'\037'
-heredoc_reference="$marker([0-9]+)$marker"
 
 # A Markdown heading at any level. Group 2 holds its text.
 heading_line='^ {0,3}#{1,6}([[:space:]]+(.*))?$'
 # The #s that can close a heading, after a space. Group 1 holds the text before them.
 closing_hashes='^(.*[^[:space:]])[[:space:]]+#+$'
-
-# Takes the bodies of the here-documents out of a command, because a body holds text and not commands, and a quote in
-# the text would end the word that holds it, such as the --body word in --body "$(cat <<'EOF' ... EOF)":
-# split_heredocs <command>
-# Sets command_text to the command without the bodies, with the marker, a number and the marker in place of each
-# delimiter, and heredocs to the bodies, in order. It takes each << as the start of a here-document, also in quoted
-# text outside $( ), where the shell doesn't.
-split_heredocs() {
-  local line rest match prefix body body_line index=0 count j
-  local -a lines=() dashes=() delimiters=()
-  command_text=""
-  heredocs=()
-  while IFS= read -r line; do
-    lines+=("$line")
-  done <<<"$1"
-  count=${#lines[@]}
-  while ((index < count)); do
-    rest=${lines[index]}
-    index=$((index + 1))
-    line=""
-    dashes=()
-    delimiters=()
-    while [[ $rest =~ $heredoc_operator ]]; do
-      match=${BASH_REMATCH[0]}
-      prefix=${rest%%"$match"*}
-      rest=${rest#*"$match"}
-      # <<< starts a string, not a here-document.
-      if [[ $prefix == *"<" ]]; then
-        line+=$prefix$match
-        continue
-      fi
-      line+="$prefix<<${BASH_REMATCH[1]}$marker$((${#heredocs[@]} + ${#delimiters[@]}))$marker"
-      dashes+=("${BASH_REMATCH[1]}")
-      delimiters+=("${BASH_REMATCH[3]}")
-    done
-    command_text+=$line$rest$'\n'
-    # The bodies follow the line, in the order of their operators. <<- removes the tabs at the start of each line.
-    for ((j = 0; j < ${#delimiters[@]}; j++)); do
-      body=""
-      while ((index < count)); do
-        body_line=${lines[index]}
-        index=$((index + 1))
-        if [[ -n ${dashes[j]} ]]; then
-          body_line=${body_line#"${body_line%%[!$'\t']*}"}
-        fi
-        if [[ $body_line == "${delimiters[j]}" ]]; then
-          break
-        fi
-        body+=$body_line$'\n'
-      done
-      heredocs+=("$body")
-    done
-  done
-}
 
 # Prints a list of words in prose, such as "bug and feature": join_words <word>...
 join_words() {
@@ -184,77 +122,6 @@ read_issue_command() {
   done
 }
 
-# Succeeds if an earlier part of the command writes a file, as a redirection names it: is_written <path>
-is_written() {
-  local file
-  for file in ${written_files[@]+"${written_files[@]}"}; do
-    if [[ $file == "$1" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-# Sets body to the text of a file, or blocks when the hook can't read the file before the command runs:
-# read_body_file <path as the command writes it>
-read_body_file() {
-  local path=$1
-  # The command's words come as written, so ~ is matched before the shell expands it.
-  # shellcheck disable=SC2088
-  case $path in
-    "~/"*) path=$HOME/${path#"~/"} ;;
-  esac
-  if is_written "$1" || [[ ! -f $path || ! -r $path ]]; then
-    block "Blocked: this hook checks the body file before the command runs, and $1 doesn't exist yet or the command writes it. Write the file in a command of its own first, and give its path without variables."
-  fi
-  body=$(<"$path")
-}
-
-# Sets body to the issue's body that the command gives, and body_may_expand to yes if the shell would change it, or
-# blocks when the hook can't read the body: read_body
-read_body() {
-  local rest i
-  body=""
-  case $body_source in
-    "")
-      block "Blocked: the command gives no body, so this hook can't check the issue's headings. $give_the_body"
-      ;;
-    text)
-      if [[ ! $body_word =~ $heredoc_reference ]]; then
-        body=$body_word
-        if [[ $body == *[\$\`]* ]]; then
-          body_may_expand=yes
-        fi
-        return 0
-      fi
-      # The text of each here-document in the word, such as "$(cat <<'EOF' ... EOF)"
-      rest=$body_word
-      while [[ $rest =~ $heredoc_reference ]]; do
-        body+=${heredocs[BASH_REMATCH[1]]}
-        rest=${rest#*"${BASH_REMATCH[0]}"}
-      done
-      ;;
-    file)
-      if [[ $body_file != - ]]; then
-        read_body_file "$body_file"
-        return 0
-      fi
-      # Standard input, from a here-document or a file
-      for ((i = 0; i < ${#redirections[@]}; i += 2)); do
-        if [[ ${redirections[i]} =~ ^0?\<\<-?$ && ${redirections[i + 1]} =~ $heredoc_reference ]]; then
-          body=${heredocs[BASH_REMATCH[1]]}
-          return 0
-        fi
-        if [[ ${redirections[i]} =~ ^0?\<$ ]]; then
-          read_body_file "${redirections[i + 1]}"
-          return 0
-        fi
-      done
-      block "Blocked: this hook can't read a body from standard input, other than from a here-document, so it can't check the issue's headings. $give_the_body"
-      ;;
-  esac
-}
-
 # Prints the text of each heading in a body, one to a line, without the spaces and #s at its end: headings_in <body>
 headings_in() {
   local line text
@@ -339,7 +206,7 @@ check_issue_create() {
   current_labels=()
   find_type_labels
   check_type_labels "the new issue" "Add it with --label <label>." "Keep one of them in --label."
-  read_body
+  read_body "the issue's headings"
   check_headings "the body of the new issue" "$body" ""
 }
 
@@ -353,7 +220,7 @@ check_issue_edit() {
     return 0
   fi
   if [[ -n $body_source ]]; then
-    read_body
+    read_body "the issue's headings"
   fi
   for issue in "${issue_arguments[@]}"; do
     answer=$(gh issue view "$issue" ${repository[@]+"${repository[@]}"} --json labels,body 2>/dev/null) || continue
@@ -378,13 +245,7 @@ check_issue_edit() {
 }
 
 check_simple_command() {
-  local i
-  # The files that the command writes, which the hook can't read before the command runs. >& joins two outputs.
-  for ((i = 0; i < ${#redirections[@]}; i += 2)); do
-    if [[ ${redirections[i]} == *">"* && ${redirections[i]} != *"&" ]]; then
-      written_files+=("${redirections[i + 1]}")
-    fi
-  done
+  record_written_files
   drop_command_prefixes "$@"
   if ((${#command_words[@]} < 3)) || [[ ${command_words[0]##*/} != gh ]]; then
     return 0

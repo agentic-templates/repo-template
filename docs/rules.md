@@ -7,6 +7,6 @@ This guide holds the rules for changing AGENTS.md, the guides in `docs/` and the
 - Leave out what the files show and how a mechanism works.
 - Before you remove a rule that still applies, find out why it was added, with `git log -S "<words>"`. Keep it if it prevents a mistake that happened, or records a decision that would be costly to make again.
 - Write a rule for the common case. When a rare case would need an exception, don't write one. Change the rule so that it covers that case too, or leave the case to the agent's judgment.
-- Prefer a hook, a check or a setting to a rule. Don't write a rule for what one of them enforces with a message that says what to do. If a check runs only in CI, state what it expects, so that nobody fails CI to learn it.
+- Prefer a hook, a check or a setting to a rule. Don't write a rule for what one of them enforces with a message that says what to do.
 - Agents follow rules less reliably as the number of rules grows. Aim to keep the rules that one session reads to about 250 sentences.
 - To add, rename or remove a label, change "Labels" in AGENTS.md, `scripts/configure-github` and every other file that names the label, in the same pull request.

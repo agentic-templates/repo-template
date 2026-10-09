@@ -7,6 +7,8 @@ source "${BASH_SOURCE[0]%/*}/testing.bash"
 source "$hooks_folder/check-passed.bash"
 
 # The cases run in repositories in a temporary folder, and git looks for no repository above it.
+# The repositories have no remote, so scripts/hooks/pull-request-rules.check allows each command that opens a pull
+# request with a title and body that it can read.
 base=$(cd "$(mktemp -d)" && pwd -P)
 trap 'rm -rf "$base"' EXIT
 export GIT_CEILING_DIRECTORIES=$base
@@ -43,13 +45,13 @@ forget_pass() {
 # The cases for the repository or worktree in the current folder, which starts with notes.txt committed.
 check_pull_requests() {
   forget_pass
-  expect_block Bash 'gh pr create --fill' "$not_checked"
-  expect_block Bash 'gh pr new --fill' "$not_checked"
+  expect_block Bash 'gh pr create --title "Add notes" --body "Closes #1"' "$not_checked"
+  expect_block Bash 'gh pr new --title "Add notes" --body "Closes #1"' "$not_checked"
 
   # A pass on the files of HEAD. A file that git doesn't track doesn't count.
   echo "Scratch" >scratch.txt
   record_pass
-  expect_allow Bash 'gh pr create --fill'
+  expect_allow Bash 'gh pr create --title "Add notes" --body "Closes #1"'
   expect_allow Bash 'gh pr new --title "Add notes" --body "Closes #1"'
 
   # A pass on changes that aren't committed: a change that isn't staged, and a new file that is
@@ -57,17 +59,17 @@ check_pull_requests() {
   echo "Plans" >plans.txt
   git add plans.txt
   record_pass
-  expect_block Bash 'gh pr create --fill' "$not_committed"
-  expect_block Bash 'git commit -am "Add plans" && gh pr create --fill' "$not_committed"
+  expect_block Bash 'gh pr create --title "Add notes" --body "Closes #1"' "$not_committed"
+  expect_block Bash 'git commit -am "Add plans" && gh pr create --title "Add notes" --body "Closes #1"' "$not_committed"
 
   # The same pass, once the changes are committed
   git commit --quiet -am "Add plans"
-  expect_allow Bash 'gh pr create --fill'
+  expect_allow Bash 'gh pr create --title "Add notes" --body "Closes #1"'
 
   # A change committed after the pass
   echo "Even more notes" >>notes.txt
   git commit --quiet -am "Add more notes"
-  expect_block Bash 'gh pr create --fill' "$not_checked"
+  expect_block Bash 'gh pr create --title "Add notes" --body "Closes #1"' "$not_checked"
 }
 
 # A repository with notes.txt committed on main and on the branch first, and a worktree on the branch work
@@ -94,20 +96,20 @@ check_pull_requests
 mkdir "$repository/docs"
 work_in "$repository/docs"
 forget_pass
-expect_block Bash 'gh pr create --fill' "$not_checked"
+expect_block Bash 'gh pr create --title "Add notes" --body "Closes #1"' "$not_checked"
 record_pass
-expect_allow Bash 'gh pr create --fill'
+expect_allow Bash 'gh pr create --title "Add notes" --body "Closes #1"'
 
 # The branch that --head names, alone or after a person's name and a colon. The branch first has only the first commit.
 work_in "$repository"
 record_pass
-expect_allow Bash 'gh pr create --head main --fill'
-expect_allow Bash 'gh pr create --head=main --fill'
-expect_allow Bash 'gh pr create -H jtmpl:main --fill'
-expect_block Bash 'gh pr create --head first --fill' "$not_checked"
-expect_block Bash 'gh pr create -H jtmpl:first --fill' "$not_checked"
+expect_allow Bash 'gh pr create --head main --title "Add notes" --body "Closes #1"'
+expect_allow Bash 'gh pr create --head=main --title "Add notes" --body "Closes #1"'
+expect_allow Bash 'gh pr create -H jtmpl:main --title "Add notes" --body "Closes #1"'
+expect_block Bash 'gh pr create --head first --title "Add notes" --body "Closes #1"' "$not_checked"
+expect_block Bash 'gh pr create -H jtmpl:first --title "Add notes" --body "Closes #1"' "$not_checked"
 # With no branch of that name here, the hook has nothing to compare.
-expect_allow Bash 'gh pr create --head missing --fill'
+expect_allow Bash 'gh pr create --head missing --title "Add notes" --body "Closes #1"'
 
 # Commands that don't open a pull request, and flags whose values look like flags
 forget_pass
@@ -117,14 +119,14 @@ expect_allow Bash 'gh pr create --fill --dry-run'
 expect_allow Bash 'gh pr view 7'
 expect_allow Bash 'echo gh pr create'
 expect_block Bash 'gh pr create --title "--dry-run" --body "Notes"' "$not_checked"
-expect_block Bash 'GH_DEBUG=1 gh pr create --fill' "$not_checked"
+expect_block Bash 'GH_DEBUG=1 gh pr create --title "Add notes" --body "Closes #1"' "$not_checked"
 
 # Outside a git repository, and before a repository's first commit, the hook has nothing to compare.
 mkdir "$base/outside"
 work_in "$base/outside"
-expect_allow Bash 'gh pr create --fill'
+expect_allow Bash 'gh pr create --title "Add notes" --body "Closes #1"'
 git init --quiet --initial-branch=main "$base/empty"
 work_in "$base/empty"
-expect_allow Bash 'gh pr create --fill'
+expect_allow Bash 'gh pr create --title "Add notes" --body "Closes #1"'
 
 finish_tests
