@@ -123,10 +123,30 @@ if [[ -n "$found_home_path" ]]; then
   exit 1
 fi
 
-# section prints a section of a Markdown file, and linked_guides prints the guides.
-# The size check and the check that every guide is linked there both use linked_guides, so that they agree on the guides.
-# shellcheck source=scripts/guides
-source scripts/guides
+# Prints the lines of a section of a Markdown file, between its "## " heading and the next one: section <file> <heading>
+section() {
+  local file=$1 heading=$2 line is_in_section=""
+  if [[ ! -f $file ]]; then
+    return 0
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == "## "* ]]; then
+      is_in_section=""
+      if [[ $line == "## $heading" ]]; then
+        is_in_section=yes
+      fi
+    elif [[ -n $is_in_section ]]; then
+      printf '%s\n' "$line"
+    fi
+  done < "$file"
+}
+
+# Prints each page that "Read the guides" in AGENTS.md links to, once. A link with an anchor,
+# as in docs/planning.md#triage-new-ideas, counts as a link to the page.
+# The size check and the check that every guide is linked there both use it, so that they agree on the guides.
+linked_guides() {
+  section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u
+}
 
 # Instruction files stay small.
 # The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
@@ -673,23 +693,22 @@ if [[ -f scripts/configure-github ]]; then
   done < <(lines_missing_from "$required" "$merge_group_checks")
 fi
 
-agents_md_gh_version=$(gh_version AGENTS.md gh)
-if [[ -z $agents_md_gh_version ]]; then
-  report_difference "AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". scripts/check compares it with other files, so add it."
+# The hooks read the gh version that the rules need from scripts/minimum-gh-version.
+# shellcheck source=scripts/minimum-gh-version
+source scripts/minimum-gh-version
+if [[ ! ${minimum_gh_version:-} =~ ^[0-9]+\.[0-9]+$ ]]; then
+  report_difference "scripts/minimum-gh-version doesn't set minimum_gh_version to a version written as <major>.<minor>, such as 2.98, so the hooks can't compare gh with it. Set it to the gh version that the rules need."
 else
+  agents_md_gh_version=$(gh_version AGENTS.md gh)
+  if [[ -z $agents_md_gh_version ]]; then
+    report_difference "AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". Add it, with the version in scripts/minimum-gh-version: $minimum_gh_version."
+  elif [[ $agents_md_gh_version != "$minimum_gh_version" ]]; then
+    report_difference "AGENTS.md asks for gh $agents_md_gh_version, and scripts/minimum-gh-version asks for gh $minimum_gh_version. Use the same version in both."
+  fi
   # Setup replaces the template's README with the project's, which may name no gh version.
   readme_gh_version=$(gh_version README.md "GitHub CLI")
-  if [[ -n $readme_gh_version && $readme_gh_version != "$agents_md_gh_version" ]]; then
-    report_difference "README.md asks for the GitHub CLI $readme_gh_version, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
-  fi
-  if [[ -f scripts/hooks/session-start ]]; then
-    hook_gh_major=$(sed -n 's/^minimum_gh_major=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
-    hook_gh_minor=$(sed -n 's/^minimum_gh_minor=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
-    if [[ -z $hook_gh_major || -z $hook_gh_minor ]]; then
-      report_difference "scripts/hooks/session-start doesn't set both minimum_gh_major and minimum_gh_minor, so it can't ask for gh $agents_md_gh_version, as AGENTS.md does. Set both to that version."
-    elif [[ $hook_gh_major.$hook_gh_minor != "$agents_md_gh_version" ]]; then
-      report_difference "scripts/hooks/session-start asks for gh $hook_gh_major.$hook_gh_minor, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
-    fi
+  if [[ -n $readme_gh_version && $readme_gh_version != "$minimum_gh_version" ]]; then
+    report_difference "README.md asks for the GitHub CLI $readme_gh_version, and scripts/minimum-gh-version asks for gh $minimum_gh_version. Use the same version in both."
   fi
 fi
 
