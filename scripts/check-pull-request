@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Checks the body of a pull request, which the title job in .github/workflows/pr-title.yml passes in BODY:
 # - Each line that closes an issue, such as "Closes #12", names an open issue in this repository, which gh looks up.
+# - No word that closes an issue comes right before an issue's number in the middle of a line, as in
+#   "the pull request that fixed #12", because GitHub closes that issue too.
 # - The body has the headings of .github/pull_request_template.md, "What changed and why" and "How it was checked",
 #   at any level, with text under each besides HTML comments.
 # It prints each problem as an error for GitHub Actions, and fails once it has checked everything.
@@ -17,9 +19,13 @@ report() {
   problem_count=$((problem_count + 1))
 }
 
-# The words that GitHub treats as closing an issue, at the start of a line, in any case.
-# Group 3 holds the issue's number.
-closing_line='^(close[sd]?|fix(es|ed)?|resolve[sd]?):? +#([0-9]+)'
+# The words that GitHub treats as closing an issue, in any case, and the number of the issue they close.
+closing_words='(close[sd]?|fix(es|ed)?|resolve[sd]?):? +#([0-9]+)'
+# Closing words at the start of a line. Group 3 holds the issue's number.
+closing_line="^$closing_words"
+# Closing words in the middle of a line, after a character that can't be part of a word.
+# Group 1 holds the closing words, and group 4 the issue's number.
+mid_line_closing="[^[:alnum:]_]($closing_words)"
 
 # Prints the number of the issue that a line closes, or nothing: closed_number <line>
 closed_number() {
@@ -51,6 +57,19 @@ check_closed_issue() {
   esac
 }
 
+# Reports each closing word that comes right before an issue's number in the middle of a line: check_mid_line <line>
+check_mid_line() {
+  local line=$1 rest=$1 words number
+  shopt -s nocasematch
+  while [[ $rest =~ $mid_line_closing ]]; do
+    words=${BASH_REMATCH[1]}
+    number=${BASH_REMATCH[4]}
+    report "The line \"$line\" has the words \"$words\", so GitHub closes #$number when the pull request merges. Reword the sentence, such as from \"the pull request that fixed #$number\" to \"the pull request for #$number\"."
+    rest=${rest#*"${BASH_REMATCH[0]}"}
+  done
+  shopt -u nocasematch
+}
+
 has_closing_line=""
 while IFS= read -r line; do
   number=$(closed_number "$line")
@@ -58,6 +77,7 @@ while IFS= read -r line; do
     has_closing_line=yes
     check_closed_issue "$number" "$line"
   fi
+  check_mid_line "$line"
 done <<<"$body"
 if [[ -z $has_closing_line ]]; then
   report "The body has no line that says which issue the pull request closes. Edit the body and add a line such as \"Closes #12\", with the number of the issue."
