@@ -113,6 +113,41 @@ record_that_cant_be_written() {
 
 run_case record_that_cant_be_written fail "error: the checks passed, but scripts/check can't record the pass in .git/check-passed, and a hook blocks opening a pull request without that record."
 
+# Cases for the check that each action pinned to a commit SHA has a version comment.
+# The SHA is a real commit of actions/checkout, because zizmor checks it when it has a GitHub token.
+
+checkout_sha=3d3c42e5aac5ba805825da76410c181273ba90b1
+
+# Writes .github/workflows/lint.yml, with a step that checks out the code. The step's uses: line is line 8:
+# write_checkout_workflow <uses: line>
+write_checkout_workflow() {
+  printf '%s\n' "name: Lint" "on: pull_request" "permissions: {}" "jobs:" "  lint:" "    runs-on: ubuntu-latest" "    steps:" \
+    "      - $1" "        with:" "          persist-credentials: false" > "$copy/.github/workflows/lint.yml"
+}
+
+pinned_action_without_a_comment() {
+  write_checkout_workflow "uses: actions/checkout@$checkout_sha"
+}
+
+pinned_action_with_a_comment_that_isnt_a_version() {
+  write_checkout_workflow "uses: actions/checkout@$checkout_sha # pinned"
+}
+
+pinned_action_without_a_comment_in_a_composite_action() {
+  mkdir -p "$copy/.github/actions/setup"
+  printf '%s\n' "name: Setup" "description: Checks out the code." "runs:" "  using: composite" "  steps:" \
+    "    - uses: actions/checkout@$checkout_sha" "      with:" "        persist-credentials: false" > "$copy/.github/actions/setup/action.yaml"
+}
+
+pinned_action_with_a_version_comment_in_quotes() {
+  write_checkout_workflow "uses: \"actions/checkout@$checkout_sha\" # v7.0.1"
+}
+
+run_case pinned_action_without_a_comment fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment. Write the version that the SHA pins in a comment after it, as in "# v5.0.0".'
+run_case pinned_action_with_a_comment_that_isnt_a_version fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment.'
+run_case pinned_action_without_a_comment_in_a_composite_action fail 'error: .github/actions/setup/action.yaml:6 pins actions/checkout to a commit SHA without a version comment.'
+run_case pinned_action_with_a_version_comment_in_quotes pass
+
 # Cases for the check that finds files that make a tool skip AGENTS.md.
 
 claude_md_in_the_root() {
