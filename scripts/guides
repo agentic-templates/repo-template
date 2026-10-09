@@ -1,0 +1,27 @@
+# shellcheck shell=bash
+# Finds the guides, the pages that "Read the guides" in AGENTS.md links to. scripts/check and scripts/try-rule
+# read them with linked_guides, so that they agree on the guides. Run it from the repository's root.
+
+# Prints the lines of a section of a Markdown file, between its "## " heading and the next one: section <file> <heading>
+section() {
+  local file=$1 heading=$2 line is_in_section=""
+  if [[ ! -f $file ]]; then
+    return 0
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == "## "* ]]; then
+      is_in_section=""
+      if [[ $line == "## $heading" ]]; then
+        is_in_section=yes
+      fi
+    elif [[ -n $is_in_section ]]; then
+      printf '%s\n' "$line"
+    fi
+  done < "$file"
+}
+
+# Prints each page that "Read the guides" in AGENTS.md links to, once. A link with an anchor,
+# as in docs/planning.md#triage-new-ideas, counts as a link to the page.
+linked_guides() {
+  section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u
+}
