@@ -37,24 +37,25 @@ cat >"$base/without-rule.jsonl" <<'OUTPUT'
 {"type":"result","subtype":"success","is_error":false,"duration_ms":59999,"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":999,"output_tokens":1},"modelUsage":{"test-model":{"inputTokens":0,"outputTokens":1,"cacheReadInputTokens":999,"cacheCreationInputTokens":0}}}
 OUTPUT
 
-# A stand-in for claude, which bin/claude links to, as the installer of Claude Code links it. It answers --version.
-# For a run, it waits up to 10 seconds until all 20 runs have started, and writes what it finds in its clone to a new
-# file in TEST_RECORDS, and its clone's and temporary folder's paths to TEST_FOLDERS. Then it prints the output for
-# a run with the rule or without it, depending on whether the clone's AGENTS.md holds the rule.
+# A stand-in for claude, which bin/claude links to, as the installer of Claude Code links it. It answers --version
+# with the name of its file. For a run, it waits up to 10 seconds until all 3 runs of a part have started, and writes
+# what it finds in its clone to a new file in TEST_RECORDS, and its clone's and temporary folder's paths to
+# TEST_FOLDERS. Then it prints the output for a run with the rule or without it, depending on whether the clone's
+# AGENTS.md holds the rule.
 # With TEST_FAILURE set to yes, a run with the rule prints no result, and a run without it fails.
 mkdir "$base/versions" "$base/bin" "$base/started" "$base/records"
 cat >"$base/versions/2.1.294" <<'STAND_IN'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ $* == --version ]]; then
-  echo "2.1.294 (Claude Code)"
+  echo "$(basename "$0") (Claude Code)"
   exit 0
 fi
 
 touch "$TEST_STARTED/$$"
 started_together=no
 for ((tries = 0; tries < 100; tries++)); do
-  if (($(ls "$TEST_STARTED" | wc -l) == 20)); then
+  if (($(ls "$TEST_STARTED" | wc -l) == 3)); then
     started_together=yes
     break
   fi
@@ -184,6 +185,11 @@ write "$base/stale.patch" "--- a/AGENTS.md
 
 mkdir "$repository/scripts"
 cp -p scripts/try-rule scripts/guides "$repository/scripts/"
+# A repository without the trial's commits, with a copy of the script too
+other_repository=$base/other-repository
+git init --quiet --initial-branch=main "$other_repository"
+mkdir "$other_repository/scripts"
+cp -p scripts/try-rule scripts/guides "$other_repository/scripts/"
 
 # What the stand-in finds in the clone of a run: expected_record <with-rule or without-rule>
 expected_record() {
@@ -240,11 +246,14 @@ Today's rule for the web.
 RECORD
 }
 
+# The copy of the script that run_try_rule runs
+try_rule=$repository/scripts/try-rule
+
 # Runs the copy of the script from $base, and sets status, output and errors: run_try_rule [<argument>...]
 run_try_rule() {
   rm -rf "${TMPDIR:?}"/* "${TEST_STARTED:?}"/* "${TEST_RECORDS:?}"/* "$TEST_FOLDERS"
   status=0
-  output=$(cd "$base" && PATH=$base/bin:$PATH "$repository/scripts/try-rule" "$@" 2>"$base/errors") || status=$?
+  output=$(cd "$base" && PATH=$base/bin:$PATH "$try_rule" "$@" 2>"$base/errors") || status=$?
   errors=$(<"$base/errors")
 }
 
@@ -264,57 +273,65 @@ trial_folder() {
   done
 }
 
-# The table that the script prints after the runs, without the lines before it: table <with-rule row> <without-rule row>
+# Moves the folder that the script keeps the output in to a folder of $base, because the next run_try_rule
+# removes everything in TMPDIR: keep_trial_folder <name>
+keep_trial_folder() {
+  mv "$(trial_folder)" "$base/$1"
+}
+
+# The table that the script prints after the runs, without the lines before it:
+# table <last run> <row of a run without the rule> [<row of a run with the rule>]
 table() {
-  local run
+  local last_run=$1 run
   echo "Claude Code 2.1.294, model test-model, in auto mode"
   echo
   echo "| Run | Branch | Time | Tokens | Output tokens |"
   echo "|---|---|---|---|---|"
-  for ((run = 1; run <= 10; run++)); do
-    echo "| $run | with the rule | $1 |"
-  done
-  for ((run = 11; run <= 20; run++)); do
-    echo "| $run | without the rule | $2 |"
+  for ((run = 1; run <= last_run; run++)); do
+    if ((run <= 3)); then
+      echo "| $run | without the rule | $2 |"
+    else
+      echo "| $run | with the rule | $3 |"
+    fi
   done
 }
 
-# Checks that the script ran the 20 runs, each in a clone of its own with the right files, and that it kept each
-# run's output: expect_runs <description>
+# Checks that the script ran 3 runs on a branch, each in a clone of its own with the right files, and that it kept
+# each run's output in the output folder: expect_runs <description> <with-rule or without-rule> <output folder>
 expect_runs() {
-  local description=$1 record with_rule=0 without_rule=0 folders run branch
+  local description=$1 branch=$2 trial=$3 record runs=0 folders leftover="" first_run=1 run output
   case_count=$((case_count + 1))
   for record in "$TEST_RECORDS"/*; do
-    if [[ -f $record && $(<"$record") == "$(expected_record with-rule)" ]]; then
-      with_rule=$((with_rule + 1))
-    elif [[ -f $record && $(<"$record") == "$(expected_record without-rule)" ]]; then
-      without_rule=$((without_rule + 1))
+    if [[ -f $record && $(<"$record") == "$(expected_record "$branch")" ]]; then
+      runs=$((runs + 1))
     elif [[ -f $record ]]; then
       echo "A run found this in its clone:" >&2
       cat "$record" >&2
     fi
   done
-  if ((with_rule != 10 || without_rule != 10)); then
-    fail "$description" "10 runs must find the clone of the branch with the rule, and 10 the branch without it, but $with_rule and $without_rule did. What the other runs found is above."
+  if ((runs != 3)); then
+    fail "$description" "all 3 runs must find the clone of the branch $branch, but $runs did. What the other runs found is above."
     return
   fi
   folders=$(sort -u "$TEST_FOLDERS" | wc -l)
-  if ((folders != 40)); then
-    fail "$description" "each of the 20 runs must have a clone and a temporary folder of its own, but they had $folders folders: $(<"$TEST_FOLDERS")"
+  if ((folders != 6)); then
+    fail "$description" "each of the 3 runs must have a clone and a temporary folder of its own, but they had $folders folders: $(<"$TEST_FOLDERS")"
     return
   fi
-  if [[ $(ls "$TMPDIR") != "$(basename "$(trial_folder)")" ]]; then
+  if [[ $(dirname "$trial") == "$TMPDIR" ]]; then
+    leftover=$(basename "$trial")
+  fi
+  if [[ $(ls "$TMPDIR") != "$leftover" ]]; then
     fail "$description" "scripts/try-rule must remove the clones and temporary folders, and keep only the folder with the output, but it left: $(ls "$TMPDIR")"
     return
   fi
-  for ((run = 1; run <= 20; run++)); do
-    if ((run <= 10)); then
-      branch=with-rule
-    else
-      branch=without-rule
-    fi
-    if ! cmp -s "$(trial_folder)/$(printf 'run-%02d' "$run").jsonl" "$base/$branch.jsonl"; then
-      fail "$description" "scripts/try-rule must keep the output of run $run, the stand-in's output for a run $branch, in $(trial_folder)/$(printf 'run-%02d' "$run").jsonl."
+  if [[ $branch == with-rule ]]; then
+    first_run=4
+  fi
+  for ((run = first_run; run < first_run + 3; run++)); do
+    output=$trial/$(printf 'run-%02d' "$run").jsonl
+    if ! cmp -s "$output" "$base/$branch.jsonl"; then
+      fail "$description" "scripts/try-rule must keep the output of run $run, the stand-in's output for a run $branch, in $output."
       return
     fi
   done
@@ -340,39 +357,91 @@ expect_stop() {
   fi
 }
 
+# The line that the script prints when it starts the runs: started_line <with or without> <output folder>
 started_line() {
-  echo "Started 20 runs, 10 with the rule and 10 without it. Their output goes to $(trial_folder)."
+  echo "Started 3 runs $1 the rule. Their output goes to $2."
 }
 
-# A trial, with the patch and the prompt given as paths from the folder that the script starts in
-run_try_rule --model test-model "$start_commit" rule.patch prompt.md
-expect_runs "In a trial"
-expect_result "In a trial" 0 "$(started_line)"$'\n\n'"$(table "14 min 33 s | 2,550,274 | 19,262" "0 min 59 s | 1,000 | 1")" ""
+# The errors that the script reports for 3 runs that failed, from the first: failed_runs <first run> <output folder>
+failed_runs() {
+  local run file
+  for ((run = $1; run < $1 + 3; run++)); do
+    file=$2/$(printf 'run-%02d' "$run")
+    if ((run <= 3)); then
+      echo "error: run $run exited with code 1. Its errors are in $file.err, and its output in $file.jsonl."
+    else
+      echo "error: run $run ended without a result, so the table has no time or tokens for it. Its output is in $file.jsonl."
+    fi
+  done
+}
 
-# A trial whose runs fail. The runs with the rule print no result, and the runs without it exit with code 1.
+without_rule_row="0 min 59 s | 1,000 | 1"
+with_rule_row="14 min 33 s | 2,550,274 | 19,262"
+
+# The runs without the rule, with the patch and the prompt given as paths from the folder that the script starts in
+run_try_rule --model test-model "$start_commit" rule.patch prompt.md
+expect_runs "In the runs without the rule" without-rule "$(trial_folder)"
+expect_result "In the runs without the rule" 0 "$(started_line without "$(trial_folder)")"$'\n\n'"$(table 3 "$without_rule_row")"$'\n\n'"To run the prompt 3 times with the rule, run: scripts/try-rule --with-rule $(trial_folder)" ""
+keep_trial_folder trial
+
+# The runs with the rule, after main on origin changed a guide, the repository fetched that change, and claude on the
+# PATH changed to another version. The runs must still get the main and the version of the runs without the rule.
+cp -p "$base/versions/2.1.294" "$base/versions/2.1.295"
+ln -sf ../versions/2.1.295 "$base/bin/claude"
+write "$other_clone/docs/new.md" "# Newer guide"
+git -C "$other_clone" commit --quiet --all -m "docs: retitle the guide"
+git -C "$other_clone" push --quiet origin main
+git -C "$repository" fetch --quiet origin main
+run_try_rule --with-rule trial
+ln -sf ../versions/2.1.294 "$base/bin/claude"
+expect_runs "In the runs with the rule" with-rule "$base/trial"
+expect_result "In the runs with the rule" 0 "$(started_line with "$base/trial")"$'\n\n'"$(table 6 "$without_rule_row" "$with_rule_row")" ""
+
+# Runs with the rule that fail, with the folder given as a full path. They print no result.
+TEST_FAILURE=yes run_try_rule --with-rule "$base/trial"
+expect_result "In runs with the rule that fail" 1 "$(started_line with "$base/trial")"$'\n\n'"$(table 6 "$without_rule_row" " |  | ")" \
+  "$(failed_runs 4 "$base/trial")"
+
+# Runs without the rule that fail, with the patch and the prompt given as full paths. They exit with code 1.
+# The script prints no command for the runs with the rule, which then don't start.
 TEST_FAILURE=yes run_try_rule --model test-model "$start_commit" "$base/rule.patch" "$base/prompt.md"
-expected_errors=""
-for ((run = 1; run <= 20; run++)); do
-  file=$(trial_folder)/$(printf 'run-%02d' "$run")
-  if ((run <= 10)); then
-    expected_errors+="error: run $run ended without a result, so the table has no time or tokens for it. Its output is in $file.jsonl."
-  else
-    expected_errors+="error: run $run exited with code 1. Its errors are in $file.err, and its output in $file.jsonl."
-  fi
-  if ((run < 20)); then
-    expected_errors+=$'\n'
-  fi
-done
-expect_result "In a trial whose runs fail" 1 "$(started_line)"$'\n\n'"$(table " |  | " " |  | ")" "$expected_errors"
+expect_result "In runs without the rule that fail" 1 "$(started_line without "$(trial_folder)")"$'\n\n'"$(table 3 " |  | ")" \
+  "$(failed_runs 1 "$(trial_folder)")"
+keep_trial_folder failed-trial
+run_try_rule --with-rule failed-trial
+expect_stop "With the folder of runs without the rule that failed" \
+  "error: failed-trial doesn't hold 3 runs without the rule that all finished. Run them with scripts/try-rule --model, and then run the command that it prints."
+
+# Runs without the rule on a version of Claude Code that is gone before the runs with the rule
+cp -p "$base/versions/2.1.294" "$base/versions/2.1.293"
+ln -sf ../versions/2.1.293 "$base/bin/claude"
+run_try_rule --model test-model "$start_commit" rule.patch prompt.md
+keep_trial_folder old-version-trial
+rm "$base/versions/2.1.293"
+ln -sf ../versions/2.1.294 "$base/bin/claude"
+run_try_rule --with-rule old-version-trial
+expect_stop "When the version of Claude Code of the runs without the rule is gone" \
+  "error: can't find $base/versions/2.1.293, the version of Claude Code that ran the runs without the rule. Start the trial again with scripts/try-rule --model."
+
+# The runs with the rule in a repository that doesn't have the commits of the runs without the rule
+try_rule=$other_repository/scripts/try-rule
+run_try_rule --with-rule trial
+try_rule=$repository/scripts/try-rule
+expect_stop "In a repository without the commits of the runs without the rule" \
+  "error: this repository has no commit $start_commit, which the runs without the rule used. Run scripts/try-rule --with-rule in the repository that ran them."
 
 # What the script can't use: its arguments, the files, the commit, the patch and origin
-usage="error: scripts/try-rule takes these arguments, in this order: --model <model> <commit> <patch> <prompt file>. For example: scripts/try-rule --model claude-opus-5-5 1a2b3c4 rule.patch prompt.md"
+usage="error: scripts/try-rule takes these arguments, in this order: --model <model> <commit> <patch> <prompt file>. For example: scripts/try-rule --model claude-opus-5-5 1a2b3c4 rule.patch prompt.md. For the runs with the rule, it takes --with-rule and the output folder of the runs without it."
 run_try_rule
 expect_stop "With no arguments" "$usage"
 run_try_rule "$start_commit" rule.patch prompt.md
 expect_stop "Without the model" "$usage"
 run_try_rule test-model --model "$start_commit" rule.patch prompt.md
 expect_stop "With the model before --model" "$usage"
+run_try_rule --with-rule
+expect_stop "With --with-rule and no folder" "$usage"
+run_try_rule --with-rule trial failed-trial
+expect_stop "With --with-rule and two folders" "$usage"
 run_try_rule --model test-model "$start_commit" missing.patch prompt.md
 expect_stop "With a patch that doesn't exist" \
   "error: can't find the patch missing.patch. Pass the path of a file that holds the rule as a patch to main's AGENTS.md and guides."

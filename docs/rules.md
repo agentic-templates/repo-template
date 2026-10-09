@@ -18,6 +18,7 @@ A rule is anything in AGENTS.md or a guide that asks agents to do something. Try
 1. Write the mistake that the rule should prevent as a yes-or-no question about harm that an agent's run caused, such as "Does the run weaken a test?" Harm counts when someone has to fix or rework the run's result after the session, when a person has to step in during the session, or when the harm can't be undone. Results that someone has to fix or rework include code that's hard to read or change, text that a reader has to read twice, and a test that no longer guards anything. If no such question fits, the rule fails without a trial.
 2. Write a prompt for a task from real work where the rule applies, or write a task if real work has none. Paste the task's text, not an issue's number. Pick a commit where the task isn't done yet. If the task needs code that the commit doesn't have, such as a small project that you wrote for it, commit that code on top of the commit.
 3. Write the rule as a patch to main's AGENTS.md and guides.
-4. Run `scripts/try-rule`.
-5. Answer the question for each run from its output. The rule passes when the runs without it make the mistake at least 4 more times than the runs with it.
-6. Record the question, the prompt, the patch, the table that the script prints and each run's answer in the issue for the change.
+4. Run `scripts/try-rule`. It runs the task 3 times without the rule.
+5. Answer the question for each run from its output. If all 3 runs make the mistake, go on to step 6. Otherwise, the rule fails. Skip to step 7.
+6. Run the command that the script printed last. It runs the task 3 times with the rule. Answer the question for each of these runs. The rule passes when none of them makes the mistake.
+7. Record the question, the prompt, the patch and each run's answer in the issue for the change. Add the script's last table, which lists every run of the trial.
