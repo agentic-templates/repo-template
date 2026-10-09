@@ -33,7 +33,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.
 - `scripts/check-title`: checks that a pull request's title has the form of a commit subject.
-- `scripts/check-pull-request`: checks that a pull request's body closes one open issue and fills in the template, that its title and body pass the writing checks that `scripts/check` runs on files, and that no commit has a `Co-authored-by` trailer. The `title` job in `.github/workflows/pr-title.yml` runs it and `scripts/check-title`, and a hook runs both before `gh pr create`.
+- `scripts/check-pull-request`: checks that a pull request's body closes one open issue and fills in the template. It also checks the title and body for the writing problems that `scripts/check` finds in files, and the commits for a `Co-authored-by` trailer. The `title` job in `.github/workflows/pr-title.yml` runs it and `scripts/check-title`, and a hook runs both before `gh pr create`.
 - `scripts/check-main-rules`: fails when the rules for main no longer require a check that `scripts/configure-github` requires there. A hook runs it before each `gh pr merge`, and a workflow runs it each week.
 - `scripts/queue-auto-merge`: adds to the merge queue each open pull request whose checks have passed and whose auto-merge didn't add it. Step 2 of "Build the ready issues" in `docs/building.md` runs it.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
