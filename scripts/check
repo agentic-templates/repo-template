@@ -154,10 +154,30 @@ if [[ -n "$found_home_path" ]]; then
   exit 1
 fi
 
-# section prints a section of a Markdown file, and linked_guides prints the guides.
-# The size check and the check that every guide is linked there both use linked_guides, so that they agree on the guides.
-# shellcheck source=scripts/guides
-source scripts/guides
+# Prints the lines of a section of a Markdown file, between its "## " heading and the next one: section <file> <heading>
+section() {
+  local file=$1 heading=$2 line is_in_section=""
+  if [[ ! -f $file ]]; then
+    return 0
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ $line == "## "* ]]; then
+      is_in_section=""
+      if [[ $line == "## $heading" ]]; then
+        is_in_section=yes
+      fi
+    elif [[ -n $is_in_section ]]; then
+      printf '%s\n' "$line"
+    fi
+  done < "$file"
+}
+
+# Prints each page that "Read the guides" in AGENTS.md links to, once. A link with an anchor,
+# as in docs/planning.md#triage-new-ideas, counts as a link to the page.
+# The size check and the check that every guide is linked there both use it, so that they agree on the guides.
+linked_guides() {
+  section AGENTS.md "Read the guides" | { grep -o '](docs/[^)#]*' || true; } | sed 's/^](//' | sort -u
+}
 
 # Instruction files stay small.
 # The limits cover every tracked AGENTS.md, and the guides that "Read the guides" in the root AGENTS.md links to.
