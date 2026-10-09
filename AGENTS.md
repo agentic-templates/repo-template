@@ -36,6 +36,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/check-pull-request`: checks that a pull request's body closes one open issue and fills in the template. It also checks the title and body for the writing problems that `scripts/check` finds in files, and the commits for a `Co-authored-by` trailer. The `title` job in `.github/workflows/pr-title.yml` runs it and `scripts/check-title`, and a hook runs both before `gh pr create`.
 - `scripts/check-main-rules`: fails when the rules for main no longer require a check that `scripts/configure-github` requires there. A hook runs it before each `gh pr merge`, and a workflow runs it each week.
 - `scripts/queue-auto-merge`: adds to the merge queue each open pull request whose checks have passed and whose auto-merge didn't add it. Step 2 of "Build the ready issues" in `docs/building.md` runs it.
+- `scripts/clear-worktrees`: saves and removes each leftover worktree that holds a ready issue's branch. Step 1 of "Build the ready issues" in `docs/building.md` runs it.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
 - `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
