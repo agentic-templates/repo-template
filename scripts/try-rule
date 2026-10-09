@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Runs a rule's trial, as "Try a rule on agents" in docs/rules.md describes:
+# Runs a rule's trial, as "Try a rule on agents" in docs/rules.md describes, in two parts:
 # scripts/try-rule --model <model> <commit> <patch> <prompt file>
-# It makes two branches from the commit, each with origin/main's AGENTS.md files and guides in place of the
-# commit's own, and applies the patch to one of them. Then it runs the prompt with Claude Code 10 times on each
-# branch, all 20 runs at once, and prints each run's branch, time and tokens. It keeps the output of each run.
+# scripts/try-rule --with-rule <output folder>
+# Each part makes two branches from the commit, each with origin/main's AGENTS.md files and guides in place of the
+# commit's own, and applies the patch to one of them. The first part runs the prompt with Claude Code 3 times on the
+# branch without the rule, all at once, and prints each run's branch, time and tokens. It keeps the output of each run
+# in a new folder, with the commits, the patch, the prompt, the model and the version of Claude Code that it used. The
+# second part takes them from that folder and runs the prompt 3 times on the branch with the rule, so that its runs
+# differ from the first part's only in the rule, even when main or Claude Code changed in between. It prints the
+# table of all 6 runs.
 set -euo pipefail
 
-runs_per_branch=10
-run_count=$((2 * runs_per_branch))
+runs_per_branch=3
 # Each run gets this after the prompt, so that no run changes GitHub.
 github_request="Don't run any command that changes GitHub, such as git push, gh pr create or gh issue comment. Say what you would run instead."
 # Both branches get one commit with this message, so that the history doesn't show which branch a run has.
@@ -19,15 +23,32 @@ stop() {
   exit 1
 }
 
-if (($# != 5)) || [[ $1 != --model ]]; then
-  stop "scripts/try-rule takes these arguments, in this order: --model <model> <commit> <patch> <prompt file>. For example: scripts/try-rule --model claude-opus-5-5 1a2b3c4 rule.patch prompt.md"
-fi
-model=$2 commit=$3 patch=$4 prompt_file=$5
-if [[ ! -f $patch ]]; then
-  stop "can't find the patch $patch. Pass the path of a file that holds the rule as a patch to main's AGENTS.md and guides."
-fi
-if [[ ! -f $prompt_file ]]; then
-  stop "can't find the prompt file $prompt_file. Pass the path of a file that holds the prompt."
+if (($# == 5)) && [[ $1 == --model ]]; then
+  branch=without-rule
+  model=$2 commit=$3 patch=$4 prompt_file=$5
+  if [[ ! -f $patch ]]; then
+    stop "can't find the patch $patch. Pass the path of a file that holds the rule as a patch to main's AGENTS.md and guides."
+  fi
+  if [[ ! -f $prompt_file ]]; then
+    stop "can't find the prompt file $prompt_file. Pass the path of a file that holds the prompt."
+  fi
+elif (($# == 2)) && [[ $1 == --with-rule ]]; then
+  branch=with-rule
+  trial=$2
+  if [[ ! -f $trial/inputs ]]; then
+    stop "$trial doesn't hold $runs_per_branch runs without the rule that all finished. Run them with scripts/try-rule --model, and then run the command that it prints."
+  fi
+  trial=$(cd "$trial" && pwd -P)
+  # The first part writes these lines, in this order.
+  {
+    IFS= read -r model
+    IFS= read -r commit_sha
+    IFS= read -r main_sha
+    IFS= read -r claude
+  } <"$trial/inputs"
+  patch=$trial/rule.patch prompt_file=$trial/prompt.md
+else
+  stop "scripts/try-rule takes these arguments, in this order: --model <model> <commit> <patch> <prompt file>. For example: scripts/try-rule --model claude-opus-5-5 1a2b3c4 rule.patch prompt.md. For the runs with the rule, it takes --with-rule and the output folder of the runs without it."
 fi
 # The paths are relative to the folder that the script starts in, so it reads them before it changes folder.
 patch_path=$(cd "$(dirname "$patch")" && pwd -P)/$(basename "$patch")
@@ -39,28 +60,41 @@ source scripts/guides
 if ! command -v jq >/dev/null; then
   stop "scripts/try-rule needs jq to read the output of the runs. Install it: https://jqlang.org/download/"
 fi
-if ! claude=$(command -v claude); then
-  stop "can't find claude, the command that starts Claude Code, on the PATH. Install Claude Code, and run scripts/try-rule again."
-fi
 # Every run starts the file that claude links to, and turns off its own updates with DISABLE_AUTOUPDATER,
-# so that an update during the trial can't give the runs different versions.
-while [[ -L $claude ]]; do
-  link=$(readlink "$claude")
-  if [[ $link != /* ]]; then
-    link=$(dirname "$claude")/$link
+# so that an update during the trial can't give the runs different versions. The second part starts the same file.
+if [[ $branch == without-rule ]]; then
+  if ! claude=$(command -v claude); then
+    stop "can't find claude, the command that starts Claude Code, on the PATH. Install Claude Code, and run scripts/try-rule again."
   fi
-  claude=$link
-done
+  while [[ -L $claude ]]; do
+    link=$(readlink "$claude")
+    if [[ $link != /* ]]; then
+      link=$(dirname "$claude")/$link
+    fi
+    claude=$link
+  done
+  claude=$(cd "$(dirname "$claude")" && pwd -P)/$(basename "$claude")
+elif [[ ! -x $claude ]]; then
+  stop "can't find $claude, the version of Claude Code that ran the runs without the rule. Start the trial again with scripts/try-rule --model."
+fi
 version=$("$claude" --version)
 version=${version%% *}
 
-if ! git fetch --quiet origin main; then
-  stop "can't fetch main from origin, as git says above. Check the network and the remote, and run scripts/try-rule again."
+if [[ $branch == without-rule ]]; then
+  if ! git fetch --quiet origin main; then
+    stop "can't fetch main from origin, as git says above. Check the network and the remote, and run scripts/try-rule again."
+  fi
+  if ! commit_sha=$(git rev-parse --verify --quiet "$commit^{commit}"); then
+    stop "this repository has no commit $commit. Pass a commit from before the task is done."
+  fi
+  main_sha=$(git rev-parse origin/main)
+else
+  for sha in "$commit_sha" "$main_sha"; do
+    if ! git rev-parse --verify --quiet "$sha^{commit}" >/dev/null; then
+      stop "this repository has no commit $sha, which the runs without the rule used. Run scripts/try-rule --with-rule in the repository that ran them."
+    fi
+  done
 fi
-if ! commit_sha=$(git rev-parse --verify --quiet "$commit^{commit}"); then
-  stop "this repository has no commit $commit. Pass a commit from before the task is done."
-fi
-main_sha=$(git rev-parse origin/main)
 
 scratch=$(mktemp -d)
 temporary_folders=("$scratch")
@@ -105,34 +139,46 @@ make_clone() {
   rm -rf "$clone/.git/FETCH_HEAD" "$clone/.git/logs"
 }
 
-# Each run works in a folder whose name doesn't show its branch. The folder holds the clone, which has the
-# repository's name, and a temporary folder of the run's own. The runs with the rule come first.
-name=$(basename "$PWD")
-run_branches=()
-run_folders=()
-for ((run = 1; run <= run_count; run++)); do
-  branch=with-rule
-  if ((run > runs_per_branch)); then
-    branch=without-rule
+# The runs without the rule are runs 1 to 3, and the runs with it are runs 4 to 6.
+first_run=1
+if [[ $branch == with-rule ]]; then
+  first_run=$((runs_per_branch + 1))
+fi
+last_run=$((first_run + runs_per_branch - 1))
+
+# Prints the branch of a run, as the table names it: branch_of <run>
+branch_of() {
+  if (($1 <= runs_per_branch)); then
+    echo "without the rule"
+  else
+    echo "with the rule"
   fi
+}
+
+# Each run works in a folder whose name doesn't show its branch. The folder holds the clone, which has the
+# repository's name, and a temporary folder of the run's own.
+name=$(basename "$PWD")
+run_folders=()
+for ((run = first_run; run <= last_run; run++)); do
   folder=$(mktemp -d)
   temporary_folders+=("$folder")
   make_clone "$branch" "$folder/$name"
   mkdir "$folder/tmp"
-  run_branches+=("$branch")
   run_folders+=("$folder")
 done
 
-temporary_root=${TMPDIR:-/tmp}
-trial=$(mktemp -d "${temporary_root%/}/try-rule.XXXXXX")
+if [[ $branch == without-rule ]]; then
+  temporary_root=${TMPDIR:-/tmp}
+  trial=$(mktemp -d "${temporary_root%/}/try-rule.XXXXXX")
+fi
 # Prints the path of a run's output, without the extension: output_of <run>
 output_of() {
   printf '%s/run-%02d\n' "$trial" "$1"
 }
 
 pids=()
-for ((run = 1; run <= run_count; run++)); do
-  folder=${run_folders[run - 1]}
+for ((run = first_run; run <= last_run; run++)); do
+  folder=${run_folders[run - first_run]}
   (
     cd "$folder/$name"
     TMPDIR=$folder/tmp CLAUDE_CODE_TMPDIR=$folder/tmp DISABLE_AUTOUPDATER=1 "$claude" --model "$model" \
@@ -140,7 +186,7 @@ for ((run = 1; run <= run_count; run++)); do
   ) </dev/null >"$(output_of "$run").jsonl" 2>"$(output_of "$run").err" &
   pids+=("$!")
 done
-echo "Started $run_count runs, $runs_per_branch with the rule and $runs_per_branch without it. Their output goes to $trial."
+echo "Started $runs_per_branch runs $(branch_of "$first_run"). Their output goes to $trial."
 
 statuses=()
 for pid in "${pids[@]}"; do
@@ -170,18 +216,15 @@ with_commas() {
   printf '%s\n' "$number$grouped"
 }
 
+# The table has every run of the trial so far. The errors are only for this part's runs.
 echo
 echo "Claude Code $version, model $model, in auto mode"
 echo
 echo "| Run | Branch | Time | Tokens | Output tokens |"
 echo "|---|---|---|---|---|"
 run_errors=""
-for ((run = 1; run <= run_count; run++)); do
+for ((run = 1; run <= last_run; run++)); do
   output=$(output_of "$run")
-  branch="with the rule"
-  if [[ ${run_branches[run - 1]} == without-rule ]]; then
-    branch="without the rule"
-  fi
   time="" tokens="" output_tokens=""
   result=$(result_of "$output.jsonl") || result=""
   if [[ -n $result ]]; then
@@ -190,9 +233,12 @@ for ((run = 1; run <= run_count; run++)); do
     tokens=$(with_commas "$tokens")
     output_tokens=$(with_commas "$output_tokens")
   fi
-  printf '| %s | %s | %s | %s | %s |\n' "$run" "$branch" "$time" "$tokens" "$output_tokens"
+  printf '| %s | %s | %s | %s | %s |\n' "$run" "$(branch_of "$run")" "$time" "$tokens" "$output_tokens"
+  if ((run < first_run)); then
+    continue
+  fi
 
-  status=${statuses[run - 1]}
+  status=${statuses[run - first_run]}
   if ((status != 0)); then
     run_errors+="error: run $run exited with code $status. Its errors are in $output.err, and its output in $output.jsonl."$'\n'
   elif [[ -z $result ]]; then
@@ -202,4 +248,12 @@ done
 if [[ -n $run_errors ]]; then
   printf '%s' "$run_errors" >&2
   exit 1
+fi
+
+if [[ $branch == without-rule ]]; then
+  printf '%s\n' "$model" "$commit_sha" "$main_sha" "$claude" >"$trial/inputs"
+  cp "$patch_path" "$trial/rule.patch"
+  printf '%s\n' "$prompt" >"$trial/prompt.md"
+  echo
+  echo "To run the prompt $runs_per_branch times with the rule, run: scripts/try-rule --with-rule $trial"
 fi
