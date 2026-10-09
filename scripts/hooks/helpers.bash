@@ -54,9 +54,9 @@ drop_command_prefixes() {
 pr_create_flags_with_value=" -a --assignee --attach -B --base -b --body -F --body-file -H --head -l --label -m --milestone -p --project --recover -r --reviewer -T --template -t --title -R --repo "
 
 # Succeeds if command_words opens a pull request with gh pr create, or its alias gh pr new, rather than show the
-# command's help or do a dry run. It sets each of these to the value of its flag, or to empty when the command
-# doesn't give the flag: pr_base, pr_head, pr_title, pr_body and pr_body_file. It sets pr_has_title and
-# pr_has_body to yes when the command gives --title and --body, because their values can be empty.
+# command's help or do a dry run. It sets pr_base, pr_head and pr_title to the values of --base, --head and --title,
+# or to empty when the command doesn't give the flag, and pr_has_title to yes when it gives --title, whose value can
+# be empty. It sets body_source, body_word and body_file for read_body, and empties body_may_expand.
 # The word after a flag that takes a value is that value, even if it starts with a dash.
 opens_pull_request() {
   local i word flag value
@@ -66,7 +66,7 @@ opens_pull_request() {
   if [[ ${command_words[2]:-} != create && ${command_words[2]:-} != new ]]; then
     return 1
   fi
-  pr_base="" pr_head="" pr_title="" pr_body="" pr_body_file="" pr_has_title="" pr_has_body=""
+  pr_base="" pr_head="" pr_title="" pr_has_title="" body_source="" body_word="" body_file="" body_may_expand=""
   for ((i = 3; i < ${#command_words[@]}; i++)); do
     word=${command_words[i]}
     case $word in
@@ -89,8 +89,8 @@ opens_pull_request() {
       -B | --base) pr_base=$value ;;
       -H | --head) pr_head=$value ;;
       -t | --title) pr_title=$value pr_has_title=yes ;;
-      -b | --body) pr_body=$value pr_has_body=yes ;;
-      -F | --body-file) pr_body_file=$value ;;
+      -b | --body) body_source=text body_word=$value ;;
+      -F | --body-file) body_source=file body_file=$value ;;
     esac
   done
 }

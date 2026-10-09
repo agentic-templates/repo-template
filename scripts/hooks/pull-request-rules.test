@@ -34,8 +34,6 @@ STAND_IN
 chmod +x "$base/bin/gh"
 export PATH=$base/bin:$PATH
 
-unreadable="Blocked: the hook can't read the pull request's title and body from this command, so it can't check them. Give the title with --title, with no \$ or backtick in it. Write the body to a file outside the repository, give it with --body-file <file>, and run gh pr create again."
-
 # Prints the message that blocks a pull request with these errors: blocked <error>...
 blocked() {
   printf '%s\n' "Blocked: the checks on pull requests in CI would fail on this one:" "$@" "Fix each problem, and run gh pr create again."
@@ -106,20 +104,35 @@ co_authored="Commit $co_authored_commit \"feat: export the totals\" has a Co-aut
 expect_block Bash "gh pr create --head co-authored --title '$title' --body-file ../body.md" "$(blocked "$co_authored")"
 expect_block Bash "gh pr create -H jtmpl:co-authored --title '$title' --body-file ../body.md" "$(blocked "$co_authored")"
 
-# Titles and bodies that the hook can't read
-expect_block Bash "gh pr create --fill" "$unreadable"
-expect_block Bash "gh pr create --title '$title' --fill" "$unreadable"
-expect_block Bash "gh pr create --body-file ../body.md" "$unreadable"
-expect_block Bash "gh pr create --title \"feat: \$change\" --body-file ../body.md" "$unreadable"
-expect_block Bash "gh pr create --title '$title' --body-file - < ../body.md" "$unreadable"
-expect_block Bash "gh pr create --title '$title' --body-file \"\$TMPDIR/body.md\"" "$unreadable"
-expect_block Bash "gh pr create --title '$title' --body 'Closes #12 with \`scripts/check\`'" "$unreadable"
-expect_block Bash "gh pr create --title '$title' --body \"\$(cat <<'EOF'
-$body
+# Bodies from here-documents and standard input, with quotes in the text, which would end a quoted word
+quoted_body=${body/"skips the expenses"/skips the \"imported\" expenses}
+expect_allow Bash "gh pr create --title '$title' --body \"\$(cat <<'EOF'
+$quoted_body
 EOF
-)\"" "$unreadable"
+)\""
+expect_allow Bash "gh pr create --title '$title' --body-file - <<'EOF'
+$quoted_body
+EOF"
+expect_allow Bash "gh pr create --title '$title' --body-file - < ../body.md"
+
+# Titles and bodies that the hook reads as the command writes them, without filling in variables
+may_expand="This hook reads the title and body as the command writes them, without running \$( ) or filling in variables."
+expect_block Bash "gh pr create --title \"\$type: skip the expenses\" --body-file ../body.md" \
+  "$(blocked "The title \"\$type: skip the expenses\" doesn't follow the format \"<type>: <what changed>\". Edit the title to match. The types are feat, fix, docs, test, refactor, perf, build, ci, revert, chore.") $may_expand"
+expect_block Bash "gh pr create --title '$title' --body \"\$(cat ../body.md)\"" \
+  "$(blocked "$no_closing_line" "The body has no heading \"What changed and why\". Add it as .github/pull_request_template.md has it, and write under it what the template's comment asks for." "The body has no heading \"How it was checked\". Add it as .github/pull_request_template.md has it, and write under it what the template's comment asks for.") $may_expand"
+
+# Commands that give no title or no body, or a body file that the hook can't read before the command runs
+expect_block Bash "gh pr create --fill" "Blocked: the command gives no title, so this hook can't check it. Give the title with --title."
+expect_block Bash "gh pr create --body-file ../body.md" "Blocked: the command gives no title, so this hook can't check it. Give the title with --title."
+expect_block Bash "gh pr create --title '$title' --fill" \
+  "Blocked: the command gives no body, so this hook can't check the pull request's body. Give the body with --body, or write it to a file and give the file with --body-file."
 expect_block Bash "gh pr create --title '$title' --body-file ../missing.md" \
-  "Blocked: the hook can't read the file ../missing.md, which --body-file names, so it can't check the body. Write the body to the file in a command of its own first, and run gh pr create again."
+  "Blocked: this hook checks the body file before the command runs, and ../missing.md doesn't exist yet or the command writes it. Write the file in a command of its own first, and give its path without variables."
+# copy.md exists, and the command writes it before gh reads it.
+cp "$base/body.md" "$base/copy.md"
+expect_block Bash "cat ../body.md > ../copy.md && gh pr create --title '$title' --body-file ../copy.md" \
+  "Blocked: this hook checks the body file before the command runs, and ../copy.md doesn't exist yet or the command writes it. Write the file in a command of its own first, and give its path without variables."
 
 # Commands that don't open a pull request
 expect_allow Bash "gh pr create --fill --dry-run"

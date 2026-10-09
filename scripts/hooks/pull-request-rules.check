@@ -2,9 +2,9 @@
 # Blocks opening a pull request with gh pr create, or its alias gh pr new, when the title job in
 # .github/workflows/pr-title.yml would fail on it: when scripts/check-title fails on its title, or
 # scripts/check-pull-request on its title, body and commits. The message gives the scripts' errors.
-# - The hook reads the title from --title, and the body from --body or from the file that --body-file names. It blocks
-#   a command that gives them in another way, such as with --fill, or with a $ or a backtick in either, because it
-#   can't tell what gh would get.
+# - The hook reads the title from --title, and the body as read_body in helpers.bash reads it, as the command writes
+#   them, without running $( ) or filling in variables. It blocks a command that gives no title or no body, such as
+#   one with --fill.
 # - The pull request's commits are those on its branch, the one that --head names or HEAD, that aren't on the base
 #   branch on GitHub. The base branch is the one that --base names, or the one that origin/HEAD points to, and the
 #   hook fetches it from origin first. It allows the command when it can't find those commits, such as outside a
@@ -16,7 +16,7 @@ source "${BASH_SOURCE[0]%/*}/helpers.bash"
 # to the folder that the agent works in.
 scripts_folder=$(cd "${BASH_SOURCE[0]%/*}/.." && pwd)
 
-unreadable="Blocked: the hook can't read the pull request's title and body from this command, so it can't check them. Give the title with --title, with no \$ or backtick in it. Write the body to a file outside the repository, give it with --body-file <file>, and run gh pr create again."
+no_title="Blocked: the command gives no title, so this hook can't check it. Give the title with --title."
 
 # Sets base_commit and head_commit to the commits that the pull request compares, or fails when it can't find them.
 find_commits() {
@@ -38,48 +38,38 @@ find_commits() {
 }
 
 check_gh_pr_create() {
-  local title body problems="" output
+  local problems="" output message
   if ! opens_pull_request; then
     return 0
   fi
-  # Cursor doesn't send the folder the agent works in, so for Cursor the hook's own folder counts.
-  cd -- "${cwd:-.}" || return 0
-  if [[ -z $pr_has_title || $pr_title == *[\$\`]* ]]; then
-    block "$unreadable"
+  if [[ -z $pr_has_title ]]; then
+    block "$no_title"
   fi
-  title=$pr_title
-  if [[ -n $pr_body_file ]]; then
-    if [[ $pr_body_file == - || $pr_body_file == *[\$\`]* ]]; then
-      block "$unreadable"
-    fi
-    if [[ ! -f $pr_body_file || ! -r $pr_body_file ]]; then
-      block "Blocked: the hook can't read the file $pr_body_file, which --body-file names, so it can't check the body. Write the body to the file in a command of its own first, and run gh pr create again."
-    fi
-    body=$(<"$pr_body_file")
-  elif [[ -n $pr_has_body && $pr_body != *[\$\`]* ]]; then
-    body=$pr_body
-  else
-    block "$unreadable"
-  fi
-
+  read_body "the pull request's body"
   if ! find_commits; then
     return 0
   fi
   # The subshells drop the trap, which would otherwise turn every exit code of the scripts into 1.
-  if ! output=$(trap - ERR && TITLE=$title "$scripts_folder/check-title" 2>&1); then
+  if ! output=$(trap - ERR && TITLE=$pr_title "$scripts_folder/check-title" 2>&1); then
     problems+=$output$'\n'
   fi
-  if ! output=$(trap - ERR && TITLE=$title BODY=$body "$scripts_folder/check-pull-request" "$base_commit" "$head_commit" 2>&1); then
+  if ! output=$(trap - ERR && TITLE=$pr_title BODY=$body "$scripts_folder/check-pull-request" "$base_commit" "$head_commit" 2>&1); then
     problems+=$output$'\n'
   fi
-  if [[ -n $problems ]]; then
-    # The scripts mark each error for GitHub Actions.
-    problems=${problems//::error::/}
-    block "Blocked: the checks on pull requests in CI would fail on this one:"$'\n'"$problems""Fix each problem, and run gh pr create again."
+  if [[ -z $problems ]]; then
+    return 0
   fi
+  # The scripts mark each error for GitHub Actions.
+  message="Blocked: the checks on pull requests in CI would fail on this one:"$'\n'"${problems//::error::/}"
+  message+="Fix each problem, and run gh pr create again."
+  if [[ -n $body_may_expand || $pr_title == *[\$\`]* ]]; then
+    message+=" This hook reads the title and body as the command writes them, without running \$( ) or filling in variables."
+  fi
+  block "$message"
 }
 
 check_simple_command() {
+  record_written_files
   drop_command_prefixes "$@"
   if ((${#command_words[@]} == 0)); then
     return 0
@@ -89,5 +79,10 @@ check_simple_command() {
 
 read_input
 if [[ $tool_name == Bash ]]; then
-  for_each_simple_command check_simple_command "$shell_command"
+  # A relative path to a body file starts from the folder the agent works in, and git finds the repository from it.
+  # Cursor doesn't send that folder, so for Cursor the hook's own folder counts.
+  cd -- "${cwd:-.}" 2>/dev/null || exit 0
+  written_files=()
+  split_heredocs "$shell_command"
+  for_each_simple_command check_simple_command "$command_text"
 fi
