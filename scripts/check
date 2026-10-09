@@ -623,14 +623,14 @@ fi
 
 # shellcheck source=scripts/title-types
 source scripts/title-types
-if has_section AGENTS.md Commits && [[ -f .github/workflows/pr-title.yml ]]; then
+if has_section AGENTS.md Commits && [[ -f scripts/check-title ]]; then
   agents_md_types=$(listed_types)
   title_check_types=$(allowed_title_types)
   while IFS= read -r type; do
-    report_difference "\"Commits\" in AGENTS.md lists the type $type, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
+    report_difference "\"Commits\" in AGENTS.md lists the type $type, and the title check in scripts/check-title doesn't allow it. Add it to the types in scripts/check-title, or remove it from AGENTS.md."
   done < <(lines_missing_from "$agents_md_types" "$title_check_types")
   while IFS= read -r type; do
-    report_difference "the title check in .github/workflows/pr-title.yml allows the type $type, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in .github/workflows/pr-title.yml."
+    report_difference "the title check in scripts/check-title allows the type $type, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in scripts/check-title."
   done < <(lines_missing_from "$title_check_types" "$agents_md_types")
 fi
 

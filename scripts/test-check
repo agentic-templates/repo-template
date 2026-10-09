@@ -602,15 +602,15 @@ run_case star_label_outside_release_notes fail "error: .github/dependabot.yml na
 run_case agents_md_without_labels fail "error: AGENTS.md has no section \"Labels\", and scripts/check compares that section with other files. Add it, with the heading \"## Labels\"."
 
 title_check_without_a_type() {
-  replace_text .github/workflows/pr-title.yml "|perf|" "|"
+  replace_text scripts/check-title "|perf|" "|"
 }
 
 title_check_with_an_extra_type() {
-  replace_text .github/workflows/pr-title.yml "|chore\"" "|chore|wip\""
+  replace_text scripts/check-title "|chore\"" "|chore|wip\""
 }
 
-run_case title_check_without_a_type fail "error: \"Commits\" in AGENTS.md lists the type perf, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
-run_case title_check_with_an_extra_type fail "error: the title check in .github/workflows/pr-title.yml allows the type wip, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in .github/workflows/pr-title.yml."
+run_case title_check_without_a_type fail "error: \"Commits\" in AGENTS.md lists the type perf, and the title check in scripts/check-title doesn't allow it. Add it to the types in scripts/check-title, or remove it from AGENTS.md."
+run_case title_check_with_an_extra_type fail "error: the title check in scripts/check-title allows the type wip, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in scripts/check-title."
 
 # Writes .github/workflows/lint.yml, with one job that has a step named lint: write_workflow <event> <job key> [<job name>]
 write_workflow() {

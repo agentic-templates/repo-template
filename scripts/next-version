@@ -37,9 +37,9 @@ fi
 
 types=$(allowed_title_types | paste -sd '|' -)
 if [[ -z $types ]]; then
-  stop "can't find the types that the title check allows, on the line types=\"...\" in .github/workflows/pr-title.yml, so scripts/next-version can't read the titles' types. Put that line back."
+  stop "can't find the types that the title check allows, on the line types=\"...\" in scripts/check-title, so scripts/next-version can't read the titles' types. Put that line back."
 fi
-# A title's type and the ! before its colon, read as the title check in .github/workflows/pr-title.yml reads them.
+# A title's type and the ! before its colon, read as the title check in scripts/check-title reads them.
 # Group 1 holds the type, and group 3 the !.
 title_pattern="^($types)(\([^)]+\))?(!)?: [^ ]"
 
