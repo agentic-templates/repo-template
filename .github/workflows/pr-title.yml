@@ -21,8 +21,10 @@ jobs:
       contents: read
       issues: read
     steps:
+      # scripts/check-pull-request reads the pull request's commits, so the checkout fetches the whole history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Check that the title follows the rules for a commit subject
@@ -31,13 +33,16 @@ jobs:
         run: scripts/check-title
 
       # Dependabot's pull requests have no issue and no template, so this step skips them.
-      - name: Check that the body closes an open issue and fills in the template
+      # The checkout is GitHub's merge of the pull request into its base branch. The merge's first parent is the
+      # base branch, and its second the pull request's latest commit.
+      - name: Check the body, the prose of the title, and the commits
         if: github.event.pull_request.user.login != 'dependabot[bot]'
         env:
+          TITLE: ${{ github.event.pull_request.title }}
           BODY: ${{ github.event.pull_request.body }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: scripts/check-pull-request
+        run: scripts/check-pull-request HEAD^1 HEAD^2
 
   # Release notes group pull requests by this label, as .github/release.yml sets out.
   # Pull requests from forks and from Dependabot get a read-only token, so this job skips them.
