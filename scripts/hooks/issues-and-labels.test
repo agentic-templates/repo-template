@@ -44,12 +44,15 @@ write_issue() {
 }
 
 # Checks that the hook calls gh exactly as listed, one call to a line: expect_gh_calls <command> <calls>
+# forbidden-commands.check asks gh for its version before each gh command, so the check leaves that call out.
 expect_gh_calls() {
+  local gh_calls
   : >"$TEST_GH_CALLS"
   run_hook "$(sample_input claude-code Bash "$1")"
   case_count=$((case_count + 1))
-  if [[ $(<"$TEST_GH_CALLS") != "$2" ]]; then
-    echo "error: for $1, the hook must call gh as \"$2\", but it called: \"$(<"$TEST_GH_CALLS")\"" >&2
+  gh_calls=$(grep -v -x -e --version "$TEST_GH_CALLS" || true)
+  if [[ $gh_calls != "$2" ]]; then
+    echo "error: for $1, the hook must call gh as \"$2\", but it called: \"$gh_calls\"" >&2
     failed_cases=$((failed_cases + 1))
   fi
 }
