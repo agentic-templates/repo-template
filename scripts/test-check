@@ -589,7 +589,6 @@ star_label_outside_release_notes() {
 # Renames the section, and the names that quote it, so that the check of section names still passes.
 agents_md_without_labels() {
   replace_text AGENTS.md "## Labels" "## Label rules"
-  replace_text AGENTS.md '"Labels"' '"Label rules"'
   replace_text docs/rules.md '"Labels"' '"Label rules"'
 }
 

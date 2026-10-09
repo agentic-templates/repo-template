@@ -53,9 +53,7 @@ The `gh` commands in these rules need gh 2.98 or later. Check `gh --version` bef
 
 ## Labels
 
-Use only the labels that this section names.
-
-Every accepted issue has exactly one type label. Choose it by what changes for users:
+Choose an issue's type label by what changes for users:
 
 - `bug`: something is broken, such as a crash, a wrong result or docs that don't match the product.
 - `feature`: a change to what users can do or read, other than a fix. The sub-issues of a split feature are features too.
@@ -76,7 +74,7 @@ Dependabot adds `dependencies` to its own pull requests.
 
 If a maintainer asks for something that's bigger than one pull request or needs a decision along the way, triage it first, as "Triage new ideas" in `docs/planning.md` describes.
 
-1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If they do, open a new issue with `gh issue create`, and mention the closed one in it. If no issue asks for the change at all, open one too. Write its body under three headings, as the form in `.github/ISSUE_TEMPLATE/change.yml` does: "What should change", "Why" and "Done when". Make "Done when" a list of results that someone can check. Make sure it has one type label, as "Labels" describes. If a maintainer asks you to work on an issue outside a build run, remove `needs-triage` from it. If it has `ready`, also follow "Work on a ready issue outside a build run" in [docs/building.md](docs/building.md).
+1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If they do, open a new issue with `gh issue create`, and mention the closed one in it. If no issue asks for the change at all, open one too. Make the "Done when" section of its body a list of results that someone can check. If a maintainer asks you to work on an issue outside a build run, remove `needs-triage` from it. If it has `ready`, also follow "Work on a ready issue outside a build run" in [docs/building.md](docs/building.md).
 2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder, and each guide that "Read the guides" names for the change. Where the AGENTS.md files differ, the one closest to the file wins.
 4. Make the change. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer, and record it as "Record a vulnerability privately" in `docs/releasing.md` describes.
