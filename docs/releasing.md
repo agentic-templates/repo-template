@@ -39,23 +39,11 @@ When a maintainer asks you to check the security advisories, check them against 
 
 ## Record a vulnerability privately
 
-As soon as you find a vulnerability that isn't public yet, write its summary and its description to two files outside the repository with your tool for writing files, not with a shell command. If you have admin access, open a draft security advisory with them: `gh api --method POST repos/{owner}/{repo}/security-advisories -F summary=@<summary file> -F description=@<description file> -f 'vulnerabilities[][package][ecosystem]=other'`. Without it, report it privately: `gh api --method POST repos/{owner}/{repo}/security-advisories/reports -F summary=@<summary file> -F description=@<description file>`.
+As soon as you find a vulnerability that isn't public yet, write its summary and its description to two files outside the repository with your tool for writing files, not with a shell command. Then run `scripts/record-vulnerability <summary file> <description file>`. It records the vulnerability in a security advisory, and prints the advisory's GHSA ID and URL.
 
 ## Fix a security vulnerability
 
-1. Build the fix in the advisory's temporary private fork. If the advisory has no fork yet, an admin can create it with the commands below. GitHub copies each of the repository's branches into the fork, and step 1 of "Publish a release" would report a copy as a waiting fix. GitHub makes the copies after it creates the fork, so the commands wait until the fork has `main`, and then delete every other branch from the fork:
-
-   ```bash
-   fork=$(gh api --method POST "repos/{owner}/{repo}/security-advisories/<ghsa_id>/forks" --jq .full_name)
-   until gh api --paginate "repos/$fork/branches" --jq '.[].name' | grep -qx main; do
-     sleep 5
-   done
-   for branch in $(gh api --paginate "repos/$fork/branches" --jq '.[].name'); do
-     if [ "$branch" != main ]; then
-       gh api --method DELETE "repos/$fork/git/refs/heads/$branch" && echo "Deleted $branch"
-     fi
-   done
-   ```
+1. Run `scripts/create-private-fork <GHSA ID>` with the advisory's GHSA ID. The script needs admin access. If the advisory has no temporary private fork yet, the script creates one. It prints the fork's full name. Build the fix in that fork.
 2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
 3. The fix's issue, pull request and commits say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. Go on to step 4 below only once the merge queue has merged it, so that the release includes the fix.
 4. Publish the release in the same session.
