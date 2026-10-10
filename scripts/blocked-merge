@@ -1,0 +1,65 @@
+# shellcheck shell=bash
+# Reads only the review decision and current commit statuses. Code scanning analyses and check names alone don't
+# prove that a merge is blocked or that work needed to allow it is pending. Missing evidence stays unknown.
+read_blocked_merge() {
+  local number=$1 query
+  query=$(cat <<'GRAPHQL'
+query BlockedMerge($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      state isInMergeQueue mergeStateStatus headRefOid reviewDecision
+      commits(last: 1) {
+        nodes {
+          commit {
+            oid
+            status {
+              contexts { context state isRequired(pullRequestNumber: $number) commit { oid } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+GRAPHQL
+  )
+  gh api graphql -F owner='{owner}' -F repo='{repo}' -F number="$number" -f query="$query"
+}
+
+# Prints pending, a blocker, or unknown from one response and the head seen before checking required checks.
+# GitHub's commit status contexts describe the current status for each name, unlike a list of old check runs.
+# Reject duplicate contexts rather than guessing which attempt is current. Requested changes can be advisory,
+# so only REVIEW_REQUIRED proves a review blocker. A missing review decision does not disprove status evidence.
+blocked_merge_reason() {
+  local response=$1 head=$2
+  jq -r --arg head "$head" '
+    if (.errors // [] | length) > 0 then "unknown"
+    else .data.repository.pullRequest as $pr
+      | $pr.commits.nodes[0].commit as $commit
+      | if ($head | test("^[0-9a-f]{40}$") | not)
+          or ($pr.commits.nodes | length) != 1 or $pr.headRefOid != $head or $commit.oid != $head
+          or $pr.state != "OPEN" or $pr.isInMergeQueue != false or $pr.mergeStateStatus != "BLOCKED"
+        then "unknown"
+        elif $pr.reviewDecision == "REVIEW_REQUIRED" then "a required review is missing"
+        elif ($pr.reviewDecision as $review | [null, "APPROVED", "CHANGES_REQUESTED"] | index($review) == null)
+        then "unknown"
+        else $commit.status.contexts as $contexts
+          | if ($contexts | type) != "array"
+              or any($contexts[]; .commit.oid != $head or (.context | type) != "string" or .context == ""
+                or (.isRequired | type) != "boolean"
+                or (.state as $state | ["SUCCESS", "FAILURE", "ERROR", "PENDING", "EXPECTED"] | index($state) == null))
+            then "unknown"
+            else ($contexts | group_by(.context)) as $groups
+              | if any($groups[]; length != 1) then "unknown"
+                else [$contexts[] | select(.isRequired)] as $required
+                  | [$required[] | select(.state == "FAILURE" or .state == "ERROR")] as $failed
+                  | if ($failed | length) > 0 then
+                      "required status \"" + $failed[0].context + "\" is " + $failed[0].state
+                    elif any($required[]; .state == "PENDING" or .state == "EXPECTED") then "pending"
+                    else "unknown"
+                    end
+                end
+            end
+        end
+    end' <<<"$response"
+}
