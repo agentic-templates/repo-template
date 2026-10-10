@@ -5,9 +5,8 @@
 # and asks gh for the rest. It fails when a gh call fails. When it removes ready, it exits with code 0,
 # because a failed run on main's latest commit stops a release.
 set -euo pipefail
-
-type_labels=(bug feature maintenance research)
-status_labels=(needs-triage needs-breakdown needs-decision)
+# shellcheck source=scripts/issue-labels
+source "${BASH_SOURCE[0]%/*}/issue-labels"
 
 # Succeeds if the word is one of the other words: is_one_of <word> [<other word>...]
 is_one_of() {

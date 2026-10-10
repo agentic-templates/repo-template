@@ -12,12 +12,12 @@
 # an edit changes, and allows the edit when gh fails, such as without a network.
 # shellcheck source=scripts/hooks/helpers.bash
 source "${BASH_SOURCE[0]%/*}/helpers.bash"
+# shellcheck source=scripts/issue-labels
+source "${BASH_SOURCE[0]%/*}/../issue-labels"
 
-type_labels=(bug feature maintenance research)
 change_headings=("What should change" "Why" "Done when")
 research_headings=("Question" "What depends on the answer" "Done when")
 
-type_label_rule="An issue has exactly one of the type labels bug, feature, maintenance and research, chosen by what changes for users, as \"Labels\" in AGENTS.md describes."
 heading_rule="An issue's body has the headings \"What should change\", \"Why\" and \"Done when\", and a research issue's body has \"Question\", \"What depends on the answer\" and \"Done when\" instead."
 label_commands="Blocked: scripts/configure-github creates the project's labels, the ones that \"Labels\" in AGENTS.md names. To add, change or remove a label, change both files in a pull request, as docs/rules.md describes, and a maintainer runs the script after the merge."
 
@@ -39,6 +39,8 @@ join_words() {
   done
   printf '%s' "$text"
 }
+
+type_label_rule="An issue has exactly one of the type labels $(join_words "${type_labels[@]}"), chosen by what changes for users, as \"Labels\" in AGENTS.md describes."
 
 # Succeeds if a list holds a label. GitHub matches label names in any case: has_label <label> [<label in the list>]...
 has_label() {
