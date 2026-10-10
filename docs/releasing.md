@@ -1,7 +1,5 @@
 # Release guide
 
-This guide holds the steps for publishing a release and checking the security advisories, the steps for recording and fixing a security vulnerability that isn't public yet, and the rules for a workflow that publishes or deploys the project. [AGENTS.md](../AGENTS.md) says when each one applies.
-
 The steps that list or check security advisories need admin access, which `gh repo view --json viewerPermission` shows as `ADMIN`. Without it, ask the maintainer to do them.
 
 ## Publish a release
@@ -44,12 +42,10 @@ When a maintainer asks you to publish a release:
 5. Tell the maintainer about each advisory from step 1 that isn't published or closed.
 6. If you told the maintainer about any advisories in step 5, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
-A published release's notes stay editable, but fixing a mistake in its tag or files takes a new release.
-
 ## Protect the credentials that publish and deploy
 
 - Run the build in a job that can only read the repository. Give the credentials, or a token that can write, only to a separate job that uploads what the build made, so that code from the build's dependencies can't reach those credentials.
-- In the `release` environment, run the job that publishes a package to a registry or deploys the project. `scripts/configure-github` sets it up so that only release tags can use it, and each run waits for the maintainer's approval.
+- In the `release` environment, run the job that publishes a package to a registry or deploys the project.
 - Where the registry or host accepts GitHub's OpenID Connect login, such as PyPI's trusted publishing, use it. Tell the maintainer the exact steps to set it up on the registry or host.
 - Where the registry or host doesn't accept that login, ask the maintainer to store the job's token as a secret of the `release` environment, not of the repository.
 
@@ -85,5 +81,5 @@ As soon as you find a vulnerability that isn't public yet, write its summary and
    done
    ```
 2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
-3. The fix's issue, pull request and commits say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. As soon as its checks pass, merge it as step 7 of "Make a change" in AGENTS.md describes. Go on to step 4 below only once the merge queue has merged it, so that the release includes the fix.
+3. The fix's issue, pull request and commits say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. Go on to step 4 below only once the merge queue has merged it, so that the release includes the fix.
 4. Publish the release in the same session.
