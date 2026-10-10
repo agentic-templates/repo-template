@@ -6,32 +6,8 @@ The steps that list or check security advisories need admin access, which `gh re
 
 When a maintainer asks you to publish a release:
 
-1. Check whether a fix that isn't released yet is waiting in a security advisory's private fork. List the advisories with `gh api --paginate "repos/{owner}/{repo}/security-advisories"`. For each one that isn't published or closed and has a `private_fork`, check each branch of the fork. Run these commands, with `<fork>` replaced by the fork's `full_name`:
-
-   ```bash
-   base=origin/main
-   git fetch origin &&
-   git fetch --prune https://github.com/<fork> '+refs/heads/*:refs/private-fork/*' &&
-   for branch in $(git for-each-ref --format='%(refname)' refs/private-fork/); do
-     if ! tree=$(git merge-tree --write-tree "$base" "$branch"); then
-       echo "$branch: can't tell, because merging it into $base conflicts"
-     elif [ "$tree" = "$(git rev-parse "$base^{tree}")" ]; then
-       echo "$branch: nothing waiting"
-     else
-       echo "$branch: holds a fix that $base doesn't have"
-     fi
-   done
-   ```
-
-   For each branch that holds a fix, or that the commands can't tell about, ask the maintainer whether this release should include its fix. If so, merge it first, as steps 2 and 3 in "Fix a security vulnerability" describe. Then go on to step 2 below, so that the SHA you release includes the fix.
-2. After `git fetch`, `git rev-parse origin/main` gives the full SHA of main's latest commit. Check that the CI runs on that commit passed, and wait for any that are still running. `gh run list --commit <sha>` lists them. Ignore the "Dependabot Updates" runs. If one failed, stop and tell the maintainer. Keep using that SHA even if more pull requests merge while you wait. Also stop and tell the maintainer if code scanning has an open alert of high or critical severity, which this command lists:
-
-   ```bash
-   gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open" \
-     --jq '.[] | select(.rule.security_severity_level == "high" or .rule.security_severity_level == "critical")'
-   ```
-
-   Do the same if Dependabot has an open alert of high or critical severity, which `gh api "repos/{owner}/{repo}/dependabot/alerts?state=open&severity=high,critical"` lists.
+1. Run `scripts/waiting-fixes`. It lists each security advisory that isn't published, closed or withdrawn, and prints a line for each branch of the advisory's private fork. For each line that says `holds a fix` or `can't tell`, ask the maintainer whether this release should include the fix that may wait there. If so, merge it first, as steps 2 and 3 in "Fix a security vulnerability" describe. Then go on to step 2 below, so that the SHA you release includes the fix.
+2. Run `scripts/release-checks`. Its first line is the full SHA of main's latest commit, and its last line is `go`, `wait` or `stop`. While it prints `wait`, run `scripts/release-checks <sha>` with that SHA every minute, so that you keep the same SHA even if more pull requests merge. If it prints `stop`, stop and tell the maintainer what the lines before it say.
 3. Choose the version with `scripts/next-version <sha>`. If the script prints an error instead of a version, tell the maintainer the error. If the maintainer named a version that differs from the one the script printed, ask which one to publish.
 4. Publish the release with notes built from the merged pull requests:
    `gh release create <version> --target <sha> --generate-notes`
@@ -39,7 +15,7 @@ When a maintainer asks you to publish a release:
    If the project attaches files to its releases, such as binaries, add `--draft`. A draft doesn't start release workflows, so use `gh workflow run` to start the workflow that builds the files from `<sha>` and attaches them to the draft. Once that run has succeeded, publish the draft.
 
    If the release starts a workflow that waits for approval, such as one that publishes a package, tell the maintainer to approve it.
-5. Tell the maintainer about each advisory from step 1 that isn't published or closed.
+5. Tell the maintainer about each advisory that step 1 listed.
 6. If you told the maintainer about any advisories in step 5, tell the maintainer to start a new session to check whether they're fixed, because an agent performs worse when its context also holds the work of publishing the release.
 
 ## Protect the credentials that publish and deploy
@@ -53,8 +29,8 @@ When a maintainer asks you to publish a release:
 
 When a maintainer asks you to check the security advisories, check them against the latest release:
 
-1. List the advisories that aren't published or closed, as step 1 of "Publish a release" describes.
-2. For each advisory on that list, check whether its problem is still in the release. If the advisory has a private fork, check whether the release includes the fix in each of the fork's branches, with the commands from step 1 of "Publish a release" and `base` set to the release's tag instead of `origin/main`. Check each fix closely too, because a fix can be incomplete.
+1. Run `scripts/waiting-fixes <tag>`, with the latest release's tag, which `gh release view --json tagName --jq .tagName` prints. It lists the advisories as step 1 of "Publish a release" describes, but compares each branch of their private forks with the release instead of main.
+2. For each advisory on that list, check whether its problem is still in the release. For a branch of its fork, `nothing waiting` means that the release has every change in the branch, and `holds a fix` means that the release lacks some. Check each fix closely too, because a fix can be incomplete.
 3. For each advisory on the list, tell the maintainer whether you're sure the release fixes it, and how you checked.
 4. Publish an advisory only when the maintainer asks you to, and only once users can install the release that fixes it, because publishing shows attackers where the problem is. If a workflow that publishes a package or deploys hasn't succeeded for the release, which `gh run list` shows, tell the maintainer and don't publish the advisory. Do the same if you can't tell whether users can install the release, such as when an app store makes it available later.
 
