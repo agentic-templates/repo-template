@@ -73,7 +73,7 @@ split_label_value() {
 
 # Reads the flags and arguments of a gh issue command from command_words, from its fourth word on, into
 # issue_arguments, added_labels, removed_labels, repository, asks_for_help, body_source (empty, text or file),
-# body_word and body_file, and empties body_may_expand: read_issue_command <flags that take a value>
+# body_word, body_file and body_may_expand: read_issue_command <flags that take a value>
 read_issue_command() {
   local flags_with_value=$1 i word flag value
   local -a split_labels
@@ -105,7 +105,7 @@ read_issue_command() {
     esac
     split_labels=()
     case $flag in
-      -b | --body) body_source=text body_word=$value ;;
+      -b | --body) body_source=text body_word=$value body_may_expand=${command_word_may_expand[i]:-} ;;
       -F | --body-file) body_source=file body_file=$value ;;
       -l | --label | --add-label)
         split_label_value "$value"
