@@ -50,6 +50,32 @@ drop_command_prefixes() {
   done
 }
 
+# Moves repository flags between a gh command group and its subcommand just after the subcommand,
+# so that the checks read the same words and flags in either position. Other flags and groups stay as written.
+move_gh_repository_flags() {
+  local index=2
+  if ((${#command_words[@]} < 3)) || [[ ${command_words[0]##*/} != gh ]]; then
+    return 0
+  fi
+  case ${command_words[1]} in
+    pr | issue | label) ;;
+    *) return 0 ;;
+  esac
+  while ((index < ${#command_words[@]})); do
+    case ${command_words[index]} in
+      -R | --repo) index=$((index + 2)) ;;
+      --repo=*) index=$((index + 1)) ;;
+      *) break ;;
+    esac
+  done
+  # An incomplete flag or a command without a subcommand starts no subcommand check.
+  if ((index == 2 || index >= ${#command_words[@]})); then
+    return 0
+  fi
+  command_words=("${command_words[@]:0:2}" "${command_words[index]}"
+    "${command_words[@]:2:index-2}" "${command_words[@]:index+1}")
+}
+
 # The flags of gh api that take a value, as gh api --help lists them.
 api_flags_with_value=" --cache -F --field -H --header --hostname --input -q --jq -X --method -p --preview -f --raw-field -t --template "
 

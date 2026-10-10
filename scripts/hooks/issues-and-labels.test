@@ -284,4 +284,24 @@ expect_block Bash 'gh label clone jtmpl/other --force --repo jtmpl/project' "$la
 expect_allow Bash 'gh label list'
 expect_allow Bash 'echo gh label create urgent'
 
+# Moving the repository flag keeps creation, edit, lookup and label checks.
+for subcommand in create new; do
+  expect_repository_flags 0 "" issue "$subcommand" "--label feature --body '$change_body'"
+  expect_repository_flags 2 "Blocked: the new issue $no_type Add it with --label <label>." issue "$subcommand" "--body '$change_body'"
+  expect_repository_flags 2 "$no_body" issue "$subcommand" '--label feature'
+  expect_repository_flags 0 "" issue "$subcommand" '--help'
+done
+expect_repository_flags 2 "Blocked: issue 7 would have the type labels bug and feature. $type_label_rule Remove the others with --remove-label <label>." issue edit '7 --add-label feature'
+expect_repository_flags 0 "" issue edit '7 --add-label bug'
+expect_repository_flags 2 "$(lacking "the new body of issue 7" 'headings "What should change", "Why" and "Done when"' "What should change")" issue edit "7 --body 'Notes'"
+expect_repository_flags 0 "" issue edit '7 --help'
+for repository in '-R jtmpl/other' '--repo jtmpl/other' '--repo=jtmpl/other'; do
+  expect_gh_calls "gh issue $repository edit 7 --add-label bug" "issue view 7 --repo jtmpl/other --json labels,body"
+  expect_gh_calls "gh issue edit $repository 7 --add-label bug" "issue view 7 --repo jtmpl/other --json labels,body"
+done
+for subcommand in create edit delete clone; do
+  expect_repository_flags 2 "$label_commands" label "$subcommand" 'urgent'
+done
+expect_repository_flags 0 "" label list ''
+
 finish_tests

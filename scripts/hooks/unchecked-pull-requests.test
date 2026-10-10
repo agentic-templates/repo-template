@@ -48,11 +48,19 @@ check_pull_requests() {
   expect_block Bash 'gh pr create --title "Add notes" --body "Closes #1"' "$not_checked"
   expect_block Bash 'gh pr new --title "Add notes" --body "Closes #1"' "$not_checked"
 
+  for subcommand in create new; do
+    expect_repository_flags 2 "$not_checked" pr "$subcommand" '--title "Add notes" --body "Closes #1"'
+  done
+
   # A pass on the files of HEAD. A file that git doesn't track doesn't count.
   echo "Scratch" >scratch.txt
   record_pass
   expect_allow Bash 'gh pr create --title "Add notes" --body "Closes #1"'
   expect_allow Bash 'gh pr new --title "Add notes" --body "Closes #1"'
+
+  for subcommand in create new; do
+    expect_repository_flags 0 "" pr "$subcommand" '--title "Add notes" --body "Closes #1"'
+  done
 
   # A pass on changes that aren't committed: a change that isn't staged, and a new file that is
   echo "More notes" >>notes.txt

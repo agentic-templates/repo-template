@@ -98,6 +98,23 @@ expect_block Bash "gh pr create --title '$title' --body-file ../no-closing-line.
 expect_block Bash "git push && GH_DEBUG=1 gh pr new --body-file ../no-closing-line.md --title 'skip the expenses that were already imported'" \
   "$(blocked "$not_a_type" "$no_closing_line")"
 
+# Each repository flag form preserves the title and body checks, including the new alias.
+for subcommand in create new; do
+  expect_repository_flags 0 "" pr "$subcommand" "--title '$title' --body '$body'"
+  expect_repository_flags 2 "Blocked: the command gives no title, so this hook can't check it. Give the title with --title." pr "$subcommand" '--fill'
+  expect_repository_flags 2 "$(blocked "$no_closing_line")" pr "$subcommand" "--title '$title' --body-file ../no-closing-line.md"
+  expect_repository_flags 2 "$(blocked "$not_a_type")" pr "$subcommand" "--title 'skip the expenses that were already imported' --body-file ../body.md"
+  expect_repository_flags 0 "" pr "$subcommand" '--help'
+  expect_repository_flags 0 "" pr "$subcommand" '--fill --dry-run'
+done
+expect_repository_flags 0 "" pr view '7'
+for repository in '-R jtmpl/other' '--repo jtmpl/other' '--repo=jtmpl/other'; do
+  expect_allow Bash "echo gh pr $repository create"
+  expect_block Bash "echo \"\$(gh pr $repository create --fill)\"" \
+    "Blocked: the command gives no title, so this hook can't check it. Give the title with --title."
+  expect_allow Bash "echo '\$(gh pr $repository create --fill)'"
+done
+
 # The commits of the branch that --head names, alone or after a person's name and a colon
 co_authored_commit=$(git rev-parse --short co-authored)
 co_authored="Commit $co_authored_commit \"feat: export the totals\" has a Co-authored-by trailer, for Claude <noreply@anthropic.com>. Rewrite the commit without the trailer, such as with git commit --amend when it's the latest commit, and push the branch again with --force-with-lease."

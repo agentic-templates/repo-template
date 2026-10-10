@@ -157,6 +157,24 @@ expect_block Bash 'git fetch origin pull/7/head:pr-7' "Blocked: pull request 7 c
 expect_block Bash 'git fetch origin +refs/pull/7/merge' "Blocked: pull request 7 comes from a fork. $checkout_reason"
 expect_block Bash 'git -C app pull origin pull/7/head' "Blocked: pull request 7 comes from a fork. $checkout_reason"
 
+for subcommand in checkout co; do
+  expect_repository_flags 2 "Blocked: pull request 7 comes from a fork. Read it with gh pr diff 7 --repo jtmpl/other instead, because a checkout brings in its hook scripts and its AGENTS.md." pr "$subcommand" '7'
+done
+expect_repository_flags 2 "Blocked: pull request 7 $merge_reason" pr merge '7 --squash'
+expect_repository_flags 2 "Blocked: this branch's pull request $merge_reason" pr merge '--squash'
+for repository in '-R jtmpl/other' '--repo jtmpl/other' '--repo=jtmpl/other'; do
+  for command in "gh pr $repository checkout 7" "gh pr checkout $repository 7"; do
+    : >"$TEST_GH_CALLS"
+    run_hook "$(sample_input claude-code Bash "$command")"
+    case_count=$((case_count + 1))
+    gh_calls=$(grep -v -x -e --version "$TEST_GH_CALLS" || true)
+    if [[ $gh_calls != "pr view 7 --repo jtmpl/other --json isCrossRepository" ]]; then
+      echo "error: for $command, expected the lookup of pull request 7 in jtmpl/other, but got: $gh_calls" >&2
+      failed_cases=$((failed_cases + 1))
+    fi
+  done
+done
+
 # The pull request that -R names is the one that gh is asked about.
 : >"$TEST_GH_CALLS"
 run_hook "$(sample_input claude-code Bash 'gh pr checkout -R jtmpl/other 7')"
@@ -203,10 +221,15 @@ TEST_MAIN_RULES="check title"
 TEST_OTHER_MAIN_RULES="check"
 expect_block Bash 'gh pr merge -R jtmpl/other 7 --squash' "$no_title"
 expect_block Bash 'gh pr merge --repo=jtmpl/other --auto --squash' "$no_title"
+expect_repository_flags 2 "$no_title" pr merge '7 --squash'
+expect_repository_flags 0 "" pr merge '7 --disable-auto'
+
 expect_allow Bash 'gh pr merge 7 --squash'
 TEST_MAIN_RULES=""
 TEST_OTHER_MAIN_RULES="check title"
 expect_allow Bash 'gh pr merge --repo jtmpl/other 7 --squash'
+expect_repository_flags 0 "" pr merge '7 --squash'
+
 TEST_MAIN_RULES="check title"
 
 # Commands that only read a pull request, a checkout that asks the person to pick one, and a fetch of no one pull request

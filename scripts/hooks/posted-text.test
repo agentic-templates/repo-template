@@ -171,4 +171,20 @@ expect_allow Bash "gh issue comment 7 --body '$semicolon_line' --help"
 expect_allow Bash "echo gh issue comment 7 --body '$semicolon_line'"
 expect_allow Bash 'gh issue view 7 --comments'
 
+# Every command that posts text keeps its message with the repository flag before the subcommand.
+for template in "${body_commands[@]}" "${title_commands[@]}"; do
+  name=$(command_name "$template")
+  read -r gh_word group subcommand <<<"$name"
+  rest=${template#"$name "}
+  if [[ $rest == *'--title TEXT'* || $rest == *'-t TEXT'* ]]; then
+    problem=$(semicolon "The title \"$semicolon_line\"")
+    text=$semicolon_line
+  else
+    problem=$(semicolon "The line \"$semicolon_line\"")
+    text=$change_body$'\n'$semicolon_line
+  fi
+  expect_repository_flags 2 "$(blocked "$name" "$problem")" "$group" "$subcommand" "$(with_text "$rest" "$text")"
+  expect_repository_flags 0 "" "$group" "$subcommand" "$(with_text "$rest" "$change_body") --help"
+done
+
 finish_tests
