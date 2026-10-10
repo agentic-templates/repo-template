@@ -156,4 +156,33 @@ for TEST_LABELS in "feature ready" "" fail; do
   expect_allow Bash 'gh issue develop --list 12'
 done
 
+# The commands that print the token that gh uses
+prints_token="Blocked: this command prints the token that gh uses, and AGENTS.md says never to read or print secrets. gh commands use the token without it."
+# shellcheck disable=SC2016 # The commands are the text that the agent sends, so $( ) stays as written.
+prints_token_commands=(
+  'gh auth token'
+  'gh auth token -h github.com'
+  'gh auth token --user other'
+  'gh auth status -t'
+  'gh auth status --show-token'
+  'gh auth status --show-token=true'
+  'gh auth status -at'
+  'gh auth git-credential get'
+  'git credential fill'
+  'git -C ../other credential fill'
+  'export GH_TOKEN=$(gh auth token)'
+)
+for command in "${prints_token_commands[@]}"; do
+  expect_block Bash "$command" "$prints_token"
+done
+for command in 'gh auth token --help' 'gh auth status' 'gh auth status --active' 'gh auth status --show-token=false' \
+  'git credential approve' 'git commit -m "Block gh auth token"'; do
+  expect_allow Bash "$command"
+done
+expect_allow Bash "git commit --file - <<'EOF'
+feat: block the commands that print the token
+
+gh auth token
+EOF"
+
 finish_tests
