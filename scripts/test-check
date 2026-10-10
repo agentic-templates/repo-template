@@ -827,7 +827,8 @@ write_readme() {
 }
 
 agents_md_that_asks_for_another_gh_version() {
-  replace_text AGENTS.md "need gh 2.98 or later" "need gh 2.99 or later"
+  agents_md_without_the_gh_version
+  printf '%s\n' "The \`gh\` commands in these rules need gh 2.99 or later." >> "$copy/AGENTS.md"
 }
 
 readme_that_asks_for_another_gh_version() {
@@ -835,16 +836,17 @@ readme_that_asks_for_another_gh_version() {
 }
 
 agents_md_without_the_gh_version() {
-  replace_text AGENTS.md "need gh 2.98 or later" "need a recent gh"
+  local content line="The \`gh\` commands in these rules need gh 2.98 or later."
+  content=$(< "$copy/AGENTS.md")
+  printf '%s\n' "${content/"$line"/}" > "$copy/AGENTS.md"
 }
 
 minimum_gh_version_that_isnt_set() {
   replace_text scripts/minimum-gh-version "minimum_gh_version=" "needed_gh_version="
 }
 
-new_gh_version_in_every_file() {
+new_gh_version_in_readme() {
   replace_text scripts/minimum-gh-version "minimum_gh_version=2.98" "minimum_gh_version=2.99"
-  replace_text AGENTS.md "need gh 2.98 or later" "need gh 2.99 or later"
   write_readme "" "You need the GitHub CLI 2.99 or later."
 }
 
@@ -852,11 +854,11 @@ readme_of_a_new_project() {
   write_readme
 }
 
-run_case agents_md_that_asks_for_another_gh_version fail "error: AGENTS.md asks for gh 2.99, and scripts/minimum-gh-version asks for gh 2.98. Use the same version in both."
+run_case agents_md_that_asks_for_another_gh_version pass
 run_case readme_that_asks_for_another_gh_version fail "error: README.md asks for the GitHub CLI 2.97, and scripts/minimum-gh-version asks for gh 2.98. Use the same version in both."
-run_case agents_md_without_the_gh_version fail "error: AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". Add it, with the version in scripts/minimum-gh-version: 2.98."
+run_case agents_md_without_the_gh_version pass
 run_case minimum_gh_version_that_isnt_set fail "error: scripts/minimum-gh-version doesn't set minimum_gh_version to a version written as <major>.<minor>, such as 2.98, so the hooks can't compare gh with it."
-run_case new_gh_version_in_every_file pass
+run_case new_gh_version_in_readme pass
 run_case readme_of_a_new_project pass
 
 # Writes the README of a new project, with a section "What you get" that names each page in docs/ and then each path given:

@@ -18,8 +18,8 @@ If you can start agents that each work in their own clone or worktree, build sev
 4. Build the issue by its kind:
    - For `research`, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. Check each issue that the research issue blocks. If the answer changes what that issue asks for, add `needs-decision` to it and comment there with the decision it needs. Then close the research issue.
    - For `parent`, don't build anything. Close it if its "Done when" is met, and give it back if it isn't.
-   - For `left behind <pull request>`, finish that pull request: run each check that the definition of done asks for again, update its description, and turn on auto-merge.
-   - For `other`, make the change as steps 2 to 5 of "Make a change" in AGENTS.md describe, which end with opening the pull request. Once the change meets the definition of done in AGENTS.md, apart from CI, turn on auto-merge with `gh pr merge <number>`.
+   - For `left behind <pull request>`, finish that pull request: run `scripts/check` again, update its description, and turn on auto-merge.
+   - For `other`, make the change as steps 2 to 5 of "Make a change" in AGENTS.md describe, which end with opening the pull request. Once the change meets the definition of done in AGENTS.md, turn on auto-merge with `gh pr merge <number>`.
 
    Then go back to step 2.
 5. Give an issue back to the maintainer when you can't finish it, for example because it's unclear, against one of the rules in AGENTS.md or too big for one pull request, or because its pull request can't merge and you can't fix that. Comment on the issue with what you need, and remove your assignment with `gh issue edit <issue> --remove-assignee @me`. If it's too big, add `needs-breakdown`. Otherwise, if the issue is now blocked by another issue, add no status label, because a build run skips it until its blocking issues are closed. Otherwise, add `needs-decision`. If it has a pull request, close it with `gh pr close <number>`.

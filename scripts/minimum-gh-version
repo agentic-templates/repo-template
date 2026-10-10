@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # The oldest gh that the commands in the rules work with, written as <major>.<minor>. The hooks in scripts/hooks
-# read it from here, and scripts/check compares AGENTS.md and README.md with it.
+# read it from here, and scripts/check compares README.md with it.
 minimum_gh_version=2.98
 
 # Prints the version that the output of gh --version names, such as 2.97.0, if it's older than minimum_gh_version.
