@@ -5,6 +5,9 @@
 # pushes the branch unless the branch has an open pull request, and removes the worktree. It switches the folder it
 # runs in to origin/main instead of removing it. It prints each folder it left and why, and fails when it can't free
 # the folder it runs in. Step 1 of "Build the ready issues" in docs/building.md runs it.
+# Given an issue, as in scripts/clear-worktrees 12, it frees only that issue's branches, whether or not the issue has
+# the ready label, and it frees a locked worktree too. It fails when it leaves any folder that holds them. "Build the
+# ready issues" runs it this way for the issue of a helper that failed, and so has stopped.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -37,14 +40,27 @@ real_path() {
   (cd "$1" 2>/dev/null && pwd -P) || printf '%s\n' "$1"
 }
 
-# The script asks gh for the branches of all the ready issues before it changes anything, so that a failure of gh
-# leaves every folder as it was.
-if ! ready_issues=$(gh issue list --label ready --limit 200 --json number --jq '.[].number' 2>&1); then
-  stop "can't list the ready issues, because gh failed: $ready_issues"
+if (($# > 1)); then
+  stop "scripts/clear-worktrees takes at most one argument, the number of an issue, and it got $#."
 fi
-# Each line holds a branch of a ready issue, a tab and the issue's number.
+given_issue=""
+if (($# == 1)); then
+  if [[ ! $1 =~ ^[1-9][0-9]*$ ]]; then
+    stop "scripts/clear-worktrees takes the number of an issue, such as 12, and it got \"$1\"."
+  fi
+  given_issue=$1
+fi
+
+# The script asks gh for the branches of all the issues it frees before it changes anything, so that a failure of gh
+# leaves every folder as it was. Without an issue, it frees the branches of all the ready issues.
+if [[ -n $given_issue ]]; then
+  issues=$given_issue
+elif ! issues=$(gh issue list --label ready --limit 200 --json number --jq '.[].number' 2>&1); then
+  stop "can't list the ready issues, because gh failed: $issues"
+fi
+# Each line holds a branch of an issue that the script frees, a tab and the issue's number.
 issue_branches=""
-for issue in $ready_issues; do
+for issue in $issues; do
   if ! linked_branches=$(gh issue develop --list "$issue" 2>&1); then
     stop "can't list the branches of issue #$issue, because gh failed: $linked_branches"
   fi
@@ -56,7 +72,8 @@ for issue in $ready_issues; do
   done <<<"$linked_branches"
 done
 
-# Prints the ready issue whose branch this is, or fails if it's no ready issue's branch: issue_of <branch>
+# Prints the issue whose branch this is, or fails if it's the branch of no issue that the script frees:
+# issue_of <branch>
 issue_of() {
   local branch issue
   while IFS=$'\t' read -r branch issue; do
@@ -122,15 +139,15 @@ unfinished_operation() {
 }
 
 # Sets reason to why a folder must stay as it is, and fails, or succeeds if nothing keeps it. It doesn't look for a
-# merge or a rebase, because the script aborts those in the folder it runs in once nothing else keeps the folder:
-# check_folder <index>
+# merge or a rebase, because the script aborts those in the folder it runs in once nothing else keeps the folder.
+# Given an issue, a lock doesn't keep a folder, because the helper that locked it has stopped: check_folder <index>
 check_folder() {
   local path=${worktree_paths[$1]} lock=${worktree_locks[$1]} git_dir untracked file secret_files=""
-  if [[ $lock == locked ]]; then
+  if [[ -z $given_issue && $lock == locked ]]; then
     reason="it's locked, and the lock gives no reason."
     return 1
   fi
-  if [[ $lock == "locked "* ]]; then
+  if [[ -z $given_issue && $lock == "locked "* ]]; then
     reason="it's locked, and the lock gives this reason: ${lock#locked }"
     return 1
   fi
@@ -185,6 +202,16 @@ save_work() {
   fi
 }
 
+# Unlocks a worktree if it's locked, so that git can remove it. Sets reason and fails if git refuses:
+# unlock_worktree <index>
+unlock_worktree() {
+  local output
+  if [[ ${worktree_locks[$1]} != no ]] && ! output=$(git worktree unlock "${worktree_paths[$1]}" 2>&1); then
+    reason="git refused to unlock it: $output"
+    return 1
+  fi
+}
+
 # Aborts a merge or a rebase in the folder the script runs in. Sets reason and fails if git refuses.
 abort_merge_or_rebase() {
   local operation output
@@ -196,7 +223,8 @@ abort_merge_or_rebase() {
 }
 
 current_folder=$(pwd -P)
-is_current_folder_left=""
+# The script fails when it leaves the folder it runs in, and, given an issue, when it leaves any folder.
+exit_code=0
 for ((index = 0; index < ${#worktree_paths[@]}; index++)); do
   path=${worktree_paths[index]}
   branch=${worktree_branches[index]}
@@ -215,7 +243,7 @@ for ((index = 0; index < ${#worktree_paths[@]}; index++)); do
     if [[ -n $reason ]]; then
       echo "error: can't free $path, the folder that scripts/clear-worktrees runs in, which holds the branch of issue #$issue, because $reason" >&2
       echo "Save the work in that folder by hand, and switch it to another branch. Then run scripts/clear-worktrees again." >&2
-      is_current_folder_left=yes
+      exit_code=1
     else
       echo "Switched $path, the folder that scripts/clear-worktrees runs in, from the branch of issue #$issue to origin/main."
     fi
@@ -223,18 +251,20 @@ for ((index = 0; index < ${#worktree_paths[@]}; index++)); do
   fi
   if ((index == 0)); then
     reason="it's the repository's main folder."
-  elif check_folder "$index" && check_merge_or_rebase "$path" && save_work "$path" "$branch"; then
+  elif check_folder "$index" && check_merge_or_rebase "$path" && save_work "$path" "$branch" &&
+    unlock_worktree "$index"; then
     if ! output=$(git worktree remove "$path" 2>&1); then
       reason="git refused to remove it: $output"
     fi
   fi
   if [[ -n $reason ]]; then
     echo "Left $path, which holds the branch of issue #$issue, because $reason"
+    if [[ -n $given_issue ]]; then
+      exit_code=1
+    fi
   else
     echo "Removed $path, which held the branch of issue #$issue."
   fi
 done
 
-if [[ -n $is_current_folder_left ]]; then
-  exit 1
-fi
+exit "$exit_code"

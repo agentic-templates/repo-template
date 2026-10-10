@@ -93,12 +93,12 @@ push_to_github() {
   git -C "$clone" push --quiet origin "$1"
 }
 
-# Runs the copy of scripts/clear-worktrees in a folder, and sets status and output:
-# run_clear_worktrees <folder> [<branches with an open pull request>] [<ready issues, or fail>]
+# Runs the copy of scripts/clear-worktrees in a folder, with the arguments after the first three, and sets status and
+# output: run_clear_worktrees <folder> [<branches with an open pull request>] [<ready issues, or fail>] [<argument>...]
 run_clear_worktrees() {
   status=0
   output=$(TEST_READY_ISSUES=${3:-12 13} TEST_ISSUE_BRANCHES=$issue_branches TEST_OPEN_PULL_REQUESTS=${2:-} \
-    PATH=$base/bin:$PATH "$1/scripts/clear-worktrees" 2>&1) || status=$?
+    PATH=$base/bin:$PATH "$1/scripts/clear-worktrees" "${@:4}" 2>&1) || status=$?
 }
 
 # Starts a case: begin_case <description>
@@ -337,6 +337,67 @@ expect_equal "the start of the output" "${output%%: *}" "Left $case_dir/agent-1,
 expect_equal "the exit code" "$status" 0
 expect_equal "whether the worktree exists" "$(exists "$case_dir/agent-1")" yes
 expect_equal "the subject of the branch's last commit" "$(last_subject 12-fix-totals)" "$save_subject"
+
+begin_case "When it gets an issue, and worktrees hold the branches of that issue and of another ready issue"
+new_case
+add_worktree agent-1 12-fix-totals
+printf 'February: 80\n' >>"$case_dir/agent-1/totals.txt"
+add_worktree agent-2 13-export-csv
+printf 'March: 95\n' >>"$case_dir/agent-2/totals.txt"
+run_clear_worktrees "$case_dir/main" "" "12 13" 12
+expect_result 0 "Removed $case_dir/agent-1, which held the branch of issue #12."
+expect_equal "whether the worktree of issue #12 exists" "$(exists "$case_dir/agent-1")" no
+expect_equal "the subject of the last commit on the branch of issue #12" "$(last_subject 12-fix-totals)" "$save_subject"
+expect_equal "the branch of issue #12 on GitHub" "$(github_commit 12-fix-totals)" "$(local_commit 12-fix-totals)"
+expect_equal "the changes in the worktree of issue #13" "$(git -C "$case_dir/agent-2" status --porcelain)" " M totals.txt"
+expect_equal "the branch of issue #13" "$(local_commit 13-export-csv)" "$start"
+
+begin_case "When it gets an issue that no longer has ready, and a worktree holds the issue's branch"
+new_case
+add_worktree agent-1 12-fix-totals
+run_clear_worktrees "$case_dir/main" "" 13 12
+expect_result 0 "Removed $case_dir/agent-1, which held the branch of issue #12."
+expect_equal "whether the worktree exists" "$(exists "$case_dir/agent-1")" no
+
+begin_case "When it gets an issue, and a locked worktree holds the issue's branch"
+new_case
+add_worktree agent-1 12-fix-totals
+git -C "$case_dir/main" worktree lock --reason "claude agent agent-1 (pid 20928)" "$case_dir/agent-1"
+printf 'February: 80\n' >>"$case_dir/agent-1/totals.txt"
+run_clear_worktrees "$case_dir/main" "" "12 13" 12
+expect_result 0 "Removed $case_dir/agent-1, which held the branch of issue #12."
+expect_equal "whether the worktree exists" "$(exists "$case_dir/agent-1")" no
+expect_equal "the subject of the branch's last commit" "$(last_subject 12-fix-totals)" "$save_subject"
+expect_equal "the branch on GitHub" "$(github_commit 12-fix-totals)" "$(local_commit 12-fix-totals)"
+
+begin_case "When it gets an issue, and no worktree holds the issue's branch"
+new_case
+run_clear_worktrees "$case_dir/main" "" "12 13" 12
+expect_result 0 ""
+
+begin_case "When it gets an issue, and it has to leave the worktree that holds the issue's branch"
+new_case
+add_worktree agent-1 12-fix-totals
+printf 'February: 80\n' >>"$case_dir/agent-1/totals.txt"
+printf 'not a real key\n' >"$case_dir/agent-1/deploy-key.pem"
+run_clear_worktrees "$case_dir/main" "" "12 13" 12
+expect_result 1 "Left $case_dir/agent-1, which holds the branch of issue #12, because it has untracked files whose names suggest a secret: deploy-key.pem"
+expect_equal "the changes in the worktree" "$(git -C "$case_dir/agent-1" status --porcelain)" $' M totals.txt\n?? deploy-key.pem'
+expect_equal "the branch" "$(local_commit 12-fix-totals)" "$start"
+
+begin_case "When it gets two arguments"
+new_case
+add_worktree agent-1 12-fix-totals
+run_clear_worktrees "$case_dir/main" "" "12 13" 12 13
+expect_result 1 "error: scripts/clear-worktrees takes at most one argument, the number of an issue, and it got 2."
+expect_equal "whether the worktree exists" "$(exists "$case_dir/agent-1")" yes
+
+begin_case "When it gets an argument that isn't the number of an issue"
+new_case
+add_worktree agent-1 12-fix-totals
+run_clear_worktrees "$case_dir/main" "" "12 13" "#12"
+expect_result 1 "error: scripts/clear-worktrees takes the number of an issue, such as 12, and it got \"#12\"."
+expect_equal "whether the worktree exists" "$(exists "$case_dir/agent-1")" yes
 
 if ((failed_cases > 0)); then
   echo "error: $failed_cases of the $case_count cases in scripts/clear-worktrees.test failed. The errors above say which." >&2
