@@ -1,18 +1,14 @@
 #!/usr/bin/env bash
 # Adds to the merge queue each open pull request that auto-merge should have added and hasn't: auto-merge is on, its
-# merge state is CLEAN, so its checks have passed, and it isn't in the queue. GitHub usually adds such a pull request
-# within a minute, but sometimes never does. Turning auto-merge off and running gh pr merge again adds it at once.
-# It skips pull requests from forks, which a maintainer merges. It asks gh about the repository of this checkout,
-# or the one in GH_REPO. scripts/stuck-pull-requests runs it.
+# merge state is CLEAN, so its checks have passed, and it isn't in the queue. add_to_merge_queue in
+# scripts/merge-queue says how. It skips pull requests from forks, which a maintainer merges. It asks gh about the
+# repository of this checkout, or the one in GH_REPO. scripts/stuck-pull-requests runs it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/merge-queue
+source scripts/merge-queue
 
-# The hook that blocks a merge while the rules for main no longer require a check doesn't see the gh commands
-# that this script runs, so the script asks the same question first. Like the hook, it goes on when it can't tell.
-main_rules_status=0
-main_rules_problem=$(scripts/check-main-rules 2>&1) || main_rules_status=$?
-if ((main_rules_status == 1)); then
-  printf '%s\n' "$main_rules_problem" >&2
+if ! main_requires_checks; then
   echo "error: scripts/queue-auto-merge added no pull request to the merge queue, because of the error above. Go on with the other work, and list this in your report for the maintainer." >&2
   exit 1
 fi
@@ -47,14 +43,7 @@ while IFS=$'\t' read -r number is_from_fork is_in_queue merge_state has_auto_mer
   if [[ -z $number ]] || ! is_waiting_for_the_queue "$is_from_fork" "$is_in_queue" "$merge_state" "$has_auto_merge"; then
     continue
   fi
-  if ! answer=$(gh pr merge "$number" --disable-auto 2>&1); then
-    echo "error: can't turn off auto-merge on pull request $number, because gh failed: $answer" >&2
-    exit 1
-  fi
-  # With checks that have passed, gh pr merge adds the pull request to the queue.
-  if ! answer=$(gh pr merge "$number" 2>&1); then
-    echo "error: turned off auto-merge on pull request $number, but can't add it to the merge queue, because gh failed: $answer. Run gh pr merge $number to add it." >&2
-    exit 1
-  fi
+  # add_to_merge_queue prints its own error.
+  add_to_merge_queue "$number" true || exit 1
   echo "Added pull request $number to the merge queue. Its checks had passed, but auto-merge hadn't added it."
 done <<<"$pull_requests"

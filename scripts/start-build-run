@@ -17,6 +17,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/open-pull-requests
 source scripts/open-pull-requests
+# shellcheck source=scripts/merge-queue
+source scripts/merge-queue
 
 # Prints an error and stops: stop <message>
 stop() {
@@ -48,12 +50,7 @@ for issue in $assigned_issues; do
   fi
 done
 
-# The hook that blocks a merge while the rules for main no longer require a check doesn't see the gh commands
-# that this script runs, so the script asks the same question first. Like the hook, it goes on when it can't tell.
-main_rules_status=0
-main_rules_problem=$(scripts/check-main-rules 2>&1) || main_rules_status=$?
-if ((main_rules_status == 1)); then
-  printf '%s\n' "$main_rules_problem" >&2
+if ! main_requires_checks; then
   echo "error: scripts/start-build-run turned on auto-merge for no pull request of Dependabot's, because of the error above. Go on with the other work, and list this in your report for the maintainer." >&2
 else
   # read_open_pull_requests prints its own error.
