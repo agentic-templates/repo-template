@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Does one pass of step 6 of "Make a change" in AGENTS.md, which waits for a pull request's checks and merges it:
+# scripts/merge <pull request>
+# Its checks are the ones that the rules for main require, which scripts/required-checks lists. It prints one line,
+# the first that applies:
+# - merged: the pull request has merged.
+# - in the merge queue: it's in the merge queue.
+# - waiting for checks: the latest run of a check hasn't finished, or a check has no run yet. Or auto-merge is on,
+#   and the merge state isn't CLEAN yet, such as while code scanning runs.
+# - queued: its checks passed, so the script added it to the merge queue with gh pr merge. When auto-merge is on,
+#   it adds the pull request only when the merge state is CLEAN, as scripts/queue-auto-merge does.
+# It stops with an error, and exits with code 1, when the pull request is closed, a draft or DIRTY, when the latest run
+# of a check failed or was cancelled, when the merge queue removed it after its latest commit, and when gh fails.
+# Before gh pr merge, it stops on a pull request from a fork, and when the rules for main no longer require a check.
+# It asks gh about the repository of this checkout, or the one in GH_REPO.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+# shellcheck source=scripts/open-pull-requests
+source scripts/open-pull-requests
+# shellcheck source=scripts/merge-queue
+source scripts/merge-queue
+
+# Prints an error and stops: stop <message>
+stop() {
+  echo "error: $1" >&2
+  exit 1
+}
+
+if (($# != 1)); then
+  stop "scripts/merge takes one argument, the number of a pull request, and it got $#."
+fi
+if [[ ! $1 =~ ^[1-9][0-9]*$ ]]; then
+  stop "scripts/merge takes the number of a pull request, such as 12, and it got \"$1\"."
+fi
+number=$1
+
+query=$(cat <<'GRAPHQL'
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      number state isDraft isCrossRepository isInMergeQueue mergeStateStatus
+      autoMergeRequest { enabledAt }
+      commits(last: 1) {
+        nodes {
+          commit {
+            committedDate
+            statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { databaseId name conclusion } } } }
+          }
+        }
+      }
+      timelineItems(itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT], last: 100) {
+        nodes { ... on RemovedFromMergeQueueEvent { createdAt reason } }
+      }
+    }
+  }
+}
+GRAPHQL
+)
+# Prints the facts about the pull request in the form that scripts/open-pull-requests describes, except that its first
+# line holds other fields: pull-request <number> <state> <draft> <from a fork> <in the merge queue> <merge state>
+# <when its latest commit was made> <when auto-merge was turned on, or nothing>
+# shellcheck disable=SC2016 # $number is a jq variable, which jq expands.
+jq_filter='.data.repository.pullRequest
+  | .number as $number
+  | (["pull-request", $number, .state, .isDraft, .isCrossRepository, .isInMergeQueue, .mergeStateStatus,
+      .commits.nodes[0].commit.committedDate, (.autoMergeRequest.enabledAt // "")] | @tsv),
+    (.commits.nodes[].commit.statusCheckRollup.contexts.nodes // [] | .[] | select(.__typename == "CheckRun")
+      | ["check", $number, .databaseId, .name, (.conclusion // "")] | @tsv),
+    (.timelineItems.nodes[] | ["removal", $number, .createdAt, (.reason // "")] | @tsv)'
+if ! pull_requests=$(gh api graphql -F owner='{owner}' -F repo='{repo}' -F number="$number" -f query="$query" --jq "$jq_filter" 2>&1); then
+  stop "can't read pull request $number, because gh failed: $pull_requests"
+fi
+required=$(required_checks)
+IFS=$'\t' read -r state is_draft is_from_fork is_in_queue merge_state committed_at auto_merge_since \
+  <<<"$(facts pull-request "$number")"
+
+# Prints the time and the reason of the latest time the merge queue removed the pull request, separated by a tab, or
+# nothing if it never did.
+latest_removal() {
+  local time reason latest="" latest_reason=""
+  while IFS=$'\t' read -r time reason; do
+    if [[ -n $time && $time > $latest ]]; then
+      latest=$time
+      latest_reason=${reason:-unknown}
+    fi
+  done <<<"$(facts removal "$number")"
+  if [[ -n $latest ]]; then
+    printf '%s\t%s\n' "$latest" "$latest_reason"
+  fi
+}
+
+if [[ $state == MERGED ]]; then
+  echo merged
+  exit 0
+fi
+if [[ $state == CLOSED ]]; then
+  stop "pull request $number was closed without merging. Ask the maintainer whether to reopen it."
+fi
+if [[ $is_in_queue == true ]]; then
+  echo "in the merge queue"
+  exit 0
+fi
+if [[ $is_draft == true ]]; then
+  stop "pull request $number is a draft, and the merge queue doesn't take drafts. If it's done, mark it as ready with gh pr ready $number, and run scripts/merge $number again."
+fi
+if [[ $merge_state == DIRTY ]]; then
+  stop "pull request $number is DIRTY, because it conflicts with main. Resolve the conflicts with main, push the result, and run scripts/merge $number again."
+fi
+failed=$(failed_checks_in_words "$number")
+if [[ -n $failed ]]; then
+  stop "the $failed of pull request $number failed. Fix what failed, push the fix, and run scripts/merge $number again."
+fi
+IFS=$'\t' read -r removed_at removal_reason <<<"$(latest_removal)"
+if [[ -n $removed_at && $removed_at > $committed_at ]] && is_out_of_queue "$number" "$is_in_queue" "$auto_merge_since"; then
+  stop "the merge queue removed pull request $number after its latest commit, with the reason \"$removal_reason\". Fix what the reason says went wrong, push the fix, and run scripts/merge $number again. If nothing went wrong, add it to the queue again with gh pr merge $number."
+fi
+if ! have_checks_passed "$number"; then
+  echo "waiting for checks"
+  exit 0
+fi
+has_auto_merge=false
+if [[ -n $auto_merge_since ]]; then
+  has_auto_merge=true
+fi
+# GitHub adds a pull request with auto-merge on to the queue once nothing stops it. CLEAN means that nothing does.
+if [[ $has_auto_merge == true && $merge_state != CLEAN ]]; then
+  echo "waiting for checks"
+  exit 0
+fi
+if [[ $is_from_fork == true ]]; then
+  stop "pull request $number comes from a fork, so a maintainer merges it. Go on with the other work, and list the pull request in your report for the maintainer."
+fi
+if ! main_requires_checks; then
+  stop "scripts/merge didn't add pull request $number to the merge queue, because of the error above. Go on with the other work, and list this in your report for the maintainer."
+fi
+# add_to_merge_queue prints its own error.
+add_to_merge_queue "$number" "$has_auto_merge" || exit 1
+echo queued

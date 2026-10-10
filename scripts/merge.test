@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+# Tests scripts/merge with a stand-in for gh.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+case_count=0
+failed_cases=0
+
+base=$(mktemp -d)
+trap 'rm -rf "$base"' EXIT
+mkdir -p "$base/bin"
+
+# A stand-in for gh, first on the PATH. It answers the command in scripts/check-main-rules with the checks in
+# TEST_MAIN_RULES, one to a line, and the command that reads pull request 12 with TEST_PULL_REQUEST, as the script's
+# --jq filter prints it. With fail, either one fails, as gh does without the network.
+# It writes each gh pr merge command to TEST_GH_CALLS, one to a line, and fails the one that matches TEST_FAILING_MERGE.
+cat >"$base/bin/gh" <<'STAND_IN'
+#!/usr/bin/env bash
+if [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
+  if [[ $TEST_MAIN_RULES == fail ]]; then
+    echo "error connecting to api.github.com" >&2
+    exit 1
+  fi
+  for check in $TEST_MAIN_RULES; do
+    echo "$check"
+  done
+  exit 0
+fi
+if [[ $1 == api && $2 == graphql && " $* " == *" number=12 "* ]]; then
+  if [[ $TEST_PULL_REQUEST == fail ]]; then
+    echo "error connecting to api.github.com" >&2
+    exit 1
+  fi
+  printf '%s\n' "$TEST_PULL_REQUEST"
+  exit 0
+fi
+if [[ $1 == pr && $2 == merge ]]; then
+  echo "$*" >>"$TEST_GH_CALLS"
+  if [[ $* == "$TEST_FAILING_MERGE" ]]; then
+    echo "GraphQL: Pull request is in clean status (enablePullRequestAutoMerge)" >&2
+    exit 1
+  fi
+  exit 0
+fi
+echo "The stand-in for gh doesn't answer: gh $*" >&2
+exit 1
+STAND_IN
+chmod +x "$base/bin/gh"
+
+tab=$'\t'
+# The time of the pull request's latest commit, and a time before and after it.
+before_commit=2026-05-04T09:00:00Z
+commit_time=2026-05-04T09:30:00Z
+after_commit=2026-05-04T10:00:00Z
+
+# The line about pull request 12, as the script's --jq filter prints it:
+# pull_request <state> <draft> <from a fork> <in the queue> <merge state> [<when auto-merge was turned on>]
+pull_request() {
+  printf '%s\n' "pull-request${tab}12$tab$1$tab$2$tab$3$tab$4$tab$5$tab$commit_time$tab${6:-}"
+}
+
+# A line about a run of a check on the latest commit: check_run <ID> <name> <conclusion, or nothing>
+check_run() {
+  printf '%s\n' "check${tab}12$tab$1$tab$2$tab${3:-}"
+}
+
+# A line about a time the merge queue removed the pull request: removal <time> <reason>
+removal() {
+  printf '%s\n' "removal${tab}12$tab$1$tab$2"
+}
+
+# The lines about runs of the checks check and title, which scripts/configure-github requires, that passed.
+passed_checks() {
+  check_run 101 check SUCCESS
+  check_run 102 title SUCCESS
+}
+
+# Runs scripts/merge, and sets status, output and merges, the gh pr merge commands it ran:
+# run_merge <lines about pull request 12, or fail> [<checks that main requires, or fail>]
+# [<gh pr merge command that fails>] [<argument>...]
+run_merge() {
+  local pull_request=$1 main_rules=${2:-check title} failing_merge=${3:-}
+  shift
+  shift "$(($# < 2 ? $# : 2))"
+  if (($# == 0)); then
+    set -- 12
+  fi
+  status=0
+  : >"$base/calls"
+  output=$(TEST_MAIN_RULES=$main_rules TEST_PULL_REQUEST=$pull_request TEST_FAILING_MERGE=$failing_merge \
+    TEST_GH_CALLS=$base/calls PATH=$base/bin:$PATH scripts/merge "$@" 2>&1) || status=$?
+  merges=$(<"$base/calls")
+}
+
+# Checks the script's exit code, output and gh pr merge commands:
+# expect_result <description> <exit code> <output> <gh pr merge commands, one to a line>
+expect_result() {
+  local description=$1 expected_status=$2 expected_output=$3 expected_merges=$4
+  case_count=$((case_count + 1))
+  if [[ $status != "$expected_status" || $output != "$expected_output" || $merges != "$expected_merges" ]]; then
+    echo "error: $description, scripts/merge must exit with code $expected_status, print \"$expected_output\" and run \"$expected_merges\", but it exited with code $status, printed \"$output\" and ran \"$merges\"." >&2
+    failed_cases=$((failed_cases + 1))
+  fi
+}
+
+run_merge "$(pull_request MERGED false false false UNKNOWN)"
+expect_result "When the pull request has merged" 0 merged ""
+
+run_merge "$(pull_request CLOSED false false false UNKNOWN)"
+expect_result "When the pull request was closed" 1 \
+  "error: pull request 12 was closed without merging. Ask the maintainer whether to reopen it." ""
+
+run_merge "$(pull_request OPEN false false true CLEAN "$after_commit"; passed_checks)"
+expect_result "When the pull request is in the merge queue" 0 "in the merge queue" ""
+
+run_merge "$(pull_request OPEN true false false DRAFT; passed_checks)"
+expect_result "When the pull request is a draft" 1 \
+  "error: pull request 12 is a draft, and the merge queue doesn't take drafts. If it's done, mark it as ready with gh pr ready 12, and run scripts/merge 12 again." ""
+
+run_merge "$(pull_request OPEN false false false DIRTY; passed_checks)"
+expect_result "When the pull request is DIRTY" 1 \
+  "error: pull request 12 is DIRTY, because it conflicts with main. Resolve the conflicts with main, push the result, and run scripts/merge 12 again." ""
+
+run_merge "$(pull_request OPEN false false false BLOCKED; check_run 101 check FAILURE; check_run 102 title SUCCESS)"
+expect_result "When a check failed" 1 \
+  "error: the check \"check\" of pull request 12 failed. Fix what failed, push the fix, and run scripts/merge 12 again." ""
+
+run_merge "$(pull_request OPEN false false false BLOCKED; check_run 101 check CANCELLED; check_run 102 title FAILURE)"
+expect_result "When one check was cancelled and another failed" 1 \
+  "error: the checks \"check\" and \"title\" of pull request 12 failed. Fix what failed, push the fix, and run scripts/merge 12 again." ""
+
+run_merge "$(pull_request OPEN false false false BLOCKED; check_run 101 check FAILURE; check_run 102 title SUCCESS
+  check_run 103 check)"
+expect_result "When a check failed, and its latest run hasn't finished" 0 "waiting for checks" ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; check_run 101 check FAILURE; check_run 102 title SUCCESS
+  check_run 103 check SUCCESS)"
+expect_result "When a check failed, and its latest run passed" 0 queued "pr merge 12"
+
+run_merge "$(pull_request OPEN false false false CLEAN; check_run 101 check SKIPPED; check_run 102 title NEUTRAL)"
+expect_result "When the checks were skipped or neutral" 0 queued "pr merge 12"
+
+run_merge "$(pull_request OPEN false false false UNSTABLE; passed_checks; check_run 103 CodeQL FAILURE)"
+expect_result "When only a check that main doesn't require failed" 0 queued "pr merge 12"
+
+run_merge "$(pull_request OPEN false false false BLOCKED; check_run 101 check SUCCESS; check_run 102 title)"
+expect_result "When a check hasn't finished" 0 "waiting for checks" ""
+
+run_merge "$(pull_request OPEN false false false BLOCKED; check_run 101 check SUCCESS)"
+expect_result "When a check has no run yet" 0 "waiting for checks" ""
+
+run_merge "$(pull_request OPEN false false false BLOCKED)"
+expect_result "When no checks exist yet" 0 "waiting for checks" ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks; removal "$before_commit" merge_conflict
+  removal "$after_commit" "failed_checks")"
+expect_result "When the merge queue removed the pull request after its latest commit" 1 \
+  "error: the merge queue removed pull request 12 after its latest commit, with the reason \"failed_checks\". Fix what the reason says went wrong, push the fix, and run scripts/merge 12 again. If nothing went wrong, add it to the queue again with gh pr merge 12." ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks; removal "$after_commit" "")"
+expect_result "When the merge queue removed the pull request after its latest commit, and gave no reason" 1 \
+  "error: the merge queue removed pull request 12 after its latest commit, with the reason \"unknown\". Fix what the reason says went wrong, push the fix, and run scripts/merge 12 again. If nothing went wrong, add it to the queue again with gh pr merge 12." ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks; removal "$before_commit" merge_conflict)"
+expect_result "When the merge queue removed the pull request before its latest commit" 0 queued "pr merge 12"
+
+run_merge "$(pull_request OPEN false false false CLEAN 2026-05-04T10:30:00Z; passed_checks
+  removal "$after_commit" failed_checks)"
+expect_result "When auto-merge was turned on after the merge queue removed the pull request" 0 queued \
+  "pr merge 12 --disable-auto"$'\n'"pr merge 12"
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)"
+expect_result "When the checks passed, and auto-merge is off" 0 queued "pr merge 12"
+
+run_merge "$(pull_request OPEN false false false BLOCKED; passed_checks)"
+expect_result "When the checks passed, auto-merge is off, and the pull request is BLOCKED" 0 queued "pr merge 12"
+
+run_merge "$(pull_request OPEN false false false CLEAN "$after_commit"; passed_checks)"
+expect_result "When the checks passed, auto-merge is on, and GitHub hasn't added the pull request to the queue" 0 \
+  queued "pr merge 12 --disable-auto"$'\n'"pr merge 12"
+
+run_merge "$(pull_request OPEN false false false BLOCKED "$after_commit"; passed_checks)"
+expect_result "When the checks passed, auto-merge is on, and the pull request is BLOCKED" 0 "waiting for checks" ""
+
+run_merge "$(pull_request OPEN false true false CLEAN; passed_checks)"
+expect_result "When the pull request comes from a fork" 1 \
+  "error: pull request 12 comes from a fork, so a maintainer merges it. Go on with the other work, and list the pull request in your report for the maintainer." ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)" check
+expect_result "When main no longer requires a check that scripts/configure-github requires" 1 \
+  "error: main no longer requires the title job, so a pull request can merge without passing it. A maintainer with admin access restores it by running scripts/configure-github."$'\n'"error: scripts/merge didn't add pull request 12 to the merge queue, because of the error above. Go on with the other work, and list this in your report for the maintainer." ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)" fail
+expect_result "When gh can't read the rules for main" 0 queued "pr merge 12"
+
+run_merge fail
+expect_result "When gh can't read the pull request" 1 \
+  "error: can't read pull request 12, because gh failed: error connecting to api.github.com" ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)" "check title" "pr merge 12"
+expect_result "When gh can't add the pull request to the queue" 1 \
+  "error: can't add pull request 12 to the merge queue, because gh failed: GraphQL: Pull request is in clean status (enablePullRequestAutoMerge)" \
+  "pr merge 12"
+
+run_merge "$(pull_request OPEN false false false CLEAN "$after_commit"; passed_checks)" "check title" "pr merge 12"
+expect_result "When gh turned off auto-merge, and can't add the pull request to the queue" 1 \
+  "error: turned off auto-merge on pull request 12, but can't add it to the merge queue, because gh failed: GraphQL: Pull request is in clean status (enablePullRequestAutoMerge). Run gh pr merge 12 to add it." \
+  "pr merge 12 --disable-auto"$'\n'"pr merge 12"
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)" "check title" "" 12 13
+expect_result "When it gets two arguments" 1 \
+  "error: scripts/merge takes one argument, the number of a pull request, and it got 2." ""
+
+run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)" "check title" "" "#12"
+expect_result "When it gets an argument that isn't the number of a pull request" 1 \
+  "error: scripts/merge takes the number of a pull request, such as 12, and it got \"#12\"." ""
+
+if ((failed_cases > 0)); then
+  echo "error: $failed_cases of the $case_count cases in scripts/merge.test failed. The errors above say which." >&2
+  exit 1
+fi
+echo "scripts/merge.test passed. Cases: $case_count."
