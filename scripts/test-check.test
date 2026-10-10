@@ -64,7 +64,12 @@ if [[ $configure_github != *"$required_checks"* ]]; then
   exit 1
 fi
 added_checks=$'\n          {"context": "eslint", "integration_id": 15368},\n          {"context": "lint", "integration_id": 15368},\n          {"context": "test_check", "integration_id": 15368},\n          {"context": "test_check_fixture", "integration_id": 15368},\n          {"context": "CodeQL", "integration_id": 15368},'
-printf '%s\n' "${configure_github/"$required_checks"/"$required_checks$added_checks"}" > "$copy/scripts/configure-github"
+# Exercise Bash 3.2 replacement quoting on newer Bash versions too.
+(
+  BASH_COMPAT=3.2
+  printf '%s\n' "${configure_github/"$required_checks"/$required_checks$added_checks}"
+) > "$copy/scripts/configure-github"
+sed -n '/^ruleset=/,/^JSON$/p' "$copy/scripts/configure-github" | sed '1d;$d' | jq empty
 
 fixture_workflow=$workflow
 
