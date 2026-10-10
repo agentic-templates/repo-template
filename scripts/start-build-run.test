@@ -132,7 +132,7 @@ new_repository() {
   repo=$(mktemp -d "$base/repo.XXXXXX")
   git init --quiet --initial-branch=main "$repo"
   mkdir "$repo/scripts"
-  for script in start-build-run open-pull-requests required-checks configure-github check-main-rules \
+  for script in start-build-run open-pull-requests merge-queue required-checks configure-github check-main-rules \
     pull-request-state clear-worktrees; do
     cp "scripts/$script" "$repo/scripts/$script"
   done

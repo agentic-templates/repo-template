@@ -1,0 +1,36 @@
+# shellcheck shell=bash
+# Functions that scripts/queue-auto-merge, scripts/start-build-run and scripts/merge run before and when they add a
+# pull request to the merge queue. The hooks that check gh pr merge don't see the gh commands that a script runs,
+# so the scripts ask the same questions first. Run them from the repository's root.
+
+# Prints the error of scripts/check-main-rules and fails when the rules for main no longer require a check that
+# scripts/configure-github requires there. Like the hook, it succeeds when it can't tell: main_requires_checks
+main_requires_checks() {
+  local problem status=0
+  problem=$(scripts/check-main-rules 2>&1) || status=$?
+  if ((status == 1)); then
+    printf '%s\n' "$problem" >&2
+    return 1
+  fi
+}
+
+# Adds a pull request whose checks passed to the merge queue with gh pr merge. When auto-merge is on, GitHub usually
+# adds such a pull request within a minute, but sometimes never does. So the function turns auto-merge off first,
+# and gh pr merge then adds the pull request at once. Prints an error and fails when gh fails:
+# add_to_merge_queue <pull request> <whether auto-merge is on: true or false>
+add_to_merge_queue() {
+  local answer
+  if [[ $2 == true ]] && ! answer=$(gh pr merge "$1" --disable-auto 2>&1 </dev/null); then
+    echo "error: can't turn off auto-merge on pull request $1, because gh failed: $answer" >&2
+    return 1
+  fi
+  if answer=$(gh pr merge "$1" 2>&1 </dev/null); then
+    return 0
+  fi
+  if [[ $2 == true ]]; then
+    echo "error: turned off auto-merge on pull request $1, but can't add it to the merge queue, because gh failed: $answer. Run gh pr merge $1 to add it." >&2
+  else
+    echo "error: can't add pull request $1 to the merge queue, because gh failed: $answer" >&2
+  fi
+  return 1
+}

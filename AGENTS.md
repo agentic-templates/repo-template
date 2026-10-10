@@ -56,29 +56,11 @@ Dependabot adds `dependencies` to its own pull requests.
 If a maintainer asks for something that's bigger than one pull request or needs a decision along the way, triage it first, as "Triage new ideas" in `docs/planning.md` describes.
 
 1. Start from an issue. If you don't have one yet, search with `gh issue list --state all --search "<words>"`, and use an open issue that asks for the change. If only a closed issue does, point it out, and ask the maintainer whether they still want the change. If they do, open a new issue with `gh issue create`, and mention the closed one in it. If no issue asks for the change at all, open one too. Make the "Done when" section of its body a list of results that someone can check. If a maintainer asks you to work on a ready issue outside a build run, follow "Work on a ready issue outside a build run" in [docs/building.md](docs/building.md) before you go on to step 2. If your issue is marked as blocked by research issues, read their answers.
-2. If `gh issue develop --list <issue>` lists any branches, check out the most recently updated one. Otherwise, create a branch for the issue with `gh issue develop <issue> --checkout`. GitHub creates the branch from the latest main and links it to the issue.
+2. Run `scripts/start-issue <issue>`. It checks out the issue's branch, and creates the branch if the issue has none.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder, and each guide that "Read the guides" names for the change. Where the AGENTS.md files differ, the one closest to the file wins.
 4. Make the change. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer, and record it as "Record a vulnerability privately" in `docs/releasing.md` describes.
 5. Push the branch and open a pull request with `gh pr create`.
-6. Wait for the checks with `gh pr checks --watch`. If it reports that no checks exist yet, wait a few seconds and run it again. Fix each failure as step 4 describes.
-7. Before you merge, run `gh pr view --json mergeStateStatus`. If it reports `DIRTY`, resolve the conflicts with main, and go back to step 6. Otherwise, add the pull request to the merge queue with `gh pr merge`, which needs no merge method. Then check every minute until it merges or the queue removes it. This command prints the pull request's state, whether it's in the queue, and the reason for each time the queue removed it:
-
-   ```bash
-   gh api graphql -F owner='{owner}' -F repo='{repo}' -F number=<number> -f query='
-     query($owner: String!, $repo: String!, $number: Int!) {
-       repository(owner: $owner, name: $repo) {
-         pullRequest(number: $number) {
-           state
-           isInMergeQueue
-           timelineItems(itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT], last: 10) {
-             nodes { ... on RemovedFromMergeQueueEvent { createdAt reason } }
-           }
-         }
-       }
-     }'
-   ```
-
-   If the queue removes it, fix what the reason says went wrong, if anything, and go back to step 6.
+6. Run `scripts/merge <number>` every minute until it prints `merged`. When it stops with an error, fix what it names as step 4 describes, and run it again.
 
 ## Commits
 
