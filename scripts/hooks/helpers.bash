@@ -50,6 +50,60 @@ drop_command_prefixes() {
   done
 }
 
+# The flags of gh api that take a value, as gh api --help lists them.
+api_flags_with_value=" --cache -F --field -H --header --hostname --input -q --jq -X --method -p --preview -f --raw-field -t --template "
+
+# Reads the words of a gh command from an index on, and sets these variables:
+# - argument: the first word that isn't a flag or a flag's value, or empty
+# - target: the words that name the argument to other gh commands: the argument, and -R or --repo with its value
+# - flags: the flags, without their values
+# - flag_values: the value of each flag in flags that takes the next word as its value, or empty
+# read_arguments <index> <flags that take a value>
+read_arguments() {
+  local i word
+  local -a repository=()
+  argument="" target=() flags=() flag_values=()
+  for ((i = $1; i < ${#command_words[@]}; i++)); do
+    word=${command_words[i]}
+    case $word in
+      -R | --repo)
+        repository=(--repo "${command_words[i + 1]:-}")
+        i=$((i + 1))
+        ;;
+      --repo=*) repository=(--repo "${word#--repo=}") ;;
+      -*)
+        flags+=("$word")
+        if [[ $word != *=* && $2 == *" $word "* ]]; then
+          flag_values+=("${command_words[i + 1]:-}")
+          i=$((i + 1))
+        else
+          flag_values+=("")
+        fi
+        ;;
+      *)
+        if [[ -z $argument ]]; then
+          argument=$word
+          target=("$word")
+        fi
+        ;;
+    esac
+  done
+  target+=(${repository[@]+"${repository[@]}"})
+}
+
+# Succeeds if read_arguments found one of these flags: has_flag <flag>...
+has_flag() {
+  local flag wanted
+  for flag in ${flags[@]+"${flags[@]}"}; do
+    for wanted in "$@"; do
+      if [[ $flag == "$wanted" ]]; then
+        return 0
+      fi
+    done
+  done
+  return 1
+}
+
 # The flags of gh pr create that take a value, as gh pr create --help lists them.
 pr_create_flags_with_value=" -a --assignee --attach -B --base -b --body -F --body-file -H --head -l --label -m --milestone -p --project --recover -r --reviewer -T --template -t --title -R --repo "
 
