@@ -185,4 +185,66 @@ feat: block the commands that print the token
 gh auth token
 EOF"
 
+# Substitutions run inside quoted words and expandable here-documents, but quoted delimiters keep them literal.
+# shellcheck disable=SC2016 # Inspect shell text without expanding it in the test.
+substitution_commands=(
+  'export GH_TOKEN="$(gh auth token)"'
+  'echo `gh auth token`'
+  'echo "`gh auth token`"'
+  'echo "$(printf ok)$(gh auth token)"'
+  'echo "$(printf "%s" ")"; gh auth token)"'
+  'echo "$(printf "%s" "$(gh auth token)")"'
+  'echo "`printf "%s" \`gh auth token\``"'
+  $'cat <<EOF\n$(gh auth token)\nEOF'
+  $'cat <<EOF\n`gh auth token`\nEOF'
+  $'cat <<EOF\n\'$(gh auth token)\'\nEOF'
+  $'cat <<-EOF\n\t$(gh auth token)\n\tEOF'
+  $'cat <<\'FIRST\' <<SECOND\n$(printf ok)\nFIRST\n$(gh auth token)\nSECOND'
+  $'cat <<E"OF"\n$(printf ok)\nEOF\ngh auth token'
+)
+for command in "${substitution_commands[@]}"; do
+  expect_block Bash "$command" "$prints_token"
+done
+# shellcheck disable=SC2016
+literal_commands=(
+  "echo '\$(gh auth token)'"
+  'echo "\$(gh auth token)"'
+  'echo "\`gh auth token\`"'
+  'echo "$(printf ok)"'
+  'git commit -m "Stop running gh auth token"'
+  $'cat <<EOF\ngh auth token\nEOF'
+  $'cat <<\'EOF\'\n$(gh auth token)\nEOF'
+  $'cat <<"EOF"\n`gh auth token`\nEOF'
+  $'cat <<E"OF"\n$(gh auth token)\nEOF'
+  $'cat <<\\EOF\n$(gh auth token)\nEOF'
+  $'cat <<FIRST <<\'SECOND\'\n$(printf ok)\nFIRST\n$(gh auth token)\nSECOND'
+  '' 'echo ""' 'echo "$()"' $'cat <<EOF\nEOF'
+)
+for command in "${literal_commands[@]}"; do
+  expect_allow Bash "$command"
+done
+
+# Inspecting a substitution must not run it.
+expect_allow Bash "echo \"\$(touch '$base/substitution-ran')\""
+case_count=$((case_count + 1))
+if [[ -e $base/substitution-ran ]]; then
+  echo "error: inspecting a substitution ran the command inside it." >&2
+  failed_cases=$((failed_cases + 1))
+fi
+
+# A broken hook would be allowed by before-tool, so check incomplete input directly as well.
+# shellcheck disable=SC2016
+for command in 'echo "$(' 'echo "$(printf ok' 'echo "`printf ok' $'cat <<EOF\n$(printf ok'; do
+  input=$(sample_input claude-code Bash "$command")
+  for check in forbidden-commands secret-files; do
+    status=0
+    message=$("$hooks_folder/$check.check" <<<"$input" 2>&1) || status=$?
+    case_count=$((case_count + 1))
+    if [[ $status != 0 && $status != 2 ]] || [[ $status == 0 && -n $message ]]; then
+      echo "error: $check crashed while inspecting an incomplete substitution or here-document: $message" >&2
+      failed_cases=$((failed_cases + 1))
+    fi
+  done
+done
+
 finish_tests

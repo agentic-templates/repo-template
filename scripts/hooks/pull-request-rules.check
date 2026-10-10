@@ -83,6 +83,5 @@ if [[ $tool_name == Bash ]]; then
   # Cursor doesn't send that folder, so for Cursor the hook's own folder counts.
   cd -- "${cwd:-.}" 2>/dev/null || exit 0
   written_files=()
-  split_heredocs "$shell_command"
-  for_each_simple_command check_simple_command "$command_text"
+  for_each_simple_command check_simple_command "$shell_command"
 fi

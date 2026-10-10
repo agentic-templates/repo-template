@@ -176,6 +176,5 @@ check_simple_command() {
 read_input
 if [[ $tool_name == Bash ]]; then
   # A here-document holds text, such as a commit message that names a command, and not commands.
-  split_heredocs "$shell_command"
-  for_each_simple_command check_simple_command "$command_text"
+  for_each_simple_command check_simple_command "$shell_command"
 fi

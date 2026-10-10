@@ -154,23 +154,123 @@ opens_pull_request() {
   done
 }
 
-# Splits a shell command into simple commands, and calls a function with the words of each one:
+# Finds the end and contents of a $( ) or backtick substitution, without running it.
+# read_substitution <text> <opening character's index>
+read_substitution() {
+  local text=$1 start=$2 index=$2 char next quote="" depth=1
+  substitution_body=""
+  if [[ ${text:start:1} == '`' ]]; then
+    index=$((index + 1))
+    while ((index < ${#text})); do
+      char=${text:index:1} next=${text:index+1:1}
+      if [[ $char == '`' ]]; then
+        substitution_end=$index
+        return 0
+      fi
+      # Backticks remove these escapes before the command inside them is parsed.
+      if [[ $char == \\ && $next == [\$\`\\] ]]; then
+        substitution_body+=$next
+        index=$((index + 2))
+      else
+        substitution_body+=$char
+        index=$((index + 1))
+      fi
+    done
+  else
+    index=$((index + 2))
+    while ((index < ${#text})); do
+      char=${text:index:1} next=${text:index+1:1}
+      if [[ $quote == "'" ]]; then
+        if [[ $char == "'" ]]; then
+          quote=""
+        fi
+      elif [[ $char == \\ ]]; then
+        index=$((index + 1))
+      elif [[ $char == '`' || ($char == '$' && $next == '(') ]]; then
+        read_substitution "$text" "$index"
+        index=$substitution_end
+      elif [[ $char == '"' ]]; then
+        if [[ $quote == '"' ]]; then
+          quote=""
+        else
+          quote='"'
+        fi
+      elif [[ -z $quote ]]; then
+        case $char in
+          "'") quote="'" ;;
+          '(') depth=$((depth + 1)) ;;
+          ')')
+            depth=$((depth - 1))
+            if ((depth == 0)); then
+              break
+            fi
+            ;;
+        esac
+      fi
+      index=$((index + 1))
+    done
+    substitution_body=${text:start+2:index-start-2}
+  fi
+  substitution_end=$index
+}
+
+# Here-document quotes are ordinary text. Only backslashes can make a substitution literal.
+check_heredoc_substitutions() {
+  local function=$1 text=$2 index char next substitution_body substitution_end
+  for ((index = 0; index < ${#text}; index++)); do
+    char=${text:index:1} next=${text:index+1:1}
+    if [[ $char == \\ && $next == [\$\`\\] ]]; then
+      index=$((index + 1))
+    elif [[ $char == '`' || ($char == '$' && $next == '(') ]]; then
+      read_substitution "$text" "$index"
+      split_simple_commands "$function" "$substitution_body"
+      index=$substitution_end
+    fi
+  done
+}
+
+# Splits shell text and checks each simple command, including commands inside substitutions:
 # for_each_simple_command <function> <command>
+# Here-document bodies stay available to the checks that read issue and pull request bodies.
+for_each_simple_command() {
+  local function=$1 text=$2 command_text index
+  local -a heredocs=() heredoc_expands=()
+  split_heredocs "$text"
+  split_simple_commands "$function" "$command_text"
+  for ((index = 0; index < ${#heredocs[@]}; index++)); do
+    if [[ ${heredoc_expands[index]} == yes ]]; then
+      check_heredoc_substitutions "$function" "${heredocs[index]}"
+    fi
+  done
+}
+
+# Splits a shell command into simple commands, and calls a function with the words of each one:
+# split_simple_commands <function> <command>
 # Simple commands end at &&, ||, ;, |, &, a parenthesis and a line break. Words end at spaces and tabs.
 # Quotes and backslashes are removed as the shell removes them, but nothing is expanded, so "$HOME" stays $HOME.
 # Redirections, such as "< .env" or "2>/dev/null", aren't words. Before each call, the array redirections
 # holds them as pairs: the operator, such as < or 2>, then its target.
-# It doesn't handle every shell feature, such as $( ) inside quotes, backticks or here-documents.
-for_each_simple_command() {
+# It leaves substitution text in the surrounding word, because body checks inspect the original text.
+split_simple_commands() {
   local function=$1 text=$2
   local length=${#text} i char next
   local word="" has_word=false quote="" descriptor="" operator="" starts_redirection
+  local substitution_body substitution_end
+  local -a redirections=()
   local -a words=()
-  redirections=()
 
   for ((i = 0; i <= length; i++)); do
     char=${text:i:1}
     next=${text:i+1:1}
+
+    if [[ $quote != "'" && ($char == '`' || ($char == '$' && $next == '(')) ]]; then
+      read_substitution "$text" "$i"
+      split_simple_commands "$function" "$substitution_body"
+      word+=${text:i:substitution_end-i+1}
+      has_word=true
+      i=$substitution_end
+      continue
+    fi
 
     if [[ -n $quote && i -lt length ]]; then
       if [[ $char == "$quote" ]]; then
@@ -257,9 +357,8 @@ for_each_simple_command() {
   done
 }
 
-# A here-document's delimiter, after << or <<-, and with or without quotes. Group 1 holds the - and group 3 the word.
-quote_characters=\'\"
-heredoc_operator="<<(-?)[[:blank:]]*([$quote_characters\\\\]?)([A-Za-z_][A-Za-z0-9_]*)[$quote_characters]?"
+# Delimiter words can mix quoted, escaped and unquoted parts, such as E"OF".
+heredoc_operator="<<(-?)[[:blank:]]*(([^[:space:]<>;&|()'\"\\\\]|'[^']*'|\"[^\"]*\"|\\\\.)+)"
 # split_heredocs puts this character around a here-document's number. Commands don't contain it.
 marker=$'\037'
 heredoc_reference="$marker([0-9]+)$marker"
@@ -271,10 +370,11 @@ heredoc_reference="$marker([0-9]+)$marker"
 # delimiter, and heredocs to the bodies, in order. It takes each << as the start of a here-document, also in quoted
 # text outside $( ), where the shell doesn't.
 split_heredocs() {
-  local line rest match prefix body body_line index=0 count j
-  local -a lines=() dashes=() delimiters=()
+  local line rest match prefix body body_line index=0 count j delimiter raw_delimiter dash character quote k expands
+  local -a lines=() dashes=() delimiters=() expansions=()
   command_text=""
   heredocs=()
+  heredoc_expands=()
   while IFS= read -r line; do
     lines+=("$line")
   done <<<"$1"
@@ -285,6 +385,7 @@ split_heredocs() {
     line=""
     dashes=()
     delimiters=()
+    expansions=()
     while [[ $rest =~ $heredoc_operator ]]; do
       match=${BASH_REMATCH[0]}
       prefix=${rest%%"$match"*}
@@ -294,9 +395,30 @@ split_heredocs() {
         line+=$prefix$match
         continue
       fi
-      line+="$prefix<<${BASH_REMATCH[1]}$marker$((${#heredocs[@]} + ${#delimiters[@]}))$marker"
-      dashes+=("${BASH_REMATCH[1]}")
-      delimiters+=("${BASH_REMATCH[3]}")
+      dash=${BASH_REMATCH[1]} raw_delimiter=${BASH_REMATCH[2]}
+      delimiter="" quote="" expands=yes
+      for ((k = 0; k < ${#raw_delimiter}; k++)); do
+        character=${raw_delimiter:k:1}
+        if [[ -n $quote ]]; then
+          if [[ $character == "$quote" ]]; then
+            quote=""
+          else
+            delimiter+=$character
+          fi
+        elif [[ $character == [\'\"] ]]; then
+          quote=$character expands=no
+        elif [[ $character == \\ ]]; then
+          k=$((k + 1))
+          delimiter+=${raw_delimiter:k:1}
+          expands=no
+        else
+          delimiter+=$character
+        fi
+      done
+      line+="$prefix<<$dash$marker$((${#heredocs[@]} + ${#delimiters[@]}))$marker"
+      dashes+=("$dash")
+      delimiters+=("$delimiter")
+      expansions+=("$expands")
     done
     command_text+=$line$rest$'\n'
     # The bodies follow the line, in the order of their operators. <<- removes the tabs at the start of each line.
@@ -314,6 +436,7 @@ split_heredocs() {
         body+=$body_line$'\n'
       done
       heredocs+=("$body")
+      heredoc_expands+=("${expansions[j]}")
     done
   done
 }
