@@ -28,6 +28,29 @@ make_copy() {
   git -C "$copy" init --quiet
 }
 
+# Checks that scripts/check recorded the tree of the copy's files in .git/check-passed if it passed, and nothing if it failed.
+# Every file of the copy is staged, so the tree of the index is the tree of the files on disk.
+# Prints an error and fails if the record is wrong: check_record <function> <pass or fail>
+check_record() {
+  local case_function=$1 result=$2 record=$copy/.git/check-passed tree
+  if [[ $result == fail ]]; then
+    if [[ -f $record ]]; then
+      echo "error: in the case $case_function, scripts/check failed, so it must not write .git/check-passed, but it did." >&2
+      return 1
+    fi
+    return 0
+  fi
+  tree=$(git -C "$copy" write-tree)
+  if [[ ! -f $record ]]; then
+    echo "error: in the case $case_function, scripts/check passed, so it must write the tree of the files it checked, $tree, to .git/check-passed, but it wrote no such file." >&2
+    return 1
+  fi
+  if [[ $(< "$record") != "$tree" ]]; then
+    echo "error: in the case $case_function, scripts/check passed, so .git/check-passed must hold the tree of the files it checked, $tree, but it holds: $(< "$record")" >&2
+    return 1
+  fi
+}
+
 # Runs one case: run_case <function> <pass or fail> [<text that the output must hold>]
 # The function gets a fresh copy at $copy, and adds the files that the case needs to it.
 # Use only checks that need no extra tool, so that a case gives the same result on every machine.
@@ -49,6 +72,10 @@ run_case() {
     failed_cases=$((failed_cases + 1))
     return
   fi
+  if ! check_record "$case_function" "$actual"; then
+    failed_cases=$((failed_cases + 1))
+    return
+  fi
   if [[ -n "$expected_text" && "$output" != *"$expected_text"* ]]; then
     echo "error: in the case $case_function, the output of scripts/check must hold \"$expected_text\". Its output:" >&2
     printf '%s\n' "$output" >&2
@@ -56,11 +83,70 @@ run_case() {
   fi
 }
 
+# Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
+# Stops the tests if the file doesn't hold the text, because the case would then test nothing.
+replace_text() {
+  local file=$1 text=$2 new_text=$3 content replaced=""
+  content=$(<"$copy/$file")
+  if [[ $content != *"$text"* ]]; then
+    echo "error: in the case ${FUNCNAME[1]}, can't find \"$text\" in $file. Change the case to match the file." >&2
+    exit 1
+  fi
+  while [[ $content == *"$text"* ]]; do
+    replaced+=${content%%"$text"*}$new_text
+    content=${content#*"$text"}
+  done
+  printf '%s\n' "$replaced$content" > "$copy/$file"
+}
+
 repository_as_it_is() {
   :
 }
 
 run_case repository_as_it_is pass
+
+# Case for the record of a pass, which run_case checks in every case.
+
+record_that_cant_be_written() {
+  mkdir "$copy/.git/check-passed"
+}
+
+run_case record_that_cant_be_written fail "error: the checks passed, but scripts/check can't record the pass in .git/check-passed, and a hook blocks opening a pull request without that record."
+
+# Cases for the check that each action pinned to a commit SHA has a version comment.
+# The SHA is a real commit of actions/checkout, because zizmor checks it when it has a GitHub token.
+
+checkout_sha=3d3c42e5aac5ba805825da76410c181273ba90b1
+
+# Writes .github/workflows/lint.yml, with a step that checks out the code. The step's uses: line is line 8:
+# write_checkout_workflow <uses: line>
+write_checkout_workflow() {
+  printf '%s\n' "name: Lint" "on: pull_request" "permissions: {}" "jobs:" "  lint:" "    runs-on: ubuntu-latest" "    steps:" \
+    "      - $1" "        with:" "          persist-credentials: false" > "$copy/.github/workflows/lint.yml"
+}
+
+pinned_action_without_a_comment() {
+  write_checkout_workflow "uses: actions/checkout@$checkout_sha"
+}
+
+pinned_action_with_a_comment_that_isnt_a_version() {
+  write_checkout_workflow "uses: actions/checkout@$checkout_sha # pinned"
+}
+
+pinned_action_without_a_comment_in_a_composite_action() {
+  mkdir -p "$copy/.github/actions/setup"
+  printf '%s\n' "name: Setup" "description: Checks out the code." "runs:" "  using: composite" "  steps:" \
+    "    - uses: actions/checkout@$checkout_sha" "      with:" "        persist-credentials: false" > "$copy/.github/actions/setup/action.yaml"
+}
+
+pinned_action_with_a_version_comment_in_quotes() {
+  write_checkout_workflow "uses: \"actions/checkout@$checkout_sha\" # v7.0.1"
+}
+
+run_case pinned_action_without_a_comment fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment. Write the version that the SHA pins in a comment after it, as in "# v5.0.0".'
+run_case pinned_action_with_a_comment_that_isnt_a_version fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment.'
+run_case pinned_action_without_a_comment_in_a_composite_action fail 'error: .github/actions/setup/action.yaml:6 pins actions/checkout to a commit SHA without a version comment.'
+run_case pinned_action_with_a_version_comment_in_quotes pass
 
 # Cases for the check that finds files that make a tool skip AGENTS.md.
 
@@ -100,6 +186,7 @@ fixme="FIX""ME"
 
 todo_in_a_shell_script() {
   printf '%s\n' '#!/usr/bin/env bash' 'echo "start"' "# $todo: print the total" > "$copy/scripts/unfinished"
+  chmod +x "$copy/scripts/unfinished"
 }
 
 fixme_in_a_text_file() {
@@ -115,6 +202,48 @@ run_case todo_in_a_shell_script fail "scripts/unfinished:3:# $todo: print the to
 run_case todo_in_a_shell_script fail "error: the lines above hold $todo or $fixme."
 run_case fixme_in_a_text_file fail "notes.txt:1:$fixme the rounding"
 run_case other_words_and_markdown pass
+
+# Cases for the check that finds paths into a person's home folder.
+
+# Prints each argument on a line of its own, with a person's name in place of <name>.
+# The check doesn't take <name> for a name, so this file holds no path into a home folder.
+fill_in_name() {
+  printf '%s\n' "${@//<name>/ana}"
+}
+
+paths_into_home_folders() {
+  fill_in_name '/home/<name>/notes' '/Users/<name>/notes' 'C:\Users\<name>\notes' '{"notes": "C:\\Users\\<name>\\notes"}' \
+    'c:/users/<name>/notes or /home/<name>/notes' > "$copy/notes.txt"
+}
+
+paths_into_no_persons_home_folder() {
+  cat > "$copy/notes.txt" <<'EOF'
+/home-for-tests/someone
+/home/<name>/notes, /home/$USER/notes, /Users/{name}/notes and C:\Users\%USERNAME%\notes
+/home/runner/work, /Users/runner/work, C:\Users\runneradmin\work, /home/node/app and /home/linuxbrew/.linuxbrew
+/home/vscode/app, /Users/Shared/notes and C:\Users\Public\notes
+https://example.com/home/docs/, /users/ana/repos in GitHub's API and src/home/ana/notes
+EOF
+}
+
+paths_into_home_folders_in_generated_and_vendored_files() {
+  local file
+  printf '%s\n' 'dist/** linguist-generated' 'api.json linguist-generated=true' 'vendor/** linguist-vendored' \
+    'third_party/** linguist-vendored=true' >> "$copy/.gitattributes"
+  mkdir -p "$copy/dist" "$copy/vendor" "$copy/third_party"
+  for file in dist/app.js api.json vendor/lib.js third_party/lib.js; do
+    fill_in_name '/home/<name>/notes' > "$copy/$file"
+  done
+}
+
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:1 holds a path into a home folder, /home/<name>/.') Use a path relative to the repository, or ~ or \$HOME."
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:2 holds a path into a home folder, /Users/<name>/.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:3 holds a path into a home folder, C:\Users\<name>\.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:4 holds a path into a home folder, C:\\Users\\<name>\\.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:5 holds a path into a home folder, c:/users/<name>/.')"
+run_case paths_into_home_folders fail "$(fill_in_name 'error: notes.txt:5 holds a path into a home folder, /home/<name>/.')"
+run_case paths_into_no_persons_home_folder pass
+run_case paths_into_home_folders_in_generated_and_vendored_files pass
 
 # Cases for the check that limits the size of instruction files.
 
@@ -157,6 +286,16 @@ guide_of_24999_bytes() {
   printf '%s\n' "$(printf '%248s' '' | tr ' ' x)" >> "$copy/docs/writing.md"
 }
 
+guide_of_25000_bytes_as_the_first_of_two_links_on_a_line() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md) and [docs/pages.md](docs/pages.md),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
+guide_of_25000_bytes_linked_with_an_anchor() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/writing.md](docs/writing.md#write-error-messages),"
+  write_lines "$copy/docs/writing.md" 100 250
+}
+
 long_page_that_is_no_guide() {
   write_lines "$copy/docs/notes.md" 300 100
 }
@@ -173,13 +312,106 @@ agents_md_files_of_32000_bytes_on_two_paths() {
 }
 
 run_case agents_md_of_200_lines fail "error: src/AGENTS.md has 200 lines, and the limit is 199."
-run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own, as docs/rules.md describes."
+run_case agents_md_of_200_lines fail "the limit is 199. Move a procedure that only one kind of request needs into a guide of its own."
 run_case agents_md_of_199_lines pass
 run_case guide_of_25000_bytes fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case guide_of_24999_bytes pass
+run_case guide_of_25000_bytes_as_the_first_of_two_links_on_a_line fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
+run_case guide_of_25000_bytes_linked_with_an_anchor fail "error: docs/writing.md has 25000 bytes, and the limit is 24999."
 run_case long_page_that_is_no_guide pass
 run_case agents_md_files_of_32000_bytes_on_one_path fail "error: the AGENTS.md files from the root down to src/api have 32000 bytes together, and the limit is 31999."
 run_case agents_md_files_of_32000_bytes_on_two_paths pass
+
+# Cases for the check that limits the length of every tracked file.
+
+file_of_1001_lines() {
+  write_lines "$copy/src/report.py" 1001 10
+}
+
+file_of_1000_lines() {
+  write_lines "$copy/src/report.py" 1000 10
+}
+
+two_long_files() {
+  write_lines "$copy/src/report.py" 1001 10
+  write_lines "$copy/web/app.js" 1500 10
+}
+
+# git counts a file as binary when its first 8,000 bytes hold a zero byte.
+long_binary_file() {
+  mkdir -p "$copy/assets"
+  for ((written = 0; written < 1001; written++)); do
+    printf 'x\0\n'
+  done > "$copy/assets/logo.png"
+}
+
+long_lockfile_in_a_folder() {
+  write_lines "$copy/web/package-lock.json" 1001 10
+}
+
+long_file_marked_linguist_generated() {
+  write_lines "$copy/src/schema.py" 1001 10
+  echo "src/schema.py linguist-generated" >> "$copy/.gitattributes"
+}
+
+long_file_marked_linguist_vendored() {
+  write_lines "$copy/vendor/chart.js" 1001 10
+  echo "vendor/** linguist-vendored=true" >> "$copy/.gitattributes"
+}
+
+long_file_unmarked_as_generated_and_vendored() {
+  write_lines "$copy/src/schema.py" 1001 10
+  printf '%s\n' "src/*.py linguist-generated linguist-vendored" "src/schema.py -linguist-generated linguist-vendored=false" >> "$copy/.gitattributes"
+}
+
+long_file_listed_with_a_reason() {
+  write_lines "$copy/tests/statement.csv" 1001 10
+  echo "tests/statement.csv A whole bank statement, to test the import" > "$copy/scripts/long-files"
+}
+
+blank_line_in_the_list_of_long_files() {
+  write_lines "$copy/tests/statement.csv" 1001 10
+  printf '%s\n' "" "tests/statement.csv A whole bank statement, to test the import" "" > "$copy/scripts/long-files"
+}
+
+long_file_listed_without_a_reason() {
+  write_lines "$copy/tests/statement.csv" 1001 10
+  echo "tests/statement.csv" > "$copy/scripts/long-files"
+}
+
+listed_file_of_1000_lines() {
+  write_lines "$copy/tests/statement.csv" 1000 10
+  echo "tests/statement.csv A whole bank statement, to test the import" > "$copy/scripts/long-files"
+}
+
+run_case file_of_1001_lines fail "error: src/report.py has 1001 lines, and the limit is 1000. Move a part with its own responsibility into a file of its own."
+run_case file_of_1000_lines pass
+run_case two_long_files fail "error: src/report.py has 1001 lines, and the limit is 1000."
+run_case two_long_files fail "error: web/app.js has 1500 lines, and the limit is 1000."
+run_case long_binary_file pass
+run_case long_lockfile_in_a_folder pass
+run_case long_file_marked_linguist_generated pass
+run_case long_file_marked_linguist_vendored pass
+run_case long_file_unmarked_as_generated_and_vendored fail "error: src/schema.py has 1001 lines, and the limit is 1000."
+run_case long_file_listed_with_a_reason pass
+run_case blank_line_in_the_list_of_long_files pass
+run_case long_file_listed_without_a_reason fail "error: scripts/long-files lists tests/statement.csv without a reason. Add a space and the reason after the path."
+run_case listed_file_of_1000_lines fail "error: scripts/long-files lists tests/statement.csv, which scripts/check accepts without the list. Remove its line, or fix the path."
+
+# Cases for the checks that scripts are executable and that each check of the hooks has a test.
+# The repository as it is has a test without a check, scripts/hooks/session-start.test, and passes.
+
+script_that_isnt_executable() {
+  printf '%s\n' '#!/usr/bin/env bash' 'echo "The total is 0."' > "$copy/scripts/total"
+}
+
+hook_check_without_a_test() {
+  printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$copy/scripts/hooks/example.check"
+  chmod +x "$copy/scripts/hooks/example.check"
+}
+
+run_case script_that_isnt_executable fail "error: scripts/total starts with #!, and git doesn't record it as executable. Run chmod +x scripts/total as a command of its own, and then commit the change. If git ignores file modes, as it can on Windows, run git update-index --chmod=+x scripts/total instead."
+run_case hook_check_without_a_test fail "error: scripts/hooks/example.check has no test. Add scripts/hooks/example.test, which runs the check through scripts/hooks/before-tool, as the other tests in scripts/hooks/ do."
 
 # Cases for the check that finds section names that match no heading.
 
@@ -228,6 +460,77 @@ run_case section_name_in_a_file_that_doesnt_exist fail "error: docs/notes.md:1 n
 run_case form_field_named_with_says pass
 run_case section_names_that_match_headings pass
 
+# Cases for the check of the prose in Markdown files.
+
+# The lines that break a rule come after two code blocks, so that a code block that doesn't end would hide them.
+prose_that_breaks_each_rule() {
+  cat > "$copy/docs/page.md" <<'EOF'
+# Page
+
+```bash
+total=0; echo "pages 10 - 20"
+```
+
+1. Add the expenses:
+
+   ```bash
+   total=0; echo "pages 10 - 20"
+   ```
+
+The app totals the month; it also exports it.
+The app totals the month — it also exports it.
+The app totals the month – it also exports it.
+pages 10 - 20
+[Click here](https://example.com)
+Read the guide: [CLICK HERE][guide].
+
+[guide]: https://example.com
+EOF
+}
+
+markdown_that_follows_the_prose_rules() {
+  cat > "$copy/docs/page.md" <<'EOF'
+# Page
+
+- A list item that starts with a dash.
+  - A list item in a list item.
+
+Run `total=0; echo "$total"` or ``echo "pages 10 - 20 `30`"``, as [the guide](https://example.com/totals?month=1;year=2026 "Totals [2026]; pages 10 - 20") says.
+Two&nbsp;words, an <span title="a; b">HTML tag</span> and a comment. <!-- Totals; pages 10 - 20 -->
+Don't write "click here" as a link's text.
+
+1. Add the expenses:
+
+   ```bash
+   total=0; echo "pages 10 - 20"
+   ```
+
+~~~~text
+```
+total=0; echo "pages 10 - 20"
+```
+~~~~
+
+[guide]: https://example.com/totals?month=1;year=2026 "Totals; pages 10 - 20"
+EOF
+}
+
+semicolons_in_generated_and_vendored_files() {
+  printf '%s\n' 'CHANGELOG.md linguist-generated' 'vendor/** linguist-vendored' >> "$copy/.gitattributes"
+  mkdir -p "$copy/vendor/chart"
+  echo "The app totals the month; it also exports it." > "$copy/CHANGELOG.md"
+  echo "The app totals the month; it also exports it." > "$copy/vendor/chart/README.md"
+}
+
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:13 has a semicolon in prose. Write two sentences, as "Write clear sentences" in docs/writing.md says.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:14 has a dash between words in prose. If it joins two sentences, write two sentences, as "Write clear sentences" in docs/writing.md says. Otherwise, replace it with a word, as in "pages 10 to 20".'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:15 has a dash between words in prose.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:16 has a dash between words in prose.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:17 has a link whose text is "click here". Make the link text name the page it opens, as "Organize a page" in docs/pages.md says.'
+run_case prose_that_breaks_each_rule fail 'error: docs/page.md:18 has a link whose text is "click here".'
+run_case markdown_that_follows_the_prose_rules pass
+run_case semicolons_in_generated_and_vendored_files pass
+
 # Case for the place where setup adds the project's checks, which the copies skip.
 
 # The last line of the comment in scripts/check that marks the place.
@@ -252,6 +555,186 @@ project_check_that_fails() {
 }
 
 run_case project_check_that_fails pass
+
+# Cases for the check that the files agree on the facts that they repeat.
+
+label_that_configure_github_doesnt_create() {
+  replace_text AGENTS.md "## Labels" $'## Labels\n\nClose an issue that no one will build with `wontfix`.'
+}
+
+label_that_agents_md_doesnt_name() {
+  replace_text scripts/configure-github "<<'LABELS'" "<<'LABELS'"$'\n'"wontfix|ffffff|No one will build this"
+}
+
+dependabot_label_that_agents_md_doesnt_name() {
+  replace_text .github/dependabot.yml "labels: [dependencies]" "labels: [deps]"
+}
+
+labels_in_a_block_list() {
+  replace_text .github/release.yml "labels: [bug]" $'labels:\n        - bug'
+}
+
+unknown_label_in_a_block_list() {
+  replace_text .github/release.yml "labels: [bug]" $'labels:\n        - bug\n        - "regression"'
+}
+
+unknown_label_in_a_string_with_commas() {
+  replace_text .github/ISSUE_TEMPLATE/bug.yml "labels: [bug, needs-triage]" "labels: bug, wontfix"
+}
+
+star_label_outside_release_notes() {
+  replace_text .github/dependabot.yml "labels: [dependencies]" 'labels: ["*"]'
+}
+
+# Renames the section, and the names that quote it, so that the check of section names still passes.
+agents_md_without_labels() {
+  replace_text AGENTS.md "## Labels" "## Label rules"
+  replace_text docs/rules.md '"Labels"' '"Label rules"'
+}
+
+run_case label_that_configure_github_doesnt_create fail "error: \"Labels\" in AGENTS.md names wontfix, and scripts/configure-github doesn't create it. Add it to scripts/configure-github, or remove it from AGENTS.md."
+run_case label_that_agents_md_doesnt_name fail "error: scripts/configure-github creates the label wontfix, and \"Labels\" in AGENTS.md doesn't name it. Add it to AGENTS.md, or remove it from scripts/configure-github."
+run_case dependabot_label_that_agents_md_doesnt_name fail "error: .github/dependabot.yml names the label deps, and \"Labels\" in AGENTS.md doesn't name it. Use a label that AGENTS.md names, or add deps to AGENTS.md and scripts/configure-github."
+run_case labels_in_a_block_list pass
+run_case unknown_label_in_a_block_list fail "error: .github/release.yml names the label regression, and \"Labels\" in AGENTS.md doesn't name it."
+run_case unknown_label_in_a_string_with_commas fail "error: .github/ISSUE_TEMPLATE/bug.yml names the label wontfix, and \"Labels\" in AGENTS.md doesn't name it."
+run_case star_label_outside_release_notes fail "error: .github/dependabot.yml names the label *, and \"Labels\" in AGENTS.md doesn't name it."
+run_case agents_md_without_labels fail "error: AGENTS.md has no section \"Labels\", and scripts/check compares that section with other files. Add it, with the heading \"## Labels\"."
+
+title_check_without_a_type() {
+  replace_text scripts/check-title "|perf|" "|"
+}
+
+title_check_with_an_extra_type() {
+  replace_text scripts/check-title "|chore\"" "|chore|wip\""
+}
+
+run_case title_check_without_a_type fail "error: \"Commits\" in AGENTS.md lists the type perf, and the title check in scripts/check-title doesn't allow it. Add it to the types in scripts/check-title, or remove it from AGENTS.md."
+run_case title_check_with_an_extra_type fail "error: the title check in scripts/check-title allows the type wip, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in scripts/check-title."
+
+# Writes .github/workflows/lint.yml, with one job that has a step named lint: write_workflow <event> <job key> [<job name>]
+write_workflow() {
+  local event=$1 key=$2 name=${3:-}
+  {
+    printf '%s\n' "name: Lint" "on: $event" "permissions: {}" "jobs:" "  $key:"
+    if [[ -n $name ]]; then
+      printf '%s\n' "    name: $name"
+    fi
+    printf '%s\n' "    runs-on: ubuntu-latest" "    steps:" "      - name: lint" "        run: echo \"The style is fine.\""
+  } > "$copy/.github/workflows/lint.yml"
+}
+
+required_check_that_no_job_reports() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+}
+
+required_check_from_a_job_name() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow "[push, pull_request, merge_group]" style lint
+}
+
+required_check_from_a_step_name() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow pull_request style
+}
+
+required_check_from_a_workflow_that_doesnt_run_on_pull_requests() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow pull_request_review lint
+}
+
+required_check_from_a_workflow_that_runs_on_both_events() {
+  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  write_workflow "[pull_request, merge_group]" lint
+}
+
+required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue() {
+  replace_text .github/workflows/pr-title.yml "  merge_group:" ""
+}
+
+run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: linux, bash-3-2, check, title, label. Rename a job to lint, or change the check in scripts/configure-github."
+run_case required_check_from_a_job_name pass
+run_case required_check_from_a_step_name fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+run_case required_check_from_a_workflow_that_runs_on_both_events pass
+run_case required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue fail "error: scripts/configure-github requires the check title on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports title on pull_request: .github/workflows/pr-title.yml."
+
+# Writes the README of a new project, followed by the lines given: write_readme [<line>...]
+# The cases that test the README write a README of their own, because the setup replaces the template's README.
+write_readme() {
+  printf '%s\n' "# expense-tracker" "" "Records what you spend. It can't do anything yet." "$@" > "$copy/README.md"
+}
+
+agents_md_that_asks_for_another_gh_version() {
+  replace_text AGENTS.md "need gh 2.98 or later" "need gh 2.99 or later"
+}
+
+readme_that_asks_for_another_gh_version() {
+  write_readme "" "You need the GitHub CLI 2.97 or later."
+}
+
+agents_md_without_the_gh_version() {
+  replace_text AGENTS.md "need gh 2.98 or later" "need a recent gh"
+}
+
+minimum_gh_version_that_isnt_set() {
+  replace_text scripts/minimum-gh-version "minimum_gh_version=" "needed_gh_version="
+}
+
+new_gh_version_in_every_file() {
+  replace_text scripts/minimum-gh-version "minimum_gh_version=2.98" "minimum_gh_version=2.99"
+  replace_text AGENTS.md "need gh 2.98 or later" "need gh 2.99 or later"
+  write_readme "" "You need the GitHub CLI 2.99 or later."
+}
+
+readme_of_a_new_project() {
+  write_readme
+}
+
+run_case agents_md_that_asks_for_another_gh_version fail "error: AGENTS.md asks for gh 2.99, and scripts/minimum-gh-version asks for gh 2.98. Use the same version in both."
+run_case readme_that_asks_for_another_gh_version fail "error: README.md asks for the GitHub CLI 2.97, and scripts/minimum-gh-version asks for gh 2.98. Use the same version in both."
+run_case agents_md_without_the_gh_version fail "error: AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". Add it, with the version in scripts/minimum-gh-version: 2.98."
+run_case minimum_gh_version_that_isnt_set fail "error: scripts/minimum-gh-version doesn't set minimum_gh_version to a version written as <major>.<minor>, such as 2.98, so the hooks can't compare gh with it."
+run_case new_gh_version_in_every_file pass
+run_case readme_of_a_new_project pass
+
+# Writes the README of a new project, with a section "What you get" that names each page in docs/ and then each path given:
+# write_readme_with_what_you_get [<path>...]
+write_readme_with_what_you_get() {
+  local page
+  local -a lines=("" "## What you get" "")
+  for page in "$copy"/docs/*.md; do
+    lines+=("- \`${page#"$copy/"}\`")
+  done
+  for page in "$@"; do
+    lines+=("- \`$page\`")
+  done
+  write_readme "${lines[@]}"
+}
+
+# The README names the pages in docs/ before the case adds the guide, so its section "What you get" leaves the guide out.
+guide_in_neither_list() {
+  write_readme_with_what_you_get
+  printf '%s\n' "# Notes guide" "" "Ideas for later." > "$copy/docs/notes.md"
+}
+
+page_whose_title_doesnt_end_in_guide() {
+  printf '%s\n' "# Notes" "" "Ideas for later." > "$copy/docs/notes.md"
+}
+
+missing_page_in_what_you_get() {
+  write_readme_with_what_you_get docs/missing.md
+}
+
+missing_page_in_read_the_guides() {
+  replace_text AGENTS.md "- [docs/writing.md](docs/writing.md)," "- [docs/missing.md](docs/missing.md) and [docs/writing.md](docs/writing.md),"
+}
+
+run_case guide_in_neither_list fail "error: \"Read the guides\" in AGENTS.md doesn't link to docs/notes.md, which is a guide because its title ends in \"guide\". Link to it there, and say when to read it."
+run_case guide_in_neither_list fail "error: \"What you get\" in README.md doesn't name docs/notes.md, which is a guide because its title ends in \"guide\". Name it there, and say what it covers."
+run_case page_whose_title_doesnt_end_in_guide pass
+run_case missing_page_in_what_you_get fail "error: \"What you get\" in README.md names docs/missing.md, which doesn't exist. Fix the path, or remove it from README.md."
+run_case missing_page_in_read_the_guides fail "error: \"Read the guides\" in AGENTS.md links to docs/missing.md, which doesn't exist. Fix the link, or remove it from AGENTS.md."
 
 # Add a case for each check in scripts/check here.
 

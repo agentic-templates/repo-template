@@ -26,14 +26,16 @@ Follow these steps for every idea, whatever form the input takes:
    - **Research first:** a maintainer can't decide whether to build the idea, or what to build, until an open question is answered. The idea becomes an issue with `needs-decision`, blocked by a new research issue for the question.
    - **Needs a decision:** only a maintainer can settle it, such as which of two approaches to take. Ask the maintainer in step 4, and replace this verdict with the one that their answer leads to. If they want to decide later, the idea becomes an issue with `needs-decision`.
    - **Too vague:** it doesn't say what should change, or you can't tell why anyone would want it. If you can guess the likely reason, propose it and ask the maintainer to confirm. Otherwise give the idea back, and say what it's missing.
-   - **Duplicate:** an issue already covers it. Add anything new to that issue as a comment. If that issue was closed as not planned, tell the maintainer, who decides whether to reopen it.
+   - **Duplicate:** an issue already covers it.
+     - If an open issue covers it, add the idea's new details to that issue's body. If that issue has `ready`, ask the maintainer in step 4 whether to add them. If they say no, add nothing.
+     - If only a closed issue covers it, ask the maintainer in step 4 whether they still want the change. If they do, open a new issue that mentions the closed one. If they don't, create nothing. If they want to decide later, the idea becomes an issue with `needs-decision`.
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
 
    When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, if no reading of an idea would fit the project, recommend **Drop**, not **Too vague**.
 
    Four verdicts don't need the maintainer's approval: **Accept**, **Accept, too big**, **Research first** and **Duplicate**. You carry them out in step 5, once the maintainer has answered your questions. **Drop**, **Too vague** and **Needs a decision** wait for the maintainer.
 4. Before you show the maintainer your verdicts, ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. If the critic recommends revising or dropping an idea whose verdict doesn't need approval, make its verdict **Needs a decision**. Show the maintainer a table of the ideas, verdicts and reasons, and mark the verdicts that you'll carry out without asking. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts that the table doesn't mark.
-5. Carry out the verdicts that the table marks, the verdicts the maintainer approved, and any verdict that an answer turned into one of the four, without asking again. Write each new issue in your own words. Leave out private details from the input. If part of the input comes from a public source, link that source instead of copying it. Write each issue under the three headings from AGENTS.md: "What should change", "Why" and "Done when". A research issue uses the headings in "Write a research issue". Give every new issue its type label.
+5. Carry out the verdicts that the table marks, the verdicts the maintainer approved, and any verdict that an answer turned into one of the four, without asking again. Write each new issue in your own words. Leave out private details from the input. If part of the input comes from a public source, link that source instead of copying it.
 
 Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak.
 
@@ -59,7 +61,7 @@ Triage every issue that has `needs-triage` or has no type label. Check each issu
 - **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`.
 
-An issue from an account that isn't a maintainer's can never get `ready`, as "Definition of ready" describes. So if the verdict for such an issue is **Accept**, **Research first** or **Needs a decision**, carry out the verdict on a new issue instead of the original. Write the new issue in your own words under the three headings, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
+An issue from an account that isn't a maintainer's can never get `ready`, as "Definition of ready" describes. So if the verdict for such an issue is **Accept**, **Research first** or **Needs a decision**, carry out the verdict on a new issue instead of the original. Write the new issue in your own words, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
 
 ## Break down a big idea
 
@@ -70,7 +72,7 @@ An issue from an account that isn't a maintainer's can never get `ready`, as "De
 
 ## Write a research issue
 
-- A research issue's body has three headings: "Question", "What depends on the answer" and "Done when". "Done when" asks for a comment with the answer, the evidence and a recommendation.
+- A research issue's "Done when" asks for a comment with the answer, the evidence and a recommendation.
 - The issue has the `research` label. Each issue that depends on the answer is blocked by it.
 
 ## Definition of ready

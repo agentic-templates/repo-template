@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# Tests scripts/queue-auto-merge with a stand-in for gh.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+case_count=0
+failed_cases=0
+
+base=$(mktemp -d)
+trap 'rm -rf "$base"' EXIT
+mkdir -p "$base/bin"
+
+# A stand-in for gh, first on the PATH. It answers the command in scripts/check-main-rules with the checks in
+# TEST_MAIN_RULES, one to a line, and the command that lists the open pull requests with TEST_PULL_REQUESTS, as the
+# script's --jq filter prints them. With fail, either one fails, as gh does without the network.
+# It writes each gh pr merge command to TEST_GH_CALLS, one to a line, and fails the one that matches TEST_FAILING_MERGE.
+cat >"$base/bin/gh" <<'STAND_IN'
+#!/usr/bin/env bash
+if [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
+  if [[ $TEST_MAIN_RULES == fail ]]; then
+    echo "error connecting to api.github.com" >&2
+    exit 1
+  fi
+  for check in $TEST_MAIN_RULES; do
+    echo "$check"
+  done
+  exit 0
+fi
+if [[ $1 == api && $2 == graphql ]]; then
+  if [[ $TEST_PULL_REQUESTS == fail ]]; then
+    echo "error connecting to api.github.com" >&2
+    exit 1
+  fi
+  if [[ -n $TEST_PULL_REQUESTS ]]; then
+    printf '%s\n' "$TEST_PULL_REQUESTS"
+  fi
+  exit 0
+fi
+if [[ $1 == pr && $2 == merge ]]; then
+  echo "$*" >>"$TEST_GH_CALLS"
+  if [[ $* == "$TEST_FAILING_MERGE" ]]; then
+    echo "GraphQL: Pull request is in clean status (enablePullRequestAutoMerge)" >&2
+    exit 1
+  fi
+  exit 0
+fi
+echo "The stand-in for gh doesn't answer: gh $*" >&2
+exit 1
+STAND_IN
+chmod +x "$base/bin/gh"
+
+tab=$'\t'
+# One open pull request, as the script's --jq filter prints it: pull_request <number> <from a fork> <in the queue>
+# <merge state> <auto-merge on>
+pull_request() {
+  printf '%s\n' "$1$tab$2$tab$3$tab$4$tab$5"
+}
+
+# Runs scripts/queue-auto-merge, and sets status, output and merges, the gh pr merge commands it ran:
+# run_queue_auto_merge <checks that main requires, or fail> <open pull requests, or fail> [<gh pr merge command that fails>]
+run_queue_auto_merge() {
+  status=0
+  : >"$base/calls"
+  output=$(TEST_MAIN_RULES=$1 TEST_PULL_REQUESTS=$2 TEST_FAILING_MERGE=${3:-} TEST_GH_CALLS=$base/calls \
+    PATH=$base/bin:$PATH scripts/queue-auto-merge 2>&1) || status=$?
+  merges=$(<"$base/calls")
+}
+
+# Checks the script's exit code, output and gh pr merge commands:
+# expect_result <description> <exit code> <output> <gh pr merge commands, one to a line>
+expect_result() {
+  local description=$1 expected_status=$2 expected_output=$3 expected_merges=$4
+  case_count=$((case_count + 1))
+  if [[ $status != "$expected_status" || $output != "$expected_output" || $merges != "$expected_merges" ]]; then
+    echo "error: $description, scripts/queue-auto-merge must exit with code $expected_status, print \"$expected_output\" and run \"$expected_merges\", but it exited with code $status, printed \"$output\" and ran \"$merges\"." >&2
+    failed_cases=$((failed_cases + 1))
+  fi
+}
+
+added="to the merge queue. Its checks had passed, but auto-merge hadn't added it."
+
+run_queue_auto_merge "check title" ""
+expect_result "When no pull request is open" 0 "" ""
+
+run_queue_auto_merge "check title" "$(pull_request 12 false false CLEAN true)"
+expect_result "When auto-merge hasn't added a pull request whose checks passed" 0 "Added pull request 12 $added" \
+  "pr merge 12 --disable-auto"$'\n'"pr merge 12"
+
+pull_requests=$(
+  pull_request 12 false false CLEAN true
+  pull_request 13 false true CLEAN true
+  pull_request 14 false false BLOCKED true
+  pull_request 15 false false CLEAN false
+  pull_request 16 true false CLEAN true
+  pull_request 17 false false UNSTABLE true
+  pull_request 18 false false CLEAN true
+)
+run_queue_auto_merge "check title" "$pull_requests"
+expect_result "When only some pull requests have auto-merge on, passed checks and no place in the queue" 0 \
+  "Added pull request 12 $added"$'\n'"Added pull request 18 $added" \
+  "pr merge 12 --disable-auto"$'\n'"pr merge 12"$'\n'"pr merge 18 --disable-auto"$'\n'"pr merge 18"
+
+run_queue_auto_merge "check" "$(pull_request 12 false false CLEAN true)"
+expect_result "When main no longer requires a check that scripts/configure-github requires" 1 \
+  "error: main no longer requires the title job, so a pull request can merge without passing it. A maintainer with admin access restores it by running scripts/configure-github."$'\n'"error: scripts/queue-auto-merge added no pull request to the merge queue, because of the error above. Go on with the other work, and list this in your report for the maintainer." ""
+
+run_queue_auto_merge fail "$(pull_request 12 false false CLEAN true)"
+expect_result "When gh can't read the rules for main" 0 "Added pull request 12 $added" \
+  "pr merge 12 --disable-auto"$'\n'"pr merge 12"
+
+run_queue_auto_merge "check title" fail
+expect_result "When gh can't list the open pull requests" 1 \
+  "error: can't list the open pull requests, because gh failed: error connecting to api.github.com" ""
+
+run_queue_auto_merge "check title" "$(pull_request 12 false false CLEAN true)" "pr merge 12"
+expect_result "When gh can't add the pull request to the queue" 1 \
+  "error: turned off auto-merge on pull request 12, but can't add it to the merge queue, because gh failed: GraphQL: Pull request is in clean status (enablePullRequestAutoMerge). Run gh pr merge 12 to add it." \
+  "pr merge 12 --disable-auto"$'\n'"pr merge 12"
+
+run_queue_auto_merge "check title" "$(pull_request 12 false false CLEAN true)" "pr merge 12 --disable-auto"
+expect_result "When gh can't turn off auto-merge" 1 \
+  "error: can't turn off auto-merge on pull request 12, because gh failed: GraphQL: Pull request is in clean status (enablePullRequestAutoMerge)" \
+  "pr merge 12 --disable-auto"
+
+if ((failed_cases > 0)); then
+  echo "error: $failed_cases of the $case_count cases in scripts/queue-auto-merge.test failed. The errors above say which." >&2
+  exit 1
+fi
+echo "scripts/queue-auto-merge.test passed. Cases: $case_count."
