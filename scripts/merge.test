@@ -2,6 +2,9 @@
 # Tests scripts/merge with a stand-in for gh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/testing-required-checks.bash
+source scripts/testing-required-checks.bash
+unrequired_check=$(fixture_check_name CodeQL)
 
 case_count=0
 failed_cases=0
@@ -24,6 +27,7 @@ if [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
   for check in $TEST_MAIN_RULES; do
     echo "$check"
   done
+  printf '%s\n' "$TEST_PROJECT_CHECKS"
   exit 0
 fi
 if [[ $1 == api && $2 == graphql && " $* " == *"query BlockedMerge"* ]]; then
@@ -71,6 +75,7 @@ unknown_error="error: cannot determine why GitHub blocks the merge of pull reque
 pull_request() {
   printf '%s\n' "pull-request${tab}12$tab$1$tab$2$tab$3$tab$4$tab$5$tab$commit_time$tab${6:-}"
   printf '%s\n' "head${tab}12$tab$pull_request_url$tab$head_oid"
+  project_check_runs 12
 }
 
 # A line about a run of a check on the latest commit: check_run <ID> <name> <conclusion, or nothing>
@@ -154,7 +159,7 @@ expect_result "When a check failed, and its latest run passed" 0 queued "pr merg
 run_merge "$(pull_request OPEN false false false CLEAN; check_run 101 check SKIPPED; check_run 102 title NEUTRAL)"
 expect_result "When the checks were skipped or neutral" 0 queued "pr merge 12"
 
-run_merge "$(pull_request OPEN false false false UNSTABLE; passed_checks; check_run 103 CodeQL FAILURE)"
+run_merge "$(pull_request OPEN false false false UNSTABLE; passed_checks; check_run 103 "$unrequired_check" FAILURE)"
 expect_result "When only a check that main doesn't require failed" 0 queued "pr merge 12"
 
 run_merge "$(pull_request OPEN false false false BLOCKED; check_run 101 check SUCCESS; check_run 102 title)"
@@ -164,7 +169,7 @@ run_merge "$(pull_request OPEN false false false BLOCKED; check_run 101 check SU
 expect_result "When a check has no run yet" 0 "waiting for checks" ""
 
 run_merge "$(pull_request OPEN false false false BLOCKED)"
-expect_result "When no checks exist yet" 0 "waiting for checks" ""
+expect_result "When neither fixture check has a run yet" 0 "waiting for checks" ""
 
 run_merge "$(pull_request OPEN false false false CLEAN; passed_checks; removal "$before_commit" merge_conflict
   removal "$after_commit" "failed_checks")"
@@ -306,7 +311,7 @@ for auto_merge in "" "$after_commit"; do
   run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
   expect_result "When a review blocker belongs to an uncertain head" 1 "$unknown_error" ""
   blocked_evidence=null
-  run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks; check_run 103 CodeQL)"
+  run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks; check_run 103 "$unrequired_check")"
   expect_result "When only a scan name suggests pending work" 1 "$unknown_error" ""
 done
 

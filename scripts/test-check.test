@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Tests that the check fixtures work in a project with its own workflows and required checks.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+expect_usage() {
+  local script=$1 option=$2 status=0 output
+  shift 2
+  output=$("$script" "$@" 2>&1) || status=$?
+  if [[ $status != 2 || $output != "usage: $script [$option]" ]]; then
+    echo "error: $script must reject unsupported arguments with exit code 2 and its usage. Got $status: $output" >&2
+    exit 1
+  fi
+}
+for script in scripts/test-check scripts/hooks/maintainer-commands.test; do
+  option=--workflows-only
+  if [[ $script == scripts/hooks/* ]]; then
+    option=--main-rules-only
+  fi
+  expect_usage "$script" "$option" --unknown
+  expect_usage "$script" "$option" "$option" extra
+  expect_usage "$script" "$option" ""
+done
+
+base=$(mktemp -d)
+trap 'rm -rf "$base"' EXIT
+copy=$base/repository
+mkdir "$copy"
+git ls-files -z | while IFS= read -r -d '' file; do
+  if [[ -f $file ]]; then
+    mkdir -p "$copy/$(dirname "$file")"
+    cp -p "$file" "$copy/$file"
+  fi
+done
+
+# Use lint.yml when it is free, and leave an existing downstream workflow untouched.
+workflow=lint
+while [[ -e $copy/.github/workflows/$workflow.yml ]]; do
+  workflow=$workflow-fixture
+done
+cat > "$copy/.github/workflows/$workflow.yml" <<'WORKFLOW'
+name: Lint
+on: [pull_request, merge_group]
+permissions: {}
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "The style is fine."
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "The style is fine."
+WORKFLOW
+for key in test_check test_check_fixture CodeQL; do
+  printf '%s\n' "  $key:" "    runs-on: ubuntu-latest" "    steps:" \
+    "      - run: echo passed" >> "$copy/.github/workflows/$workflow.yml"
+done
+
+configure_github=$(< "$copy/scripts/configure-github")
+required_checks='"required_status_checks": ['
+if [[ $configure_github != *"$required_checks"* ]]; then
+  echo "error: scripts/configure-github has no required checks list. Update the test to match it." >&2
+  exit 1
+fi
+added_checks=$'\n          {"context": "eslint", "integration_id": 15368},\n          {"context": "lint", "integration_id": 15368},\n          {"context": "test_check", "integration_id": 15368},\n          {"context": "test_check_fixture", "integration_id": 15368},\n          {"context": "CodeQL", "integration_id": 15368},'
+# Exercise Bash 3.2 replacement quoting on newer Bash versions too.
+(
+  BASH_COMPAT=3.2
+  printf '%s\n' "${configure_github/"$required_checks"/$required_checks$added_checks}"
+) > "$copy/scripts/configure-github"
+sed -n '/^ruleset=/,/^JSON$/p' "$copy/scripts/configure-github" | sed '1d;$d' | jq empty
+
+fixture_workflow=$workflow
+
+# These names collide with fixtures too, and their contents must survive every case.
+for workflow in test-check test-check-1 test-check-push; do
+  if [[ ! -e $copy/.github/workflows/$workflow.yml ]]; then
+    cp -p "$copy/.github/workflows/$fixture_workflow.yml" "$copy/.github/workflows/$workflow.yml"
+  fi
+done
+
+git -C "$copy" init --quiet
+git -C "$copy" add --all
+before=$(git -C "$copy" write-tree)
+# The default suite covers the other checks already. Repeat only the cases that add workflow fixtures.
+if ! (cd "$copy" && scripts/test-check --workflows-only) > "$base/output" 2>&1; then
+  cat "$base/output" >&2
+  echo "error: scripts/test-check failed with downstream workflows and required checks." >&2
+  exit 1
+fi
+for test in check-main-rules merge queue-auto-merge start-build-run stuck-pull-requests hooks/maintainer-commands; do
+  argument=""
+  if [[ $test == hooks/maintainer-commands ]]; then
+    argument=--main-rules-only
+  fi
+  if ! (cd "$copy" && "scripts/$test.test" ${argument:+"$argument"}) > "$base/output" 2>&1; then
+    cat "$base/output" >&2
+    echo "error: scripts/$test.test failed with downstream required checks." >&2
+    exit 1
+  fi
+done
+git -C "$copy" add --all
+if [[ $(git -C "$copy" write-tree) != "$before" ]]; then
+  echo "error: scripts/test-check changed its source repository." >&2
+  exit 1
+fi
+echo "scripts/test-check.test passed."
