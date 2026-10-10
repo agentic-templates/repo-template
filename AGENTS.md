@@ -19,7 +19,7 @@ Read each guide before you first do its kind of work in a session, even when the
 
 ## What this project is
 
-repo-template gives a new GitHub project the rules, hooks, checks and settings that people and coding agents follow to plan, build and release it. It works with any language, and with any coding tool that runs the project's hooks. Each project adds its own language tools during setup.
+repo-template gives a new GitHub project the rules, hooks, checks and settings that people and coding agents follow to plan, build and release it. Its aim is a project that stays easy to change over many changes, with a simple design that lasts, code that reads clearly, tests that guard behavior, clear writing, safety from security problems and risky actions, and little for an agent to read in each change. It aims to keep its rules few, and to enforce them with hooks, checks and settings where it can. It works with any language, and with any coding tool that runs the project's hooks. Each project adds its own language tools during setup.
 
 When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction.
 
