@@ -632,8 +632,31 @@ write_workflow() {
   } > "$copy/.github/workflows/lint.yml"
 }
 
+# Writes a workflow with one job for each key given: write_jobs <file in .github/workflows> <event> <job key>...
+write_jobs() {
+  local file=$1 event=$2 key
+  shift 2
+  {
+    printf '%s\n' "name: $file" "on: $event" "permissions: {}" "jobs:"
+    for key in "$@"; do
+      printf '%s\n' "  $key:" "    runs-on: ubuntu-latest" "    steps:" "      - run: echo \"The $key job passed.\""
+    done
+  } > "$copy/.github/workflows/$file"
+}
+
+# Removes the copy's workflows, for a case whose expected error lists the jobs or says that no job reports lint.
+# A project adds jobs of its own, and may name one lint, so such a case writes its own workflows.
+remove_workflows() {
+  rm -rf "$copy/.github/workflows"
+  mkdir "$copy/.github/workflows"
+}
+
 required_check_that_no_job_reports() {
   replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  remove_workflows
+  write_jobs ci.yml "[pull_request, merge_group]" test build
+  write_jobs deploy.yml push deploy
+  write_jobs pr-title.yml pull_request title
 }
 
 required_check_from_a_job_name() {
@@ -643,11 +666,13 @@ required_check_from_a_job_name() {
 
 required_check_from_a_step_name() {
   replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  remove_workflows
   write_workflow pull_request style
 }
 
 required_check_from_a_workflow_that_doesnt_run_on_pull_requests() {
   replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
+  remove_workflows
   write_workflow pull_request_review lint
 }
 
@@ -660,7 +685,7 @@ required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue() {
   replace_text .github/workflows/pr-title.yml "  merge_group:" ""
 }
 
-run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: linux, bash-3-2, check, title, label. Rename a job to lint, or change the check in scripts/configure-github."
+run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: test, build, title. Rename a job to lint, or change the check in scripts/configure-github."
 run_case required_check_from_a_job_name pass
 run_case required_check_from_a_step_name fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
 run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
