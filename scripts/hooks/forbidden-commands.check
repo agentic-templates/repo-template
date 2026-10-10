@@ -6,6 +6,8 @@
 #   happens to Dependabot's pull requests
 # - deleting a pull request's branch with gh pr close, because the next agent that works on its issue starts from it
 # - gh issue develop on an issue with needs-triage, because no maintainer has accepted the issue yet
+# - gh auth token, gh auth status with --show-token, gh auth git-credential and git credential fill, because they print
+#   the token that gh uses, and AGENTS.md says never to read or print secrets
 # It asks gh and git about the pull request, the issue or the branch, and allows the command when they fail, such as
 # without a network.
 # shellcheck source=scripts/hooks/helpers.bash
@@ -13,10 +15,15 @@ source "${BASH_SOURCE[0]%/*}/helpers.bash"
 # shellcheck source=scripts/minimum-gh-version
 source "${BASH_SOURCE[0]%/*}/../minimum-gh-version"
 
-# The flags that take a value, as gh pr close --help, gh issue develop --help and git push -h list them.
+# The flags that take a value, as gh pr close --help, gh issue develop --help, git push -h, gh auth token --help and
+# gh auth status --help list them.
 close_flags_with_value=" -c --comment -R --repo "
 develop_flags_with_value=" -b --base --branch-repo -n --name --worktree -R --repo "
 push_flags_with_value=" --repo --recurse-submodules --receive-pack --exec -o --push-option "
+token_flags_with_value=" -h --hostname -u --user "
+status_flags_with_value=" -h --hostname --jq --json --template "
+
+prints_token="Blocked: this command prints the token that gh uses, and AGENTS.md says never to read or print secrets. gh commands use the token without it."
 
 check_gh_version() {
   local version_output found
@@ -69,21 +76,24 @@ check_gh_issue_develop() {
   fi
 }
 
-check_git_push() {
-  local i=1 word refspec branch
-  local -a folder=(-C "${cwd:-.}") words=() refspecs=(HEAD)
-  if [[ ${command_words[0]##*/} != git ]]; then
-    return 0
-  fi
+# Reads the -C options at the start of a git command, and sets these variables:
+# - git_folder: the -C options that make git work in the same folder as the command, starting from the agent's folder
+# - git_subcommand: the index of the word after the options, such as push
+read_git_options() {
+  local i=1
+  git_folder=(-C "${cwd:-.}")
   # git takes each -C relative to the folder before it, so the hook asks git about the branch in the same folder.
   while [[ ${command_words[i]:-} == -C ]]; do
-    folder+=(-C "${command_words[i + 1]:-}")
+    git_folder+=(-C "${command_words[i + 1]:-}")
     i=$((i + 2))
   done
-  if [[ ${command_words[i]:-} != push ]]; then
-    return 0
-  fi
-  for ((i = i + 1; i < ${#command_words[@]}; i++)); do
+  git_subcommand=$i
+}
+
+check_git_push() {
+  local i word refspec branch
+  local -a words=() refspecs=(HEAD)
+  for ((i = git_subcommand + 1; i < ${#command_words[@]}; i++)); do
     word=${command_words[i]}
     case $word in
       -*=*) ;;
@@ -104,7 +114,7 @@ check_git_push() {
     branch=${refspec#+}
     branch=${branch#*:}
     if [[ $branch == HEAD ]]; then
-      branch=$(git "${folder[@]}" symbolic-ref --quiet --short HEAD 2>/dev/null) || continue
+      branch=$(git "${git_folder[@]}" symbolic-ref --quiet --short HEAD 2>/dev/null) || continue
     fi
     branch=${branch#refs/heads/}
     if [[ $branch == dependabot/* ]]; then
@@ -113,12 +123,41 @@ check_git_push() {
   done
 }
 
+check_gh_auth_token() {
+  read_arguments 3 "$token_flags_with_value"
+  # Only --help shows the help instead of the token, because -h means --hostname here.
+  if ! has_flag --help; then
+    block "$prints_token"
+  fi
+}
+
+check_gh_auth_status() {
+  local flag
+  read_arguments 3 "$status_flags_with_value"
+  for flag in ${flags[@]+"${flags[@]}"}; do
+    case $flag in
+      --show-token=false) ;;
+      --show-token | --show-token=*) block "$prints_token" ;;
+      --*) ;;
+      # -t, or a group of short flags that holds it, such as -at
+      -*t*) block "$prints_token" ;;
+    esac
+  done
+}
+
 check_simple_command() {
   drop_command_prefixes "$@"
   if ((${#command_words[@]} == 0)); then
     return 0
   fi
-  check_git_push
+  if [[ ${command_words[0]##*/} == git ]]; then
+    read_git_options
+    case "${command_words[git_subcommand]:-} ${command_words[git_subcommand + 1]:-}" in
+      "push "*) check_git_push ;;
+      "credential fill") block "$prints_token" ;;
+    esac
+    return 0
+  fi
   if [[ ${command_words[0]##*/} != gh ]]; then
     return 0
   fi
@@ -127,10 +166,15 @@ check_simple_command() {
     "api "*) check_gh_api ;;
     "pr close") check_gh_pr_close ;;
     "issue develop") check_gh_issue_develop ;;
+    "auth token") check_gh_auth_token ;;
+    "auth status") check_gh_auth_status ;;
+    "auth git-credential") block "$prints_token" ;;
   esac
 }
 
 read_input
 if [[ $tool_name == Bash ]]; then
-  for_each_simple_command check_simple_command "$shell_command"
+  # A here-document holds text, such as a commit message that names a command, and not commands.
+  split_heredocs "$shell_command"
+  for_each_simple_command check_simple_command "$command_text"
 fi
