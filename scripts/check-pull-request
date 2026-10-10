@@ -119,19 +119,8 @@ elif [[ $closed_numbers == *" "* ]]; then
   report "The body closes more than one issue: #${closed_numbers// /, #}. A pull request closes one issue, so keep the line for the issue that it builds, and build each other issue in a pull request of its own."
 fi
 
-# The body without its HTML comments, which can span lines. A comment that doesn't end runs to the end of the body.
-rest=$body
-text=""
-while [[ $rest == *"<!--"* ]]; do
-  text+=${rest%%"<!--"*}
-  rest=${rest#*"<!--"}
-  if [[ $rest != *"-->"* ]]; then
-    rest=""
-    break
-  fi
-  rest=${rest#*"-->"}
-done
-text+=$rest
+# The body without its HTML comments, which hold no headings or sentences that count.
+text=$(without_html_comments "$body")
 
 # A heading at any level. Group 2 holds its text.
 heading_line='^ {0,3}#{1,6}([[:space:]]+(.*))?$'
@@ -176,40 +165,9 @@ check_section() {
 check_section "What changed and why"
 check_section "How it was checked"
 
-# Reports each path into a home folder in a piece of text: check_home_paths <where> <text>
-# <where> names the text at the start of the error, such as: The title "fix: keep the total"
-check_home_paths() {
-  local path
-  while IFS= read -r path; do
-    report "$1 holds a path into a home folder, $path. Use a path relative to the repository, or ~ or \$HOME."
-  done < <(home_paths_in "$2")
-}
-
-# Reports each semicolon and dash between words in the prose of a line of Markdown: check_prose <where> <line>
-check_prose() {
-  local prose
-  # prose_in only replaces parts of a line, so a line that breaks no rule as it is passes.
-  if [[ $2 != *\;* && ! $2 =~ $dash_between_words ]]; then
-    return 0
-  fi
-  prose=$(prose_in "$2")
-  if [[ $prose == *\;* ]]; then
-    report "$1 has a semicolon in prose. Replace it with a period or a word such as \"and\", as \"Write clear sentences\" in docs/writing.md says."
-  fi
-  if [[ $prose =~ $dash_between_words ]]; then
-    report "$1 has a dash between words in prose. If it joins two sentences, write two sentences, as \"Write clear sentences\" in docs/writing.md says. Otherwise, replace it with a word, as in \"pages 10 to 20\"."
-  fi
-}
-
-check_home_paths "The title \"$title\"" "$title"
-check_prose "The title \"$title\"" "$title"
-# The HTML comments in the body are public too, so a path in one counts.
-while IFS= read -r line; do
-  check_home_paths "The line \"$line\"" "$line"
-done <<<"$body"
-while IFS=$'\t' read -r line_number line; do
-  check_prose "The line \"$line\"" "$line"
-done < <(lines_outside_code_blocks <(printf '%s\n' "$text"))
+while IFS= read -r problem; do
+  report "$problem"
+done < <(title_problems "$title"; body_problems "$body")
 
 configure_github_sentence="A maintainer with admin access needs to run scripts/configure-github after the merge."
 # The files that the pull request changes. --no-renames lists a renamed file under its old path too.
