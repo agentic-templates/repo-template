@@ -431,6 +431,32 @@ lines_missing_from() {
   done <<<"$1"
 }
 
+# Prints the labels in one category's list in the Labels section: listed_issue_labels <category> <section>
+# Only list items count, so the separate mentions of ready and dependencies stay out of both lists.
+listed_issue_labels() {
+  local category=$1 line is_in_list="" pattern="^- \`([^\`]+)\`:"
+  while IFS= read -r line; do
+    if [[ $line == *" $category label"*":" ]]; then
+      is_in_list=yes
+    elif [[ -n $is_in_list && -n $line ]]; then
+      if [[ ! $line =~ $pattern ]]; then
+        return 0
+      fi
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done <<<"$2"
+}
+
+compare_issue_labels() {
+  local category=$1 expected=$2 actual=$3 label
+  while IFS= read -r label; do
+    report_difference "AGENTS.md lists the $category label $label, and scripts/issue-labels does not. Add it to the $category list in scripts/issue-labels, or remove it from the $category list in AGENTS.md."
+  done < <(lines_missing_from "$expected" "$actual")
+  while IFS= read -r label; do
+    report_difference "scripts/issue-labels lists the $category label $label, and AGENTS.md does not. Add it to the $category list in AGENTS.md, or remove it from the $category list in scripts/issue-labels."
+  done < <(lines_missing_from "$actual" "$expected")
+}
+
 # Prints a YAML value without the spaces and the quotes around it, or nothing if it's empty.
 yaml_value() {
   local value=$1 trimmed='^[[:space:]]*(.*[^[:space:]])[[:space:]]*$' double_quoted='^"(.*)"$' single_quoted="^'(.*)'$"
@@ -602,6 +628,14 @@ for heading in Labels Commits "Read the guides"; do
 done
 
 if has_section AGENTS.md Labels; then
+  if [[ -f scripts/issue-labels ]]; then
+    # shellcheck source=scripts/issue-labels
+    source scripts/issue-labels
+    labels_section=$(section AGENTS.md Labels)
+    # The defaults also allow empty arrays with nounset on Bash 3.2.
+    compare_issue_labels type "$(listed_issue_labels type "$labels_section")" "$(printf '%s\n' "${type_labels[@]:-}")"
+    compare_issue_labels status "$(listed_issue_labels status "$labels_section")" "$(printf '%s\n' "${status_labels[@]:-}")"
+  fi
   agents_md_labels=$(section AGENTS.md Labels | { grep -o "\`[^\`]*\`" || true; } | tr -d '`' | sort -u)
   if [[ -f scripts/configure-github ]]; then
     created=$(created_labels)
