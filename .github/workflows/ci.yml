@@ -70,10 +70,7 @@ jobs:
           persist-credentials: false
 
       - name: Run the hooks' tests
-        run: |
-          for hook_test in scripts/hooks/*.test; do
-            "$hook_test"
-          done
+        run: scripts/test-hooks
 
       - name: Run scripts/test-check
         run: scripts/test-check

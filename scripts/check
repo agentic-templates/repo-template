@@ -756,9 +756,7 @@ if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
 
   scripts/test-check
   if has jq https://jqlang.org/download/; then
-    for hook_test in scripts/hooks/*.test; do
-      "$hook_test"
-    done
+    scripts/test-hooks
   fi
   # -f skips the pattern itself, which the loop gets when no test matches it.
   for script_test in scripts/*.test; do
