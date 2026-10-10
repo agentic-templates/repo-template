@@ -75,6 +75,14 @@ jobs:
       - name: Run scripts/test-check
         run: scripts/test-check
 
+      - name: Run the scripts' tests
+        run: |
+          for script_test in scripts/*.test; do
+            if [[ -f $script_test ]]; then
+              bash "$script_test"
+            fi
+          done
+
   # The rules for main require a job named "check". If you rename it, change scripts/configure-github too.
   # It fails unless each job in needs passed or was skipped. When you add a job to this workflow, add it to needs.
   # It runs with if: always(), because otherwise a failed job would skip it, and GitHub counts a skip as a pass.
