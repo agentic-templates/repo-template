@@ -83,7 +83,7 @@ An issue from a maintainer's account can get `ready` when all of these are true:
 
 - It asks for one change that fits in one pull request.
 - "Why" says who needs the change and what for.
-- Someone could check each "Done when" item by running or looking at something. Where quality matters, such as accuracy or speed, the item gives a number that a maintainer chose or approved. An item about what the code does gives example inputs with the result a test should check for each, or a rule that must hold for every input.
+- Someone could check each "Done when" item by running or looking at something. Where quality matters, such as accuracy or speed, the item gives a number that a maintainer chose or approved. An item about what the code does gives example inputs with the result a test should check for each, or a rule that must hold for every input. Such an item also gives the results for the edges of the requirement: empty input, and the values on both sides of each limit.
 - Nothing is left to decide, except a question about how to build it that a research issue blocking it will answer. If the answer could change what the issue asks for, the issue isn't ready, and it keeps `needs-decision` until a maintainer decides. The issue has no "maybe", no "to be decided" and no "A or B".
 - "What should change" says what's out of scope, if the agent that builds the issue might otherwise do more than the issue asks for.
 - It's blocked by every issue whose change it needs first.
