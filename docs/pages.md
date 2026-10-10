@@ -1,7 +1,5 @@
 # Pages guide
 
-This guide holds the rules for the README and the pages in `docs/`: how to organize a page, write a README, and review a changed page with a fresh reader.
-
 ## Organize a page
 
 - Headings name what the reader does or learns, in words they would search for. Write "Install on macOS", not "Getting started".
@@ -26,6 +24,6 @@ A README or docs page where you added or rewrote text gets a review by a reader 
 
 1. Start a new agent with no other context. In Claude Code, start it as the Explore subagent, because the general-purpose subagent gets the project's AGENTS.md. Put the page's text in the prompt. Tell the agent not to open any files.
 2. Give the reader this prompt: "You are <the page's reader and what they want to do, for example a developer who wants to use this project>. Read this page once, the way that reader would. Quote each sentence you had to read twice, and say what made you stop. Then quote each sentence you didn't need, and say why. Leave out sentences that you'd only word differently."
-3. In the text you added or rewrote, rewrite each sentence that you agree is unclear, so that it says the same thing in clearer words. If you reword a sentence that the issue gives word for word, say in the pull request how it differs from the issue. Cut a sentence that the reader didn't need only if the guide for that kind of text allows it: `docs/rules.md` for a rule, and `docs/writing.md` for any other text. Leave quoted sentences elsewhere on the page as they are. Open an issue for one of them only if the repository's files, a command's output or a tool's docs show that it's wrong, or if it contradicts another rule so that no agent can follow both. Open it as step 4 of "Make a change" in AGENTS.md describes.
+3. In the text you added or rewrote, rewrite each sentence that you agree is unclear, so that it says the same thing in clearer words. If you reword a sentence that the issue gives word for word, say in the pull request how it differs from the issue. Leave quoted sentences elsewhere on the page as they are. Open an issue for one of them only if the repository's files, a command's output or a tool's docs show that it's wrong, or if it contradicts another rule so that no agent can follow both.
 4. If you rewrote or cut sentences after the first review, run one more review with a new reader, and then stop. Change nothing after that review.
 5. In the pull request, list each sentence of the text you added or rewrote that the last reader quoted, with the reader's reason.
