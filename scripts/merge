@@ -6,11 +6,13 @@
 # - merged: the pull request has merged.
 # - in the merge queue: it's in the merge queue.
 # - waiting for checks: the latest run of a check hasn't finished, or a check has no run yet. Or auto-merge is on,
-#   and the merge state isn't CLEAN yet, such as while code scanning runs.
+#   and the merge state is not CLEAN or BLOCKED. A BLOCKED pull request waits only when GitHub confirms pending work.
 # - queued: its checks passed, so the script added it to the merge queue with gh pr merge. When auto-merge is on,
 #   it adds the pull request only when the merge state is CLEAN, as scripts/queue-auto-merge does.
 # It stops with an error, and exits with code 1, when the pull request is closed, a draft or DIRTY, when the latest run
 # of a check failed or was cancelled, when the merge queue removed it after its latest commit, and when gh fails.
+# After checks pass, BLOCKED outside the queue stops with a blocker or unknown-reason error, unless GitHub confirms
+# pending work for the current head and no blocker needs action. These errors leave auto-merge unchanged.
 # Before gh pr merge, it stops on a pull request from a fork, and when the rules for main no longer require a check.
 # It asks gh about the repository of this checkout, or the one in GH_REPO.
 set -euo pipefail
@@ -38,7 +40,7 @@ query=$(cat <<'GRAPHQL'
 query($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
-      number state isDraft isCrossRepository isInMergeQueue mergeStateStatus
+      number url headRefOid state isDraft isCrossRepository isInMergeQueue mergeStateStatus
       autoMergeRequest { enabledAt }
       commits(last: 1) {
         nodes {
@@ -66,7 +68,8 @@ jq_filter='.data.repository.pullRequest
       .commits.nodes[0].commit.committedDate, (.autoMergeRequest.enabledAt // "")] | @tsv),
     (.commits.nodes[].commit.statusCheckRollup.contexts.nodes // [] | .[] | select(.__typename == "CheckRun")
       | ["check", $number, .databaseId, .name, (.conclusion // "")] | @tsv),
-    (.timelineItems.nodes[] | ["removal", $number, .createdAt, (.reason // "")] | @tsv)'
+    (.timelineItems.nodes[] | ["removal", $number, .createdAt, (.reason // "")] | @tsv),
+    (["head", $number, .url, (.headRefOid // "")] | @tsv)'
 if ! pull_requests=$(gh api graphql -F owner='{owner}' -F repo='{repo}' -F number="$number" -f query="$query" --jq "$jq_filter" 2>&1); then
   stop "can't read pull request $number, because gh failed: $pull_requests"
 fi
@@ -117,6 +120,24 @@ fi
 if ! have_checks_passed "$number"; then
   echo "waiting for checks"
   exit 0
+fi
+if [[ $merge_state == BLOCKED ]]; then
+  # shellcheck source=scripts/blocked-merge
+  source scripts/blocked-merge
+  IFS=$'\t' read -r pull_request_url head_oid <<<"$(facts head "$number")"
+  reason=unknown
+  if evidence=$(read_blocked_merge "$number" 2>&1); then
+    reason=$(blocked_merge_reason "$evidence" "$head_oid" 2>/dev/null) || reason=unknown
+  fi
+  if [[ $reason == pending ]]; then
+    echo "waiting for checks"
+    exit 0
+  fi
+  next_step="Inspect $pull_request_url, resolve the blocker or let pending work finish, and run scripts/merge $number again."
+  if [[ $reason == unknown || -z $reason ]]; then
+    stop "cannot determine why GitHub blocks the merge of pull request $number. $next_step"
+  fi
+  stop "GitHub blocks the merge of pull request $number because $reason. $next_step"
 fi
 has_auto_merge=false
 if [[ -n $auto_merge_since ]]; then

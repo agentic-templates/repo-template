@@ -26,6 +26,14 @@ if [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
   done
   exit 0
 fi
+if [[ $1 == api && $2 == graphql && " $* " == *"query BlockedMerge"* ]]; then
+  if [[ $TEST_BLOCKED_EVIDENCE == fail ]]; then
+    echo "error connecting to api.github.com" >&2
+    exit 1
+  fi
+  printf '%s\n' "$TEST_BLOCKED_EVIDENCE"
+  exit 0
+fi
 if [[ $1 == api && $2 == graphql && " $* " == *" number=12 "* ]]; then
   if [[ $TEST_PULL_REQUEST == fail ]]; then
     echo "error connecting to api.github.com" >&2
@@ -42,6 +50,7 @@ if [[ $1 == pr && $2 == merge ]]; then
   fi
   exit 0
 fi
+echo "$*" >>"$TEST_GH_CALLS"
 echo "The stand-in for gh doesn't answer: gh $*" >&2
 exit 1
 STAND_IN
@@ -52,11 +61,16 @@ tab=$'\t'
 before_commit=2026-05-04T09:00:00Z
 commit_time=2026-05-04T09:30:00Z
 after_commit=2026-05-04T10:00:00Z
+pull_request_url=https://github.com/owner/repo/pull/12
+head_oid=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+blocked_evidence=null
+unknown_error="error: cannot determine why GitHub blocks the merge of pull request 12. Inspect $pull_request_url, resolve the blocker or let pending work finish, and run scripts/merge 12 again."
 
 # The line about pull request 12, as the script's --jq filter prints it:
 # pull_request <state> <draft> <from a fork> <in the queue> <merge state> [<when auto-merge was turned on>]
 pull_request() {
   printf '%s\n' "pull-request${tab}12$tab$1$tab$2$tab$3$tab$4$tab$5$tab$commit_time$tab${6:-}"
+  printf '%s\n' "head${tab}12$tab$pull_request_url$tab$head_oid"
 }
 
 # A line about a run of a check on the latest commit: check_run <ID> <name> <conclusion, or nothing>
@@ -87,7 +101,7 @@ run_merge() {
   fi
   status=0
   : >"$base/calls"
-  output=$(TEST_MAIN_RULES=$main_rules TEST_PULL_REQUEST=$pull_request TEST_FAILING_MERGE=$failing_merge \
+  output=$(TEST_BLOCKED_EVIDENCE=$blocked_evidence TEST_MAIN_RULES=$main_rules TEST_PULL_REQUEST=$pull_request TEST_FAILING_MERGE=$failing_merge \
     TEST_GH_CALLS=$base/calls PATH=$base/bin:$PATH scripts/merge "$@" 2>&1) || status=$?
   merges=$(<"$base/calls")
 }
@@ -173,14 +187,14 @@ run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)"
 expect_result "When the checks passed, and auto-merge is off" 0 queued "pr merge 12"
 
 run_merge "$(pull_request OPEN false false false BLOCKED; passed_checks)"
-expect_result "When the checks passed, auto-merge is off, and the pull request is BLOCKED" 0 queued "pr merge 12"
+expect_result "When the checks passed, auto-merge is off, and the pull request is BLOCKED" 1 "$unknown_error" ""
 
 run_merge "$(pull_request OPEN false false false CLEAN "$after_commit"; passed_checks)"
 expect_result "When the checks passed, auto-merge is on, and GitHub hasn't added the pull request to the queue" 0 \
   queued "pr merge 12 --disable-auto"$'\n'"pr merge 12"
 
 run_merge "$(pull_request OPEN false false false BLOCKED "$after_commit"; passed_checks)"
-expect_result "When the checks passed, auto-merge is on, and the pull request is BLOCKED" 0 "waiting for checks" ""
+expect_result "When the checks passed, auto-merge is on, and the pull request is BLOCKED" 1 "$unknown_error" ""
 
 run_merge "$(pull_request OPEN false true false CLEAN; passed_checks)"
 expect_result "When the pull request comes from a fork" 1 \
@@ -214,6 +228,87 @@ expect_result "When it gets two arguments" 1 \
 run_merge "$(pull_request OPEN false false false CLEAN; passed_checks)" "check title" "" "#12"
 expect_result "When it gets an argument that isn't the number of a pull request" 1 \
   "error: scripts/merge takes the number of a pull request, such as 12, and it got \"#12\"." ""
+
+# GitHub reports these contexts as the current statuses for the commit. A duplicate context is ambiguous.
+evidence() {
+  jq -n --arg head "$head_oid" --arg review "${1:-APPROVED}" --arg state "${2:-PENDING}" '
+    {data: {repository: {pullRequest: {
+      state: "OPEN", isInMergeQueue: false, mergeStateStatus: "BLOCKED", headRefOid: $head,
+      reviewDecision: $review, commits: {nodes: [{commit: {oid: $head, status: {contexts: [
+        {context: "security policy", state: $state, isRequired: true, commit: {oid: $head}}
+      ]}}}]}
+    }}}}'
+}
+
+for auto_merge in "" "$after_commit"; do
+  blocked_evidence=$(evidence REVIEW_REQUIRED)
+  run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+  expect_result "When a required review is missing, even while a required status is pending" 1 \
+    "error: GitHub blocks the merge of pull request 12 because a required review is missing. Inspect $pull_request_url, resolve the blocker or let pending work finish, and run scripts/merge 12 again." ""
+  for review in null '"CHANGES_REQUESTED"'; do
+    for current_status in PENDING FAILURE; do
+      blocked_evidence=$(evidence APPROVED "$current_status" | jq ".data.repository.pullRequest.reviewDecision = $review")
+      run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+      if [[ $current_status == PENDING ]]; then
+        expect_result "When review $review does not disprove pending required work" 0 "waiting for checks" ""
+      else
+        expect_result "When review $review does not disprove a failed required status" 1 \
+          "error: GitHub blocks the merge of pull request 12 because required status \"security policy\" is FAILURE. Inspect $pull_request_url, resolve the blocker or let pending work finish, and run scripts/merge 12 again." ""
+      fi
+    done
+  done
+  blocked_evidence=$(evidence CHANGES_REQUESTED SUCCESS)
+  run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+  expect_result "When requested changes might be advisory" 1 "$unknown_error" ""
+  for pending in PENDING EXPECTED; do
+    blocked_evidence=$(evidence APPROVED "$pending")
+    run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+    expect_result "When a required current status is $pending" 0 "waiting for checks" ""
+  done
+  for failure in FAILURE ERROR; do
+    blocked_evidence=$(evidence APPROVED "$failure")
+    run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+    expect_result "When a required current status is $failure" 1 \
+      "error: GitHub blocks the merge of pull request 12 because required status \"security policy\" is $failure. Inspect $pull_request_url, resolve the blocker or let pending work finish, and run scripts/merge 12 again." ""
+  done
+  blocked_evidence=$(evidence | jq '.data.repository.pullRequest.commits.nodes[0].commit.status.contexts += [
+    {context: "release policy", state: "FAILURE", isRequired: true,
+      commit: {oid: .data.repository.pullRequest.headRefOid}}]')
+  run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+  expect_result "When a required status failed while another is pending" 1 \
+    "error: GitHub blocks the merge of pull request 12 because required status \"release policy\" is FAILURE. Inspect $pull_request_url, resolve the blocker or let pending work finish, and run scripts/merge 12 again." ""
+  for change in \
+    '.data.repository.pullRequest.headRefOid = "old"' \
+    '.data.repository.pullRequest.headRefOid = null' \
+    '.data.repository.pullRequest.commits.nodes += .data.repository.pullRequest.commits.nodes' \
+    '.data.repository.pullRequest.state = "MERGED"' \
+    '.data.repository.pullRequest.isInMergeQueue = true' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.oid = "old"' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.status.contexts[0].commit.oid = "old"' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.status.contexts[0].isRequired = false' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.status.contexts[0].isRequired = null' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.status.contexts[0].state = "SUCCESS"' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.status.contexts[0].state = "UNKNOWN"' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.status.contexts += .data.repository.pullRequest.commits.nodes[0].commit.status.contexts' \
+    '.data.repository.pullRequest.commits.nodes[0].commit.status = null' \
+    '.data.repository.pullRequest.reviewDecision = "UNKNOWN"' \
+    '.data.repository.pullRequest.mergeStateStatus = "CLEAN"' \
+    '.errors = [{message: "resource inaccessible"}]'; do
+    blocked_evidence=$(evidence | jq "$change")
+    run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+    expect_result "When evidence cannot confirm current required work: $change" 1 "$unknown_error" ""
+  done
+  for blocked_evidence in null fail 'not json'; do
+    run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+    expect_result "When evidence is missing or unreadable: $blocked_evidence" 1 "$unknown_error" ""
+  done
+  blocked_evidence=$(evidence CHANGES_REQUESTED | jq '.data.repository.pullRequest.headRefOid = "old"')
+  run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks)"
+  expect_result "When a review blocker belongs to an uncertain head" 1 "$unknown_error" ""
+  blocked_evidence=null
+  run_merge "$(pull_request OPEN false false false BLOCKED "$auto_merge"; passed_checks; check_run 103 CodeQL)"
+  expect_result "When only a scan name suggests pending work" 1 "$unknown_error" ""
+done
 
 if ((failed_cases > 0)); then
   echo "error: $failed_cases of the $case_count cases in scripts/merge.test failed. The errors above say which." >&2
