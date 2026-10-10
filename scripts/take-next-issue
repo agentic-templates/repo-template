@@ -14,8 +14,8 @@
 # Step 3 of "Build the ready issues" in docs/building.md runs it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-# shellcheck source=scripts/issue-labels
-source scripts/issue-labels
+# shellcheck source=scripts/ready-issues
+source scripts/ready-issues
 
 # Prints an error and stops: stop <message>
 stop() {
@@ -29,78 +29,26 @@ for skipped_issue in "$@"; do
   fi
 done
 
-# Prints each ready issue's facts on lines, as fields separated by tabs. The first field says what the line holds:
-# - issue <number> <assignees> <sub-issues> <closed sub-issues>, with the number of each
-# - label <issue> <name>, for each of the issue's labels
-# - blocked-by <issue> <state of the blocking issue>, for each issue that blocks it
-# shellcheck disable=SC2016 # $number is a jq variable, which jq expands.
-jq_filter='.[] | .number as $number
-  | (["issue", $number, (.assignees | length), .subIssuesSummary.total, .subIssuesSummary.completed] | @tsv),
-    (.labels[] | ["label", $number, .name] | @tsv),
-    (.blockedBy.nodes[] | ["blocked-by", $number, .state] | @tsv)'
-
-# Prints the facts of one kind about an issue, without the kind and the number: facts <kind> <issue> <issue facts>
-facts() {
-  { grep -- "^$1"$'\t'"$2"$'\t' <<<"$3" || true; } | cut -f 3-
-}
-
-# Succeeds if a word is one of the other words: is_one_of <word> [<other word>...]
-is_one_of() {
-  local word=$1 other
-  shift
-  for other in "$@"; do
-    if [[ $other == "$word" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
-
-# Succeeds if a build run can start an issue, judged by everything but its pull requests:
-# can_start <issue> <issue facts>
-can_start() {
-  local issue=$1 issue_facts=$2 label state type_count=0 assignees sub_issues closed_sub_issues
-  while IFS= read -r label; do
-    if is_one_of "$label" "${status_labels[@]}"; then
-      return 1
-    fi
-    if is_one_of "$label" "${type_labels[@]}"; then
-      type_count=$((type_count + 1))
-    fi
-  done <<<"$(facts label "$issue" "$issue_facts")"
-  if ((type_count != 1)); then
-    return 1
-  fi
-  while IFS= read -r state; do
-    if [[ -n $state && $state != CLOSED ]]; then
-      return 1
-    fi
-  done <<<"$(facts blocked-by "$issue" "$issue_facts")"
-  IFS=$'\t' read -r assignees sub_issues closed_sub_issues <<<"$(facts issue "$issue" "$issue_facts")"
-  ((assignees == 0 && sub_issues == closed_sub_issues))
-}
-
 # Prints, lowest first, the numbers of the issues that a build run can start, judged by everything but their pull
-# requests, leaving out the issues to skip: issues_to_consider <issue facts> [<issue to skip>...]
+# requests, leaving out the issues to skip: issues_to_consider [<issue to skip>...]
 issues_to_consider() {
-  local issue_facts=$1 issue
-  shift
+  local issue
   while IFS= read -r issue; do
-    if [[ -n $issue ]] && ! is_one_of "$issue" "$@" && can_start "$issue" "$issue_facts"; then
+    if [[ -n $issue ]] && ! is_one_of "$issue" "$@" && [[ -z $(reasons_not_to_start "$issue") ]]; then
       printf '%s\n' "$issue"
     fi
-  done <<<"$(grep $'^issue\t' <<<"$issue_facts" | cut -f 2 | sort -n)"
+  done <<<"$(ready_issue_numbers)"
 }
 
-# Prints an issue's kind: kind_of <issue> <issue facts> <what scripts/pull-request-state prints for it>
+# Prints an issue's kind: kind_of <issue> <what scripts/pull-request-state prints for it>
 kind_of() {
-  local issue=$1 issue_facts=$2 pull_request_state=$3 labels sub_issues
-  labels=$(facts label "$issue" "$issue_facts")
+  local issue=$1 pull_request_state=$2 labels sub_issues
+  labels=$(ready_issue_facts label "$issue")
   if grep -qxF research <<<"$labels"; then
     echo research
     return 0
   fi
-  sub_issues=$(facts issue "$issue" "$issue_facts" | cut -f 2)
+  sub_issues=$(ready_issue_facts issue "$issue" | cut -f 2)
   if ((sub_issues > 0)); then
     echo parent
   elif [[ $pull_request_state == "left behind "* ]]; then
@@ -110,16 +58,15 @@ kind_of() {
   fi
 }
 
-if ! issue_facts=$(gh issue list --label ready --limit 200 --json number,labels,assignees,blockedBy,subIssuesSummary --jq "$jq_filter" 2>&1); then
-  stop "can't list the ready issues, because gh failed: $issue_facts"
-fi
+# read_ready_issues prints its own error.
+read_ready_issues || exit 1
 
-for issue in $(issues_to_consider "$issue_facts" "$@"); do
+for issue in $(issues_to_consider "$@"); do
   # scripts/pull-request-state prints its own error.
   if ! pull_request_state=$(scripts/pull-request-state "$issue"); then
     exit 1
   fi
-  if [[ $pull_request_state != none && $pull_request_state != "left behind "* ]]; then
+  if ! can_start_with_pull_request_state "$pull_request_state"; then
     continue
   fi
   if ! answer=$(gh issue edit "$issue" --add-assignee @me 2>&1); then
@@ -134,7 +81,7 @@ for issue in $(issues_to_consider "$issue_facts" "$@"); do
     fi
     continue
   fi
-  echo "$issue $(kind_of "$issue" "$issue_facts" "$pull_request_state")"
+  echo "$issue $(kind_of "$issue" "$pull_request_state")"
   exit 0
 done
 echo none
