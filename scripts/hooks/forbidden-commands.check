@@ -14,6 +14,8 @@
 source "${BASH_SOURCE[0]%/*}/helpers.bash"
 # shellcheck source=scripts/minimum-gh-version
 source "${BASH_SOURCE[0]%/*}/../minimum-gh-version"
+# shellcheck source=scripts/needs-triage
+source "${BASH_SOURCE[0]%/*}/../needs-triage"
 
 # The flags that take a value, as gh issue develop --help, git push -h, gh auth token --help and gh auth status --help
 # list them.
@@ -71,7 +73,7 @@ check_gh_issue_develop() {
   fi
   answer=$(gh issue view "${target[@]}" --json labels 2>/dev/null) || return 0
   if jq -e 'any(.labels[]; .name == "needs-triage")' >/dev/null <<<"$answer"; then
-    block "Blocked: issue $argument has needs-triage, so no maintainer has accepted it yet. If a maintainer asked you to work on it, remove the label with gh issue edit ${target[*]} --remove-label needs-triage, and run the command again. Otherwise, leave the issue for the maintainer to triage."
+    block "Blocked: $(needs_triage_message "$argument" "${target[*]}")"
   fi
 }
 
