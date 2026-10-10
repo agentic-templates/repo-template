@@ -1,8 +1,9 @@
 # shellcheck shell=bash
-# Functions that read the open pull requests into main and answer questions about them, for scripts/start-build-run
-# and scripts/stuck-pull-requests. scripts/merge reads one pull request into the same form, and answers its questions
-# with them too. A pull request's checks are the ones that the rules for main require, which scripts/required-checks
-# lists. They ask gh about the repository of this checkout, or the one in GH_REPO. Run them from the repository's root.
+# Functions that read the open pull requests into main and answer questions about them, for scripts/start-build-run,
+# scripts/stuck-pull-requests and scripts/build-run-report. scripts/merge reads one pull request into the same form,
+# and answers its questions with them too. A pull request's checks are the ones that the rules for main require, which
+# scripts/required-checks lists. They ask gh about the repository of this checkout, or the one in GH_REPO. Run them
+# from the repository's root.
 # shellcheck source=scripts/required-checks
 source scripts/required-checks
 

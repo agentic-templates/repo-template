@@ -23,17 +23,12 @@ If you can start agents that each work in their own clone or worktree, build sev
 
    Then go back to step 2.
 5. Give an issue back to the maintainer when you can't finish it, for example because it's unclear, against one of the rules in AGENTS.md or too big for one pull request, or because its pull request can't merge and you can't fix that. Comment on the issue with what you need, and remove your assignment with `gh issue edit <issue> --remove-assignee @me`. If it's too big, add `needs-breakdown`. Otherwise, if the issue is now blocked by another issue, add no status label, because a build run skips it until its blocking issues are closed. Otherwise, add `needs-decision`. If it has a pull request, close it with `gh pr close <number>`.
-6. When no issue is left that you can start, wait for your helpers, if you have any. Also wait for the checks of each open pull request that closes a ready issue and has auto-merge turned on, with `gh pr checks <number> --watch`. For each one that's in the merge queue, run `scripts/merge <number>` every minute until it prints `merged` or stops with an error. Then go back to step 2. But if a helper reports or fails while you wait, go back to step 2 right away. Once no such pull request is open, no helper is working and no issue is left that you can start, report to the maintainer:
-   - the pull requests that merged
-   - the issues that have the `needs-decision` label
-   - the ready issues that are still open, and what each one waits for
-   - the ready issues for which `scripts/pull-request-state` prints `stopped` or `several`
+6. When no issue is left that you can start, wait for your helpers, if you have any. Also wait for the checks of each open pull request that closes a ready issue and has auto-merge turned on, with `gh pr checks <number> --watch`. For each one that's in the merge queue, run `scripts/merge <number>` every minute until it prints `merged` or stops with an error. Then go back to step 2. But if a helper reports or fails while you wait, go back to step 2 right away. Once no such pull request is open, no helper is working and no issue is left that you can start, run `scripts/build-run-report`. Report to the maintainer what it prints, and add:
    - the issues you opened on your own, for problems you noticed
    - the security vulnerabilities you noticed
-   - the open code scanning alerts, which `gh api --paginate "repos/{owner}/{repo}/code-scanning/alerts?state=open"` lists
-   - the Dependabot pull requests you didn't merge
-   - whether the latest CI run on main passed, failed or is still running
-   - anything a maintainer needs to run, such as `scripts/configure-github`
+   - the worktrees that `scripts/start-build-run` and `scripts/clear-worktrees` left, and why
+   - what a hook or a script asked you to list in your report
+   - anything else a maintainer needs to run, such as `scripts/configure-github`
 
 ## Work on a ready issue outside a build run
 
