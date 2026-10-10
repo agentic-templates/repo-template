@@ -38,6 +38,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `scripts/queue-auto-merge`: adds to the merge queue each open pull request whose checks have passed and whose auto-merge didn't add it. Step 2 of "Build the ready issues" in `docs/building.md` runs it.
 - `scripts/clear-worktrees`: saves and removes each leftover worktree that holds a ready issue's branch. Step 1 of "Build the ready issues" in `docs/building.md` runs it.
 - `scripts/pull-request-state`: prints the state of an issue's open pull requests, such as `merging` or `left behind <number>`. Steps 1 and 4 of "Build the ready issues" in `docs/building.md` run it.
+- `scripts/check-ready-label`: removes `ready` from an issue that someone without write access opened or labeled, or that has a status label or not exactly one type label. A workflow runs it each time an issue gets `ready`.
 - `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
 - `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
 - `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
