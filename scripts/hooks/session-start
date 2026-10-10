@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Claude Code runs this hook when a session starts, and again after /clear and after a compaction, because
 # .claude/settings.json lists it. Claude Code adds what the hook prints to Claude's context.
-# It prints a note for each problem it finds, and nothing when it finds none:
+# It prints a note for each of these that it finds, and nothing when it finds none:
+# - a compaction, after which Claude must read its guides again. Claude Code then reads again only CLAUDE.md and up to
+#   five of the files that Claude read or edited, the most recently changed first, so the rules from the guides often
+#   survive only in the summary. Its docs don't say whether it reads AGENTS.md again, so the note covers AGENTS.md too.
 # - a CLAUDE.md, .claude/CLAUDE.md or CLAUDE.local.md that makes Claude Code skip AGENTS.md
 # - a gh older than the rules need
 # - a missing jq, which the hooks need
@@ -78,7 +81,15 @@ reads_both_files() {
   [[ $setting == claude-md-and-agents-md ]]
 }
 
-# 1. Files that make Claude Code read them instead of AGENTS.md, in this folder and each folder above it.
+# 1. A compaction. Claude Code sends the event as JSON on standard input, and its source field is compact after a
+# compaction. Without jq, or with input that isn't JSON, the source is empty. The subshell drops the trap, which would
+# otherwise take the source from input that is only partly JSON.
+event_source=$(trap - ERR && jq -r '.source // empty' 2>/dev/null) || event_source=""
+if [[ $event_source == compact ]]; then
+  echo "This conversation was just compacted, so the guides that this session read from docs/ survive only in the summary. Read again each guide that \"Read the guides\" in AGENTS.md names for the work you're doing, and AGENTS.md itself if its text isn't in your context."
+fi
+
+# 2. Files that make Claude Code read them instead of AGENTS.md, in this folder and each folder above it.
 # ~/.claude/CLAUDE.md doesn't count, because Claude Code reads it alongside AGENTS.md.
 hiding_files=()
 imported=false
@@ -105,7 +116,7 @@ if ((${#hiding_files[@]} > 0)) && ! $imported && ! reads_both_files; then
   echo "Read AGENTS.md before you do anything else, and follow it. Then tell the person which files hide AGENTS.md, and how to fix that: move or delete those files, or set \"Project instructions\" in /config so that Claude Code reads both CLAUDE.md and AGENTS.md."
 fi
 
-# 2. A gh older than the rules need. If the version can't be read, the hook says nothing about gh.
+# 3. A gh older than the rules need. If the version can't be read, the hook says nothing about gh.
 if ! command -v gh >/dev/null; then
   echo "The rules in AGENTS.md need gh $minimum_gh_version or later, and gh isn't installed. Tell the person, and that https://github.com/cli/cli#installation says how to install it."
 else
@@ -115,12 +126,12 @@ else
   fi
 fi
 
-# 3. A missing jq. The hooks need it to read what the tool sends them, and without it they let every action through.
+# 4. A missing jq. The hooks need it to read what the tool sends them, and without it they let every action through.
 if ! command -v jq >/dev/null; then
   echo "The hooks in scripts/hooks need jq, and it isn't installed, so they let every action through. Tell the person, and that they can install it with a package manager, such as brew install jq on macOS or sudo apt install jq on Ubuntu."
 fi
 
-# 4. In a Claude Code on the web session, install shellcheck, actionlint and zizmor, so that scripts/check runs
+# 5. In a Claude Code on the web session, install shellcheck, actionlint and zizmor, so that scripts/check runs
 # every check there. The folder is under the home folder, so that the tools survive a resumed session.
 # The PATH line in CLAUDE_ENV_FILE puts the folder first for the session's later commands, so these versions win.
 if [[ ${CLAUDE_CODE_REMOTE:-} == true ]]; then
