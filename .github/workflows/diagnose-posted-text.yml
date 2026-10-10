@@ -8,13 +8,20 @@ permissions:
 
 jobs:
   posted-text:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        phase: [before-tool, body-problems]
     runs-on: macos-latest
     timeout-minutes: 15
     env:
       PATH: /usr/bin:/bin:/usr/sbin:/sbin
+      DIAGNOSTIC_PHASE: ${{ matrix.phase }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Reproduce the Cursor review check under bash 3.2
-        run: /bin/bash scripts/diagnose-posted-text
+        run: /bin/bash scripts/diagnose-posted-text "$DIAGNOSTIC_PHASE"

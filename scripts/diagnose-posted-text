@@ -5,6 +5,11 @@ if [[ $(uname -s) != Darwin || $BASH_VERSION != 3.2.* ]]; then
   echo "error: this workload requires macOS bash 3.2." >&2
   exit 1
 fi
+phase=${1:-all}
+case $phase in
+  all | before-tool | body-problems) ;;
+  *) echo "error: choose before-tool or body-problems." >&2; exit 1 ;;
+esac
 root=$(pwd -P)
 work=$(mktemp -d)
 mkdir -p "$work/bin" "$work/project"
@@ -13,11 +18,12 @@ chmod +x "$work/bin/gh"
 export PATH="$work/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export HOME="$work/home"
 mkdir -p "$HOME"
-exec 9>>"$work/write-errors.log"
+exec 9>&1
 printf 'System: '; uname -a
 /bin/bash --version
 printf 'Tree: '; git rev-parse HEAD
-printf 'Workers: 8; iterations per worker: 50; solo iterations: 50\n'
+printf 'Phase: %s; before-tool workers: 12; iterations per worker: 175; solo iterations: 50\n' "$phase"
+printf 'Direct workers: 12; iterations per worker: 5000; modes: plain and observed\n'
 body=$'## What should change\nThe app skips the expenses it already has.\n\n## Why\nPeople import the same file twice.\n\n## Done when\n- Importing a file twice adds each expense once.\nThe app skips the expenses - it keeps the total.'
 command="gh pr review 5 --request-changes --body '$body'"
 jq -n --arg cwd "$work/project" --arg command "$command" \
@@ -56,62 +62,71 @@ run_worker() {
   done
   printf 'COUNT label=%s worker=%s total=%s missed=%s wrong=%s\n' "$label" "$worker" "$count" "$missed" "$wrong"
 }
-for mode in plain observed; do
-  if [[ $mode == observed ]]; then
-    export BASH_ENV="$work/observe.bash"
-  else
-    unset BASH_ENV
-  fi
-  run_worker "$mode-alone" 0 50
-  cd "$root" || exit 1
-  pids=()
-  for test in scripts/hooks/*.test; do
-    if [[ $test != scripts/hooks/posted-text.test ]]; then
-      "$test" > "$work/$mode-$(basename "$test").log" 2>&1 &
-      pids+=("$!")
+if [[ $phase != body-problems ]]; then
+  for mode in plain observed; do
+    if [[ $mode == observed ]]; then
+      export BASH_ENV="$work/observe.bash"
+    else
+      unset BASH_ENV
     fi
+    run_worker "$mode-alone" 0 50
+    cd "$root" || exit 1
+    pids=()
+    for test in scripts/hooks/*.test; do
+      if [[ $test != scripts/hooks/posted-text.test ]]; then
+        "$test" > "$work/$mode-$(basename "$test").log" 2>&1 &
+        pids+=("$!")
+      fi
+    done
+    for ((worker=1; worker<=12; worker++)); do
+      run_worker "$mode-loaded" "$worker" 175 &
+      pids+=("$!")
+    done
+    for pid in "${pids[@]}"; do
+      wait "$pid" || printf 'Background test failed: pid=%s mode=%s\n' "$pid" "$mode"
+    done
+    for log in "$work/$mode-"*.test.log; do
+      cat "$log"
+    done
   done
-  for ((worker=1; worker<=8; worker++)); do
-    run_worker "$mode-loaded" "$worker" 50 &
-    pids+=("$!")
-  done
-  for pid in "${pids[@]}"; do
-    wait "$pid" || printf 'Background test failed: pid=%s mode=%s\n' "$pid" "$mode"
-  done
-  for log in "$work/$mode-"*.test.log; do
-    cat "$log"
-  done
-done
+fi
 # This separate cohort tests the same text-reading functions without the other checks.
 # Its counts do not count as reproductions through before-tool.
 run_direct_worker() {
-  local worker=$1 iteration status output missed=0 wrong=0
-  for ((iteration=1; iteration<=1000; iteration++)); do
+  local mode=$1 worker=$2 iteration status output missed=0 wrong=0
+  for ((iteration=1; iteration<=5000; iteration++)); do
     status=0
-    output=$(DIAGNOSTIC_CASE="direct/$worker/$iteration" /bin/bash -c '
+    output=$(DIAGNOSTIC_CASE="direct-$mode/$worker/$iteration" /bin/bash -c '
       source "$1/scripts/hooks/helpers.bash"
       source "$1/scripts/text-rules"
       body_problems "$2"
     ' _ "$root" "$body" 2> "$work/direct-$worker.err") || status=$?
     if [[ $output != *"has a dash between words in prose"* ]]; then
       missed=$((missed+1))
-      printf 'DIRECT MISS worker=%s iteration=%s status=%s\n' "$worker" "$iteration" "$status"
+      printf 'DIRECT MISS mode=%s worker=%s iteration=%s status=%s\n' "$mode" "$worker" "$iteration" "$status"
       cat "$work/direct-$worker.err"
     elif [[ $status != 0 ]]; then
       wrong=$((wrong+1))
     fi
   done
-  printf 'DIRECT COUNT worker=%s total=1000 missed=%s wrong=%s\n' "$worker" "$missed" "$wrong"
+  printf 'DIRECT COUNT mode=%s worker=%s total=5000 missed=%s wrong=%s\n' "$mode" "$worker" "$missed" "$wrong"
 }
-cd "$root" || exit 1
-pids=()
-for ((worker=1; worker<=12; worker++)); do
-  run_direct_worker "$worker" &
-  pids+=("$!")
-done
-for pid in "${pids[@]}"; do
-  wait "$pid" || printf 'Direct worker failed: pid=%s\n' "$pid"
-done
-printf '\nActual write failures:\n'
-cat "$work/write-errors.log"
-printf 'Diagnostic files: %s\n' "$work"
+if [[ $phase != before-tool ]]; then
+  cd "$root" || exit 1
+  for mode in plain observed; do
+    if [[ $mode == observed ]]; then
+      export BASH_ENV="$work/observe.bash"
+    else
+      unset BASH_ENV
+    fi
+    pids=()
+    for ((worker=1; worker<=12; worker++)); do
+      run_direct_worker "$mode" "$worker" &
+      pids+=("$!")
+    done
+    for pid in "${pids[@]}"; do
+      wait "$pid" || printf 'Direct worker failed: pid=%s mode=%s\n' "$pid" "$mode"
+    done
+  done
+fi
+printf 'Diagnostic phase finished: %s\n' "$phase"
