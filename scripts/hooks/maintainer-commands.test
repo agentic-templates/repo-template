@@ -161,8 +161,10 @@ expect_block Bash 'git -C app pull origin pull/7/head' "Blocked: pull request 7 
 : >"$TEST_GH_CALLS"
 run_hook "$(sample_input claude-code Bash 'gh pr checkout -R jtmpl/other 7')"
 case_count=$((case_count + 1))
-if [[ $(<"$TEST_GH_CALLS") != "pr view 7 --repo jtmpl/other --json isCrossRepository" ]]; then
-  echo "error: for gh pr checkout -R jtmpl/other 7, the hook must ask gh about pull request 7 in jtmpl/other, but it called: $(<"$TEST_GH_CALLS")" >&2
+# forbidden-commands.check asks gh for its version before each gh command, so the case leaves that call out.
+gh_calls=$(grep -v -x -e --version "$TEST_GH_CALLS" || true)
+if [[ $gh_calls != "pr view 7 --repo jtmpl/other --json isCrossRepository" ]]; then
+  echo "error: for gh pr checkout -R jtmpl/other 7, the hook must ask gh about pull request 7 in jtmpl/other, but it called: $gh_calls" >&2
   failed_cases=$((failed_cases + 1))
 fi
 

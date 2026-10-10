@@ -113,6 +113,41 @@ record_that_cant_be_written() {
 
 run_case record_that_cant_be_written fail "error: the checks passed, but scripts/check can't record the pass in .git/check-passed, and a hook blocks opening a pull request without that record."
 
+# Cases for the check that each action pinned to a commit SHA has a version comment.
+# The SHA is a real commit of actions/checkout, because zizmor checks it when it has a GitHub token.
+
+checkout_sha=3d3c42e5aac5ba805825da76410c181273ba90b1
+
+# Writes .github/workflows/lint.yml, with a step that checks out the code. The step's uses: line is line 8:
+# write_checkout_workflow <uses: line>
+write_checkout_workflow() {
+  printf '%s\n' "name: Lint" "on: pull_request" "permissions: {}" "jobs:" "  lint:" "    runs-on: ubuntu-latest" "    steps:" \
+    "      - $1" "        with:" "          persist-credentials: false" > "$copy/.github/workflows/lint.yml"
+}
+
+pinned_action_without_a_comment() {
+  write_checkout_workflow "uses: actions/checkout@$checkout_sha"
+}
+
+pinned_action_with_a_comment_that_isnt_a_version() {
+  write_checkout_workflow "uses: actions/checkout@$checkout_sha # pinned"
+}
+
+pinned_action_without_a_comment_in_a_composite_action() {
+  mkdir -p "$copy/.github/actions/setup"
+  printf '%s\n' "name: Setup" "description: Checks out the code." "runs:" "  using: composite" "  steps:" \
+    "    - uses: actions/checkout@$checkout_sha" "      with:" "        persist-credentials: false" > "$copy/.github/actions/setup/action.yaml"
+}
+
+pinned_action_with_a_version_comment_in_quotes() {
+  write_checkout_workflow "uses: \"actions/checkout@$checkout_sha\" # v7.0.1"
+}
+
+run_case pinned_action_without_a_comment fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment. Write the version that the SHA pins in a comment after it, as in "# v5.0.0".'
+run_case pinned_action_with_a_comment_that_isnt_a_version fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment.'
+run_case pinned_action_without_a_comment_in_a_composite_action fail 'error: .github/actions/setup/action.yaml:6 pins actions/checkout to a commit SHA without a version comment.'
+run_case pinned_action_with_a_version_comment_in_quotes pass
+
 # Cases for the check that finds files that make a tool skip AGENTS.md.
 
 claude_md_in_the_root() {
@@ -554,7 +589,6 @@ star_label_outside_release_notes() {
 # Renames the section, and the names that quote it, so that the check of section names still passes.
 agents_md_without_labels() {
   replace_text AGENTS.md "## Labels" "## Label rules"
-  replace_text AGENTS.md '"Labels"' '"Label rules"'
   replace_text docs/rules.md '"Labels"' '"Label rules"'
 }
 
@@ -568,15 +602,15 @@ run_case star_label_outside_release_notes fail "error: .github/dependabot.yml na
 run_case agents_md_without_labels fail "error: AGENTS.md has no section \"Labels\", and scripts/check compares that section with other files. Add it, with the heading \"## Labels\"."
 
 title_check_without_a_type() {
-  replace_text .github/workflows/pr-title.yml "|perf|" "|"
+  replace_text scripts/check-title "|perf|" "|"
 }
 
 title_check_with_an_extra_type() {
-  replace_text .github/workflows/pr-title.yml "|chore\"" "|chore|wip\""
+  replace_text scripts/check-title "|chore\"" "|chore|wip\""
 }
 
-run_case title_check_without_a_type fail "error: \"Commits\" in AGENTS.md lists the type perf, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
-run_case title_check_with_an_extra_type fail "error: the title check in .github/workflows/pr-title.yml allows the type wip, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in .github/workflows/pr-title.yml."
+run_case title_check_without_a_type fail "error: \"Commits\" in AGENTS.md lists the type perf, and the title check in scripts/check-title doesn't allow it. Add it to the types in scripts/check-title, or remove it from AGENTS.md."
+run_case title_check_with_an_extra_type fail "error: the title check in scripts/check-title allows the type wip, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in scripts/check-title."
 
 # Writes .github/workflows/lint.yml, with one job that has a step named lint: write_workflow <event> <job key> [<job name>]
 write_workflow() {
@@ -625,33 +659,62 @@ run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "e
 run_case required_check_from_a_workflow_that_runs_on_both_events pass
 run_case required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue fail "error: scripts/configure-github requires the check title on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports title on pull_request: .github/workflows/pr-title.yml."
 
-hook_that_asks_for_another_gh_version() {
-  replace_text scripts/hooks/session-start "minimum_gh_minor=98" "minimum_gh_minor=99"
+# Writes the README of a new project, followed by the lines given: write_readme [<line>...]
+# The cases that test the README write a README of their own, because the setup replaces the template's README.
+write_readme() {
+  printf '%s\n' "# expense-tracker" "" "Records what you spend. It can't do anything yet." "$@" > "$copy/README.md"
+}
+
+agents_md_that_asks_for_another_gh_version() {
+  replace_text AGENTS.md "need gh 2.98 or later" "need gh 2.99 or later"
 }
 
 readme_that_asks_for_another_gh_version() {
-  replace_text README.md "The GitHub CLI 2.98 or later" "The GitHub CLI 2.97 or later"
+  write_readme "" "You need the GitHub CLI 2.97 or later."
 }
 
 agents_md_without_the_gh_version() {
   replace_text AGENTS.md "need gh 2.98 or later" "need a recent gh"
 }
 
-hook_without_the_gh_version() {
-  replace_text scripts/hooks/session-start "minimum_gh_minor" "needed_gh_minor"
+minimum_gh_version_that_isnt_set() {
+  replace_text scripts/minimum-gh-version "minimum_gh_version=" "needed_gh_version="
+}
+
+new_gh_version_in_every_file() {
+  replace_text scripts/minimum-gh-version "minimum_gh_version=2.98" "minimum_gh_version=2.99"
+  replace_text AGENTS.md "need gh 2.98 or later" "need gh 2.99 or later"
+  write_readme "" "You need the GitHub CLI 2.99 or later."
 }
 
 readme_of_a_new_project() {
-  printf '%s\n' "# expense-tracker" "" "Records what you spend. It can't do anything yet." > "$copy/README.md"
+  write_readme
 }
 
-run_case hook_that_asks_for_another_gh_version fail "error: scripts/hooks/session-start asks for gh 2.99, and AGENTS.md says gh 2.98. Use the same version in both."
-run_case readme_that_asks_for_another_gh_version fail "error: README.md asks for the GitHub CLI 2.97, and AGENTS.md says gh 2.98. Use the same version in both."
-run_case agents_md_without_the_gh_version fail "error: AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\"."
-run_case hook_without_the_gh_version fail "error: scripts/hooks/session-start doesn't set both minimum_gh_major and minimum_gh_minor, so it can't ask for gh 2.98, as AGENTS.md does."
+run_case agents_md_that_asks_for_another_gh_version fail "error: AGENTS.md asks for gh 2.99, and scripts/minimum-gh-version asks for gh 2.98. Use the same version in both."
+run_case readme_that_asks_for_another_gh_version fail "error: README.md asks for the GitHub CLI 2.97, and scripts/minimum-gh-version asks for gh 2.98. Use the same version in both."
+run_case agents_md_without_the_gh_version fail "error: AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". Add it, with the version in scripts/minimum-gh-version: 2.98."
+run_case minimum_gh_version_that_isnt_set fail "error: scripts/minimum-gh-version doesn't set minimum_gh_version to a version written as <major>.<minor>, such as 2.98, so the hooks can't compare gh with it."
+run_case new_gh_version_in_every_file pass
 run_case readme_of_a_new_project pass
 
+# Writes the README of a new project, with a section "What you get" that names each page in docs/ and then each path given:
+# write_readme_with_what_you_get [<path>...]
+write_readme_with_what_you_get() {
+  local page
+  local -a lines=("" "## What you get" "")
+  for page in "$copy"/docs/*.md; do
+    lines+=("- \`${page#"$copy/"}\`")
+  done
+  for page in "$@"; do
+    lines+=("- \`$page\`")
+  done
+  write_readme "${lines[@]}"
+}
+
+# The README names the pages in docs/ before the case adds the guide, so its section "What you get" leaves the guide out.
 guide_in_neither_list() {
+  write_readme_with_what_you_get
   printf '%s\n' "# Notes guide" "" "Ideas for later." > "$copy/docs/notes.md"
 }
 
@@ -660,7 +723,7 @@ page_whose_title_doesnt_end_in_guide() {
 }
 
 missing_page_in_what_you_get() {
-  replace_text README.md "## What you get" $'## What you get\n\n- `docs/missing.md`: a page that doesn\'t exist.'
+  write_readme_with_what_you_get docs/missing.md
 }
 
 missing_page_in_read_the_guides() {

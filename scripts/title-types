@@ -1,7 +1,7 @@
 # shellcheck shell=bash
-# Prints the types that the title check in .github/workflows/pr-title.yml allows, one to a line.
+# Prints the types that the title check in scripts/check-title allows, one to a line.
 # scripts/check compares them with AGENTS.md, and scripts/next-version reads the titles of commits with them.
 # Run it from the repository's root.
 allowed_title_types() {
-  sed -n 's/^[[:space:]]*types="\([^"]*\)".*/\1/p' .github/workflows/pr-title.yml | tr '|' '\n'
+  sed -n 's/^[[:space:]]*types="\([^"]*\)".*/\1/p' scripts/check-title | tr '|' '\n'
 }

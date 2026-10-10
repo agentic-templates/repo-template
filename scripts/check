@@ -10,6 +10,30 @@ cd "$(dirname "$0")/.."
 source scripts/hooks/check-passed.bash
 checked_tree=$(tree_on_disk) || checked_tree=""
 
+# The repository's settings require each action to be pinned to a full commit SHA, which doesn't show which version
+# of the action runs. So a comment after the SHA gives the version, as in "# v5.0.0".
+# A version starts with a digit, or with v and a digit.
+optional_quote="[\"']?"
+# Group 2 holds the action, and group 3 what follows the SHA.
+pinned_action="^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]*$optional_quote([^@[:space:]\"']+)@[0-9a-f]{40}$optional_quote([[:space:]].*)?\$"
+version_comment='^[[:space:]]+#[[:space:]]*v?[0-9]'
+found_pin_without_version=""
+# git grep prints the file, NUL, the line number, NUL and the line, for each line that may pin an action.
+while IFS= read -r -d '' file && IFS= read -r -d '' line_number && IFS= read -r line; do
+  if [[ ! $line =~ $pinned_action ]]; then
+    continue
+  fi
+  action=${BASH_REMATCH[2]}
+  after_sha=${BASH_REMATCH[3]}
+  if [[ ! $after_sha =~ $version_comment ]]; then
+    echo "error: $file:$line_number pins $action to a commit SHA without a version comment. Write the version that the SHA pins in a comment after it, as in \"# v5.0.0\"." >&2
+    found_pin_without_version=yes
+  fi
+done < <(git grep --null -n -I -E -e 'uses:.*@[0-9a-f]{40}' -- '.github/*.yml' '.github/*.yaml')
+if [[ -n "$found_pin_without_version" ]]; then
+  exit 1
+fi
+
 # CI installs every tool, so a missing tool there is an error.
 # On your machine the check is skipped, and CI still runs it.
 skipped=""
@@ -75,41 +99,8 @@ if git grep -n -w -I -e "$todo" -e "$fixme" -- ':!*.md' >&2; then
   exit 1
 fi
 
-# Paths into a person's home folder stay out of the files, as "Keep the repository clean" in AGENTS.md says.
-# A path counts only at the start of a line or after a character other than a letter, a digit, ".", "_" or "-".
-# So the path of a URL, as in https://example.com/home/docs/, doesn't count, and neither does a relative path, as in src/home/<name>/.
-home_path_start='(^|[^A-Za-z0-9._-])'
-# A Windows path can have either slash, and JSON doubles each backslash.
-separator='[\/]+'
-# /users/ in lower case is also a path in GitHub's API, so only /Users/ counts. A Windows path can have any case.
-home_folders="(/(home|Users)/|[A-Za-z]:${separator}[Uu][Ss][Ee][Rr][Ss]${separator})"
-# A name can't hold whitespace, so that "/home/ or /Users/" doesn't count. Nor can it hold the characters of a placeholder,
-# so that /home/<name>/, /home/$USER/ and C:\Users\%USERNAME%\ don't count.
-home_folder_name='([^/\<>$%{}[:space:]]+)'
-# Group 2 holds the path, and group 5 the name.
-home_path="$home_path_start($home_folders$home_folder_name$separator)"
-
-# Succeeds if a home folder belongs to an account that no person uses: is_shared_home_folder <name>
-is_shared_home_folder() {
-  case $1 in
-    # GitHub's runners, then containers, then macOS and Windows.
-    runner | runneradmin | node | linuxbrew | vscode | Shared | Public) return 0 ;;
-  esac
-  return 1
-}
-
-# Prints each path into a person's home folder in a line, one to a line: home_paths_in <line>
-home_paths_in() {
-  local rest=$1 path name
-  while [[ $rest =~ $home_path ]]; do
-    path=${BASH_REMATCH[2]}
-    name=${BASH_REMATCH[5]}
-    rest=${rest#*"${BASH_REMATCH[0]}"}
-    if ! is_shared_home_folder "$name"; then
-      printf '%s\n' "$path"
-    fi
-  done
-}
+# shellcheck source=scripts/text-rules
+source scripts/text-rules
 
 # Files that .gitattributes marks as generated or vendored don't count.
 not_generated_or_vendored=(
@@ -118,6 +109,8 @@ not_generated_or_vendored=(
   ':(exclude,attr:linguist-vendored)'
   ':(exclude,attr:linguist-vendored=true)'
 )
+
+# Paths into a person's home folder stay out of the files.
 found_home_path=""
 # git grep prints the file, NUL, the line number, NUL and the line, for each line that may hold such a path.
 while IFS= read -r -d '' file && IFS= read -r -d '' line_number && IFS= read -r line; do
@@ -400,115 +393,7 @@ if [[ -n "$broken_name" ]]; then
   exit 1
 fi
 
-# The prose in the Markdown files follows three rules that a check can find by matching text.
-# "Write clear sentences" in docs/writing.md bans semicolons and dashes that join two sentences.
-# "Organize a page" in docs/pages.md bans links whose text is "click here".
-# A dash that joins two sentences looks like any other dash between words, so the check fails on each dash
-# that has a space on each side and a letter or digit beyond each space, as in "pages 10 - 20".
-# Only ASCII letters and digits count, so that the check gives the same result in every locale.
-dash_between_words='[A-Za-z0-9] (—|–|-) [A-Za-z0-9]'
-# A link's text in brackets, then its target in parentheses or a reference in brackets. An image, which starts with "!",
-# isn't a link.
-click_here_link='(^|[^!])\[[[:space:]]*click[[:space:]]+here[[:space:]]*\](\(|\[)'
-# A fence starts or ends a code block. It's three or more backticks or tildes, after any indentation, as in a list item.
-code_fence="^[[:space:]]*(\`{3,}|~{3,})(.*)$"
-# A run of backticks, with the text before it and the text after it.
-backtick_run="^([^\`]*)(\`+)(.*)$"
-html_comment_start='<!--'
-html_comment_end='-->'
-# An HTML tag, as in <br> or </details>, or a link in angle brackets, as in <https://example.com>.
-html_tag='<[A-Za-z/][^>]*>'
-# An HTML entity, as in &nbsp;, &#160; or &#xA0;.
-html_entity='&([A-Za-z][A-Za-z0-9]*|#[0-9]+|#[xX][0-9A-Fa-f]+);'
-# A link's target, in parentheses after the link's text.
-link_target='\]\([^)]+\)'
-# A line that gives the target of a reference link, as in [guide]: https://example.com.
-# A footnote, as in [^1]: text, is prose.
-link_definition='^ {0,3}\[[^]^][^]]*\]:'
-
-# Prints each line of a Markdown file that's outside its code blocks: its line number, a tab and the line.
-# A code block ends at a fence of the same character that's at least as long and holds nothing else,
-# or at the end of the file. An indented code block, which has no fences, counts as prose,
-# because telling it apart from the text of a list item takes a Markdown parser: lines_outside_code_blocks <file>
-lines_outside_code_blocks() {
-  local line line_number=0 fence=""
-  # The test after || also reads a last line that has no line break.
-  while IFS= read -r line || [[ -n $line ]]; do
-    line_number=$((line_number + 1))
-    if [[ $line =~ $code_fence ]]; then
-      if [[ -z $fence ]]; then
-        fence=${BASH_REMATCH[1]}
-        continue
-      fi
-      # A fence of the same character that's at least as long starts with the fence that opened the block.
-      if [[ ${BASH_REMATCH[1]} == "$fence"* && -z ${BASH_REMATCH[2]//[[:space:]]/} ]]; then
-        fence=""
-        continue
-      fi
-    fi
-    if [[ -z $fence ]]; then
-      printf '%s\t%s\n' "$line_number" "$line"
-    fi
-  done < "$1"
-}
-
-# Prints the prose in a line of Markdown: the line with each code span, HTML comment, HTML tag and HTML entity
-# replaced by an underscore, and each link's target left out, so that [text](target) becomes [text]().
-# A line that gives the target of a reference link becomes a single underscore.
-# An HTML comment over several lines counts as prose, because the check reads one line at a time: prose_in <line>
-prose_in() {
-  local rest=$1 prose="" opening after is_closed comment_and_after empty_target=']()'
-  if [[ $rest =~ $link_definition ]]; then
-    echo _
-    return 0
-  fi
-  # A run of backticks starts a code span, which ends at the next run of as many backticks.
-  # A run that no such run follows is text, as in CommonMark.
-  while [[ $rest =~ $backtick_run ]]; do
-    prose+=${BASH_REMATCH[1]}
-    opening=${BASH_REMATCH[2]}
-    rest=${BASH_REMATCH[3]}
-    after=$rest
-    is_closed=""
-    while [[ $after =~ $backtick_run ]]; do
-      after=${BASH_REMATCH[3]}
-      if [[ ${BASH_REMATCH[2]} == "$opening" ]]; then
-        is_closed=yes
-        break
-      fi
-    done
-    if [[ -n $is_closed ]]; then
-      prose+=_
-      rest=$after
-    else
-      prose+=$opening
-    fi
-  done
-  prose+=$rest
-  while [[ $prose == *"$html_comment_start"*"$html_comment_end"* ]]; do
-    comment_and_after=${prose#*"$html_comment_start"}
-    prose=${prose%%"$html_comment_start"*}_${comment_and_after#*"$html_comment_end"}
-  done
-  while [[ $prose =~ $html_tag || $prose =~ $html_entity ]]; do
-    prose=${prose/"${BASH_REMATCH[0]}"/_}
-  done
-  while [[ $prose =~ $link_target ]]; do
-    prose=${prose/"${BASH_REMATCH[0]}"/$empty_target}
-  done
-  printf '%s\n' "$prose"
-}
-
-# Succeeds if a line has a link whose text is "click here", in any case: has_click_here_link <line>
-has_click_here_link() {
-  local result=1
-  shopt -s nocasematch
-  if [[ $1 =~ $click_here_link ]]; then
-    result=0
-  fi
-  shopt -u nocasematch
-  return "$result"
-}
-
+# The prose in the Markdown files follows the rules that scripts/text-rules finds.
 found_prose_error=""
 while IFS= read -r -d '' file; do
   # -f skips the deleted files that git ls-files also lists.
@@ -758,14 +643,14 @@ fi
 
 # shellcheck source=scripts/title-types
 source scripts/title-types
-if has_section AGENTS.md Commits && [[ -f .github/workflows/pr-title.yml ]]; then
+if has_section AGENTS.md Commits && [[ -f scripts/check-title ]]; then
   agents_md_types=$(listed_types)
   title_check_types=$(allowed_title_types)
   while IFS= read -r type; do
-    report_difference "\"Commits\" in AGENTS.md lists the type $type, and the title check in .github/workflows/pr-title.yml doesn't allow it. Add it to the types in .github/workflows/pr-title.yml, or remove it from AGENTS.md."
+    report_difference "\"Commits\" in AGENTS.md lists the type $type, and the title check in scripts/check-title doesn't allow it. Add it to the types in scripts/check-title, or remove it from AGENTS.md."
   done < <(lines_missing_from "$agents_md_types" "$title_check_types")
   while IFS= read -r type; do
-    report_difference "the title check in .github/workflows/pr-title.yml allows the type $type, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in .github/workflows/pr-title.yml."
+    report_difference "the title check in scripts/check-title allows the type $type, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in scripts/check-title."
   done < <(lines_missing_from "$title_check_types" "$agents_md_types")
 fi
 
@@ -808,23 +693,22 @@ if [[ -f scripts/configure-github ]]; then
   done < <(lines_missing_from "$required" "$merge_group_checks")
 fi
 
-agents_md_gh_version=$(gh_version AGENTS.md gh)
-if [[ -z $agents_md_gh_version ]]; then
-  report_difference "AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". scripts/check compares it with other files, so add it."
+# The hooks read the gh version that the rules need from scripts/minimum-gh-version.
+# shellcheck source=scripts/minimum-gh-version
+source scripts/minimum-gh-version
+if [[ ! ${minimum_gh_version:-} =~ ^[0-9]+\.[0-9]+$ ]]; then
+  report_difference "scripts/minimum-gh-version doesn't set minimum_gh_version to a version written as <major>.<minor>, such as 2.98, so the hooks can't compare gh with it. Set it to the gh version that the rules need."
 else
+  agents_md_gh_version=$(gh_version AGENTS.md gh)
+  if [[ -z $agents_md_gh_version ]]; then
+    report_difference "AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". Add it, with the version in scripts/minimum-gh-version: $minimum_gh_version."
+  elif [[ $agents_md_gh_version != "$minimum_gh_version" ]]; then
+    report_difference "AGENTS.md asks for gh $agents_md_gh_version, and scripts/minimum-gh-version asks for gh $minimum_gh_version. Use the same version in both."
+  fi
   # Setup replaces the template's README with the project's, which may name no gh version.
   readme_gh_version=$(gh_version README.md "GitHub CLI")
-  if [[ -n $readme_gh_version && $readme_gh_version != "$agents_md_gh_version" ]]; then
-    report_difference "README.md asks for the GitHub CLI $readme_gh_version, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
-  fi
-  if [[ -f scripts/hooks/session-start ]]; then
-    hook_gh_major=$(sed -n 's/^minimum_gh_major=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
-    hook_gh_minor=$(sed -n 's/^minimum_gh_minor=\([0-9][0-9]*\)$/\1/p' scripts/hooks/session-start)
-    if [[ -z $hook_gh_major || -z $hook_gh_minor ]]; then
-      report_difference "scripts/hooks/session-start doesn't set both minimum_gh_major and minimum_gh_minor, so it can't ask for gh $agents_md_gh_version, as AGENTS.md does. Set both to that version."
-    elif [[ $hook_gh_major.$hook_gh_minor != "$agents_md_gh_version" ]]; then
-      report_difference "scripts/hooks/session-start asks for gh $hook_gh_major.$hook_gh_minor, and AGENTS.md says gh $agents_md_gh_version. Use the same version in both."
-    fi
+  if [[ -n $readme_gh_version && $readme_gh_version != "$minimum_gh_version" ]]; then
+    report_difference "README.md asks for the GitHub CLI $readme_gh_version, and scripts/minimum-gh-version asks for gh $minimum_gh_version. Use the same version in both."
   fi
 fi
 
