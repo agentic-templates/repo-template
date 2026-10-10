@@ -69,19 +69,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run the hooks' tests
-        run: scripts/test-hooks
-
-      - name: Run scripts/test-check
-        run: scripts/test-check
-
-      - name: Run the scripts' tests
-        run: |
-          for script_test in scripts/*.test; do
-            if [[ -f $script_test ]]; then
-              bash "$script_test"
-            fi
-          done
+      - name: Run tests with bash 3.2
+        run: scripts/test-bash-3-2
 
   # The rules for main require a job named "check". If you rename it, change scripts/configure-github too.
   # It fails unless each job in needs passed or was skipped. When you add a job to this workflow, add it to needs.

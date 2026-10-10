@@ -1,22 +1,20 @@
 #!/usr/bin/env bash
-# Runs the bash 3.2 job's script-test step on small sets of tests.
+# Runs the bash 3.2 job's test runner on small sets of tests.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 base=$(mktemp -d)
 trap 'rm -rf "$base"' EXIT
 
-# Read the actual step so these cases also catch changes to its loop or error handling.
+# Run the workflow's command so removing the runner from CI also fails these cases.
 awk '
   /^  bash-3-2:/ { in_job = 1; next }
   in_job && /^  [[:alnum:]_-]+:/ { exit }
-  in_job && /^      - name: Run the scripts.* tests$/ { in_step = 1; next }
-  in_step && /^        run: \|$/ { in_run = 1; next }
-  in_run && /^          / { sub(/^          /, ""); print; next }
-  in_run && NF { exit }
+  in_job && /^      - name: Run tests with bash 3.2$/ { in_step = 1; next }
+  in_step && /^        run: / { sub(/^        run: /, ""); print; exit }
 ' .github/workflows/ci.yml > "$base/step"
 if [[ ! -s $base/step ]]; then
-  echo "error: the bash-3-2 job has no step that runs the scripts' tests. Add the step to .github/workflows/ci.yml." >&2
+  echo "error: the bash-3-2 job has no test step. Add the step to .github/workflows/ci.yml." >&2
   exit 1
 fi
 
@@ -26,6 +24,9 @@ failed_cases=0
 new_case() {
   case_dir=$(mktemp -d "$base/case.XXXXXX")
   mkdir "$case_dir/scripts"
+  cp scripts/test-bash-3-2 "$case_dir/scripts/"
+  printf '%s\n' '#!/usr/bin/env bash' > "$case_dir/scripts/test-hooks"
+  printf '%s\n' '#!/usr/bin/env bash' > "$case_dir/scripts/test-check"
 }
 
 # GitHub's bash shell exits on a failing command and sets pipefail.
@@ -77,9 +78,45 @@ cat > "$case_dir/scripts/child" <<'CHILD'
 #!/usr/bin/env bash
 printf '%s\n' "$BASH_VERSION"
 CHILD
+cp "$case_dir/scripts/child" "$case_dir/scripts/test-hooks"
+cp "$case_dir/scripts/child" "$case_dir/scripts/test-check"
 chmod +x "$case_dir/scripts/version.test" "$case_dir/scripts/child"
 run_step
-expect_result "uses the current bash for tests and the scripts they start" 0 "$BASH_VERSION"$'\n'"$BASH_VERSION"
+expect_result "uses the current bash for all three groups and child scripts" 0 "$BASH_VERSION"$'\n'"$BASH_VERSION"$'\n'"$BASH_VERSION"$'\n'"$BASH_VERSION"
+
+# Each group must start before any group finishes. Sequential execution times out.
+new_case
+for group in hooks check scripts; do
+  case "$group" in
+    hooks) file=test-hooks ;;
+    check) file=test-check ;;
+    scripts) file=meeting.test ;;
+  esac
+  cat > "$case_dir/scripts/$file" <<TEST
+#!/usr/bin/env bash
+echo "$group started"
+touch "$group.started"
+for ((tries = 0; tries < 100; tries++)); do
+  if [[ -f hooks.started && -f check.started && -f scripts.started ]]; then
+    echo "$group passed"
+    exit 0
+  fi
+  sleep 0.1
+done
+echo "error: the three groups did not start together." >&2
+exit 1
+TEST
+done
+run_step
+expect_result "runs all three groups at the same time and keeps their output together" 0 $'hooks started\nhooks passed\ncheck started\ncheck passed\nscripts started\nscripts passed'
+
+for group in test-hooks test-check; do
+  new_case
+  printf '%s\n' '#!/usr/bin/env bash' 'echo failed >&2' 'exit 7' > "$case_dir/scripts/$group"
+  printf '%s\n' '#!/usr/bin/env bash' 'echo scripts passed' > "$case_dir/scripts/pass.test"
+  run_step
+  expect_result "fails when $group fails and still waits for the script tests" 7 $'failed\nscripts passed'
+done
 
 if ((failed_cases > 0)); then
   echo "error: $failed_cases of the $case_count cases in scripts/ci.test failed. The errors above say which." >&2
