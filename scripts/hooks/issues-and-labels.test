@@ -279,6 +279,8 @@ expect_block Bash 'gh label create urgent --color ff0000' "$label_commands"
 expect_block Bash "gh label edit bug --description 'Something is broken'" "$label_commands"
 expect_block Bash 'gh label delete wontfix --yes' "$label_commands"
 expect_block Bash 'gh label create urgent --repo jtmpl/other' "$label_commands"
+expect_block Bash 'gh label clone jtmpl/other' "$label_commands"
+expect_block Bash 'gh label clone jtmpl/other --force --repo jtmpl/project' "$label_commands"
 expect_allow Bash 'gh label list'
 expect_allow Bash 'echo gh label create urgent'
 
