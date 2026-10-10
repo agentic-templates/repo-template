@@ -4,7 +4,7 @@
 # branch checked out or is in the middle of rebasing it. For each such worktree, the script commits all its changes,
 # pushes the branch unless the branch has an open pull request, and removes the worktree. It switches the folder it
 # runs in to origin/main instead of removing it. It prints each folder it left and why, and fails when it can't free
-# the folder it runs in. Step 1 of "Build the ready issues" in docs/building.md runs it.
+# the folder it runs in. scripts/start-build-run runs it.
 # Given an issue, as in scripts/clear-worktrees 12, it frees only that issue's branches, whether or not the issue has
 # the ready label, and it frees a locked worktree too. It fails when it leaves any folder that holds them. "Build the
 # ready issues" runs it this way for the issue of a helper that failed, and so has stopped.

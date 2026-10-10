@@ -3,7 +3,7 @@
 # merge state is CLEAN, so its checks have passed, and it isn't in the queue. GitHub usually adds such a pull request
 # within a minute, but sometimes never does. Turning auto-merge off and running gh pr merge again adds it at once.
 # It skips pull requests from forks, which a maintainer merges. It asks gh about the repository of this checkout,
-# or the one in GH_REPO. Step 2 of "Build the ready issues" in docs/building.md runs it.
+# or the one in GH_REPO. scripts/stuck-pull-requests runs it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
