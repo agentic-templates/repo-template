@@ -1,10 +1,10 @@
 # Writing guide
 
-This guide covers everything written for the project: docs, issues, pull requests, commit messages, code comments, error messages, and replies and reports to the maintainer. The aim is text that a reader understands the first time they read it. The examples use a made-up expense tracker.
+The aim is text that a reader understands the first time they read it.
 
 ## Know your reader
 
-- Write for a reader who knows the project's field and reads once. The reader is new to the project too, even in a pull request that the maintainer reads, but not in a reply or report to the maintainer. For someone who uses the project, the field is the kind of work it helps with, such as keeping track of spending. For a developer, the field also includes the project's language and tools.
+- Write for a reader who knows the project's field and reads once.
 - Leave out what the reader already knows and what the code already shows.
 - Leave out how something works inside, and how one tool differs from another, unless the reader must act on it.
 - Start with what the reader came for: what they can do, what changed or what went wrong.
@@ -14,7 +14,7 @@ This guide covers everything written for the project: docs, issues, pull request
 - Use everyday words for the actual action. Write "adds the expense to the month's total", not "processes the expense".
 - Replace vague verbs such as "handles", "deals with" and "manages" with the verb for what happens.
 - Keep a technical term only when it is the precise name for the thing. Explain it where it first appears, unless people in the reader's field use it every day.
-- Use one term for one thing, everywhere. Don't switch to a synonym for variety.
+- Use one term for one thing, everywhere.
 - Don't use metaphors or marketing words such as "seamless", "powerful" or "blazing fast".
 - Cut filler such as "simply", "just", "basically" and "note that".
 - When you give a single example, pick the case that applies to most readers.
@@ -57,8 +57,8 @@ An error message says what failed and what the reader can do about it. When a li
 
 - Write for a reader who hasn't seen your conversation, notes or session. Don't refer to any of them, or to what happened in an earlier session, such as a build run on a given date.
 - An issue's body describes what to build now. When a decision, an answer or a new detail changes the issue, rewrite the sentences it changes, so that the body reads as if it had been written that way from the start.
-- Write a pull request for a developer who joins the project later, not only for today's reviewer. Say what changed and why. Don't list the changed files.
-- Say how you checked the change: the checks you ran and what they showed. That includes the review described under "Review a changed page with a fresh reader" in [docs/pages.md](pages.md). Name any check from AGENTS.md that you skipped, and say why.
+- Write a pull request for a developer who joins the project later, not only for today's reviewer. Don't list the changed files.
+- Say how you checked the change: the checks you ran and what they showed. Name any check from AGENTS.md that you skipped, and say why.
 
 ## Write replies and reports
 
