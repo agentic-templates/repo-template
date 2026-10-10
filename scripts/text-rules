@@ -1,7 +1,8 @@
 # shellcheck shell=bash
 # Functions that find text that breaks a writing rule, for the rules that a check can find by matching text.
-# scripts/check runs them on the repository's files, and scripts/check-pull-request on a pull request's title and body.
-# Paths into a person's home folder stay out of the files and pull requests, as "Keep the repository clean" in
+# scripts/check runs them on the repository's files, scripts/check-pull-request on a pull request's title and body, and
+# scripts/hooks/posted-text.check on the text of the issues, comments and reviews that gh posts.
+# Paths into a person's home folder stay out of the files, issues and pull requests, as "Keep the repository clean" in
 # AGENTS.md says.
 # A path counts only at the start of a line or after a character other than a letter, a digit, ".", "_" or "-".
 # So the path of a URL, as in https://example.com/home/docs/, doesn't count, and neither does a relative path, as in src/home/<name>/.
