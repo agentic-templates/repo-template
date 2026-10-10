@@ -40,7 +40,7 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 
 ## Fail with a clear error
 
-- Check input where it enters the program: command-line arguments, files, network traffic and, in a library, the arguments to its public functions. Trust values that come from inside the program.
+- Check input where it enters the program: command-line arguments, environment variables, files, network traffic and, in a library, the arguments to its public functions. Trust values that come from inside the program.
 - Catch an error only where you can recover from it or add useful context. Never hide an error, such as by returning an empty list when the expense file can't be read.
 - If the code around yours hides errors by convention, don't hide them in the code you add. Your code may still call that code. Leave it as it is, and open an issue to change the convention everywhere.
 
