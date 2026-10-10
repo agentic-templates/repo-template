@@ -1,7 +1,5 @@
 # Languages guide
 
-This guide holds the steps for adding a language to the project, at setup or later.
-
 ## Add a language
 
 1. Pin the version of the language and of each framework and database that the code in the language uses, such as Python in `.python-version`. Commit the lockfile for the language's packages, and add steps to `.github/workflows/ci.yml` that install those versions and the packages.

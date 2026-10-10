@@ -1,7 +1,5 @@
 # Dependencies guide
 
-This guide holds the rules for choosing, pinning and updating tools, packages and GitHub Actions.
-
 ## Pin versions
 
 - When you add a tool or a dependency, use its newest stable version that is at least 7 days old.
