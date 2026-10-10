@@ -15,9 +15,8 @@ source "${BASH_SOURCE[0]%/*}/helpers.bash"
 # shellcheck source=scripts/minimum-gh-version
 source "${BASH_SOURCE[0]%/*}/../minimum-gh-version"
 
-# The flags that take a value, as gh pr close --help, gh issue develop --help, git push -h, gh auth token --help and
-# gh auth status --help list them.
-close_flags_with_value=" -c --comment -R --repo "
+# The flags that take a value, as gh issue develop --help, git push -h, gh auth token --help and gh auth status --help
+# list them.
 develop_flags_with_value=" -b --base --branch-repo -n --name --worktree -R --repo "
 push_flags_with_value=" --repo --recurse-submodules --receive-pack --exec -o --push-option "
 token_flags_with_value=" -h --hostname -u --user "
@@ -52,7 +51,7 @@ is_from_dependabot() {
 
 check_gh_pr_close() {
   local pull_request="this branch's pull request"
-  read_arguments 3 "$close_flags_with_value"
+  read_arguments 3 "$pr_close_flags_with_value"
   if [[ -n $argument ]]; then
     pull_request="pull request $argument"
   fi

@@ -53,6 +53,11 @@ drop_command_prefixes() {
 # The flags of gh api that take a value, as gh api --help lists them.
 api_flags_with_value=" --cache -F --field -H --header --hostname --input -q --jq -X --method -p --preview -f --raw-field -t --template "
 
+# The flags that take a value, as gh issue create --help, gh issue edit --help and gh pr close --help list them.
+issue_create_flags_with_value=" -a --assignee --attach --blocked-by --blocking -b --body -F --body-file -l --label -m --milestone --parent -p --project --recover -T --template -t --title --type -R --repo "
+issue_edit_flags_with_value=" --add-assignee --add-blocked-by --add-blocking --add-label --add-project --add-sub-issue --attach -b --body -F --body-file -m --milestone --parent --remove-assignee --remove-blocked-by --remove-blocking --remove-label --remove-project --remove-sub-issue -t --title --type -R --repo "
+pr_close_flags_with_value=" -c --comment -R --repo "
+
 # Reads the words of a gh command from an index on, and sets these variables:
 # - argument: the first word that isn't a flag or a flag's value, or empty
 # - target: the words that name the argument to other gh commands: the argument, and -R or --repo with its value
