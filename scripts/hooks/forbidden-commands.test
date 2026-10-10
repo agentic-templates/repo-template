@@ -89,6 +89,11 @@ expect_block Bash 'gh pr close 7 --delete-branch' "Blocked: pull request 7 $from
 expect_block Bash 'gh pr close' "Blocked: this branch's pull request $from_dependabot"
 expect_block Bash 'gh pr close -R jtmpl/other 7' "Blocked: pull request 7 $from_dependabot"
 expect_gh_call 'gh pr close -R jtmpl/other 7' "pr view 7 --repo jtmpl/other --json author"
+expect_repository_flags 2 "Blocked: pull request 7 $from_dependabot" pr close '7'
+for repository in '-R jtmpl/other' '--repo jtmpl/other' '--repo=jtmpl/other'; do
+  expect_gh_call "gh pr $repository close 7" "pr view 7 --repo jtmpl/other --json author"
+  expect_gh_call "gh pr close $repository 7" "pr view 7 --repo jtmpl/other --json author"
+done
 expect_allow Bash 'gh pr view 7'
 expect_allow Bash 'gh pr comment 7 --body "@dependabot rebase"'
 for TEST_AUTHOR in person fail; do
@@ -140,6 +145,9 @@ for command in 'gh pr close 7' 'gh pr close 7 --comment "Giving it back"' 'gh pr
   expect_allow Bash "$command"
 done
 
+expect_repository_flags 2 "$delete_branch" pr close '7 --delete-branch'
+expect_repository_flags 0 "" pr close '7 --delete-branch=false'
+
 # gh issue develop on an issue with needs-triage
 TEST_LABELS="feature needs-triage"
 needs_triage="Blocked: issue 12 has needs-triage, so no maintainer has accepted it yet. If a maintainer asked you to work on it, remove the label with gh issue edit 12 --remove-label needs-triage, and run the command again. Otherwise, leave the issue for the maintainer to triage."
@@ -148,6 +156,11 @@ expect_block Bash 'gh issue develop --list 12' "$needs_triage"
 expect_block Bash 'gh issue develop --name fix-12 --base main 12' "$needs_triage"
 expect_block Bash 'gh issue develop 12 -R jtmpl/other' "${needs_triage/edit 12/edit 12 --repo jtmpl/other}"
 expect_gh_call 'gh issue develop 12 -R jtmpl/other' "issue view 12 --repo jtmpl/other --json labels"
+expect_repository_flags 2 "${needs_triage/edit 12/edit 12 --repo jtmpl/other}" issue develop '12 --checkout'
+for repository in '-R jtmpl/other' '--repo jtmpl/other' '--repo=jtmpl/other'; do
+  expect_gh_call "gh issue $repository develop 12" "issue view 12 --repo jtmpl/other --json labels"
+  expect_gh_call "gh issue develop $repository 12" "issue view 12 --repo jtmpl/other --json labels"
+done
 expect_allow Bash 'gh issue view 12'
 expect_allow Bash 'gh issue edit 12 --remove-label needs-triage'
 expect_allow Bash 'gh issue develop'
@@ -244,6 +257,16 @@ for command in 'echo "$(' 'echo "$(printf ok' 'echo "`printf ok' $'cat <<EOF\n$(
       echo "error: $check crashed while inspecting an incomplete substitution or here-document: $message" >&2
       failed_cases=$((failed_cases + 1))
     fi
+  done
+done
+
+# Incomplete commands start no subcommand check, and each check itself exits cleanly.
+for command in '' 'gh' 'gh pr' 'gh pr --repo' 'gh pr --repo create' 'gh pr -R create' 'gh pr --repo=jtmpl/other'; do
+  expect_allow Bash "$command"
+  for check in forbidden-commands maintainer-commands issues-and-labels posted-text pull-request-rules unchecked-pull-requests; do
+    hook_status=0
+    hook_message=$("$hooks_folder/$check.check" 2>&1 >/dev/null <<<"$(sample_input claude-code Bash "$command")") || hook_status=$?
+    expect_result "$check for incomplete command $command" 0 ""
   done
 done
 

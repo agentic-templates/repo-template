@@ -71,6 +71,7 @@ check_gh_pr_create() {
 check_simple_command() {
   record_written_files
   drop_command_prefixes "$@"
+  move_gh_repository_flags
   if ((${#command_words[@]} == 0)); then
     return 0
   fi

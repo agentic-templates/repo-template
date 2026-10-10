@@ -99,6 +99,18 @@ expect_allow() {
   done
 }
 
+# Checks all repository flag forms on either side of a subcommand against a fixed result:
+# expect_repository_flags <exit code> <message> <group> <subcommand> <remaining command words>
+expect_repository_flags() {
+  local status=$1 message=$2 group=$3 subcommand=$4 rest=$5 repository command
+  for repository in '-R jtmpl/other' '--repo jtmpl/other' '--repo=jtmpl/other'; do
+    for command in "gh $group $repository $subcommand $rest" "gh $group $subcommand $repository $rest"; do
+      run_hook "$(sample_input claude-code Bash "$command")"
+      expect_result "The hook for $command" "$status" "$message"
+    done
+  done
+}
+
 finish_tests() {
   if ((failed_cases > 0)); then
     echo "error: $failed_cases of the $case_count cases in $test_name failed. The errors above say which." >&2
