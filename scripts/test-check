@@ -7,12 +7,22 @@ copy=""
 failed_cases=0
 case_count=0
 
+# The copies skip shellcheck, actionlint and zizmor, so a case can test only what scripts/check finds by itself.
+# Stand-ins for the three tools come first on the PATH of each copy's run, and fail, so that a case fails if a copy
+# runs one.
+stand_ins=$(mktemp -d)
+for tool in shellcheck actionlint zizmor; do
+  printf '%s\n' '#!/usr/bin/env bash' "echo \"error: the copy ran $tool, and the copies that scripts/test-check makes must skip it.\" >&2" \
+    'exit 1' > "$stand_ins/$tool"
+  chmod +x "$stand_ins/$tool"
+done
+
 remove_copy() {
   if [[ -n "$copy" ]]; then
     rm -rf "$copy"
   fi
 }
-trap remove_copy EXIT
+trap 'remove_copy; rm -rf "$stand_ins"' EXIT
 
 # Copies the tracked files, as they are on disk, into a new git repository at $copy.
 make_copy() {
@@ -53,7 +63,6 @@ check_record() {
 
 # Runs one case: run_case <function> <pass or fail> [<text that the output must hold>]
 # The function gets a fresh copy at $copy, and adds the files that the case needs to it.
-# Use only checks that need no extra tool, so that a case gives the same result on every machine.
 run_case() {
   local case_function=$1 expected=$2 expected_text=${3:-}
   local output actual=pass
@@ -62,7 +71,7 @@ run_case() {
   "$case_function"
   git -C "$copy" add --all
   # CHECK_UNDER_TEST stops the copy's scripts/check from running this script again.
-  if ! output=$(cd "$copy" && CHECK_UNDER_TEST=1 scripts/check 2>&1); then
+  if ! output=$(cd "$copy" && CHECK_UNDER_TEST=1 PATH=$stand_ins:$PATH scripts/check 2>&1); then
     actual=fail
   fi
 
@@ -114,7 +123,6 @@ record_that_cant_be_written() {
 run_case record_that_cant_be_written fail "error: the checks passed, but scripts/check can't record the pass in .git/check-passed, and a hook blocks opening a pull request without that record."
 
 # Cases for the check that each action pinned to a commit SHA has a version comment.
-# The SHA is a real commit of actions/checkout, because zizmor checks it when it has a GitHub token.
 
 checkout_sha=3d3c42e5aac5ba805825da76410c181273ba90b1
 

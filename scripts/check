@@ -51,26 +51,6 @@ has() {
   return 1
 }
 
-if has shellcheck https://github.com/koalaman/shellcheck#installing; then
-  shebang='^#!(/bin/|/usr/bin/env )(sh|bash)([[:space:]]|$)'
-  # -f skips the submodules and deleted files that git ls-files also lists.
-  git ls-files -z | while IFS= read -r -d '' file; do
-    if [[ -f $file ]] && IFS= read -r first_line < "$file" && [[ $first_line =~ $shebang ]]; then
-      printf '%s\0' "$file"
-    fi
-  done | xargs -0 shellcheck -x
-fi
-
-if has actionlint https://github.com/rhysd/actionlint/blob/main/docs/install.md; then
-  actionlint
-fi
-
-if has zizmor https://docs.zizmor.sh/installation/; then
-  # zizmor checks actions against GitHub's advisories only when it has a GitHub token,
-  # such as GH_TOKEN. CI gives it one.
-  zizmor .
-fi
-
 # Some tools read a file with one of these names instead of AGENTS.md.
 # shellcheck source=scripts/instruction-file-names
 source scripts/instruction-file-names
@@ -746,9 +726,30 @@ if [[ -n "$files_disagree" ]]; then
 fi
 
 # scripts/test-check runs this script on copies of the repository. It sets CHECK_UNDER_TEST for those runs,
-# so that they don't start it again. They skip the tests in scripts/ and scripts/hooks/ too, because the copies
-# don't change the scripts that those tests run.
+# so that they don't start it again. They skip shellcheck, actionlint and zizmor too, because the cases test what this
+# script finds by itself, and the three tools would take most of the time of each case. They skip the tests in
+# scripts/ and scripts/hooks/ too, because the copies don't change the scripts that those tests run.
 if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
+  if has shellcheck https://github.com/koalaman/shellcheck#installing; then
+    shebang='^#!(/bin/|/usr/bin/env )(sh|bash)([[:space:]]|$)'
+    # -f skips the submodules and deleted files that git ls-files also lists.
+    git ls-files -z | while IFS= read -r -d '' file; do
+      if [[ -f $file ]] && IFS= read -r first_line < "$file" && [[ $first_line =~ $shebang ]]; then
+        printf '%s\0' "$file"
+      fi
+    done | xargs -0 shellcheck -x
+  fi
+
+  if has actionlint https://github.com/rhysd/actionlint/blob/main/docs/install.md; then
+    actionlint
+  fi
+
+  if has zizmor https://docs.zizmor.sh/installation/; then
+    # zizmor checks actions against GitHub's advisories only when it has a GitHub token,
+    # such as GH_TOKEN. CI gives it one.
+    zizmor .
+  fi
+
   # Add the project's formatter check, linter, type checker, tests and coverage check here.
   # The copies that scripts/test-check makes skip these checks, because the copies hold only the tracked files.
   # Keep this comment after setup, because a case in scripts/test-check finds the place by it.
