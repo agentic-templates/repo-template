@@ -609,6 +609,88 @@ run_case unknown_label_in_a_string_with_commas fail "error: .github/ISSUE_TEMPLA
 run_case star_label_outside_release_notes fail "error: .github/dependabot.yml names the label *, and \"Labels\" in AGENTS.md doesn't name it."
 run_case agents_md_without_labels fail "error: AGENTS.md has no section \"Labels\", and scripts/check compares that section with other files. Add it, with the heading \"## Labels\"."
 
+# Cases for the separate type and status lists used by the issue checks and build queue.
+write_issue_labels() {
+  printf 'type_labels=(%s)\nstatus_labels=(%s)\n' "$1" "$2" > "$copy/scripts/issue-labels"
+}
+
+reordered_issue_labels() {
+  write_issue_labels 'research maintenance feature bug' 'needs-decision needs-triage needs-breakdown'
+}
+
+missing_issue_type() {
+  write_issue_labels 'feature maintenance research' 'needs-triage needs-breakdown needs-decision'
+}
+
+missing_issue_status() {
+  write_issue_labels 'bug feature maintenance research' 'needs-breakdown needs-decision'
+}
+
+extra_issue_type() {
+  write_issue_labels 'bug feature maintenance research ready' 'needs-triage needs-breakdown needs-decision'
+}
+
+extra_issue_status() {
+  write_issue_labels 'bug feature maintenance research' 'needs-triage needs-breakdown needs-decision dependencies'
+}
+
+swapped_issue_categories() {
+  write_issue_labels 'needs-triage feature maintenance research' 'bug needs-breakdown needs-decision'
+}
+
+empty_issue_types() {
+  write_issue_labels '' 'needs-triage needs-breakdown needs-decision'
+}
+
+empty_issue_statuses() {
+  write_issue_labels 'bug feature maintenance research' ''
+}
+
+# Keep these names in the section so that its separate comparisons with the other files still pass.
+empty_documented_types() {
+  replace_text AGENTS.md "- \`bug\`:" "\`bug\`:"
+  replace_text AGENTS.md "- \`feature\`:" "\`feature\`:"
+  replace_text AGENTS.md "- \`maintenance\`:" "\`maintenance\`:"
+  replace_text AGENTS.md "- \`research\`:" "\`research\`:"
+}
+
+empty_documented_statuses() {
+  replace_text AGENTS.md "- \`needs-triage\`:" "\`needs-triage\`:"
+  replace_text AGENTS.md "- \`needs-breakdown\`:" "\`needs-breakdown\`:"
+  replace_text AGENTS.md "- \`needs-decision\`:" "\`needs-decision\`:"
+}
+
+matching_empty_types() {
+  empty_documented_types
+  empty_issue_types
+}
+
+matching_empty_statuses() {
+  empty_documented_statuses
+  empty_issue_statuses
+}
+
+run_case reordered_issue_labels pass
+run_case missing_issue_type fail 'error: AGENTS.md lists the type label bug, and scripts/issue-labels does not. Add it to the type list in scripts/issue-labels, or remove it from the type list in AGENTS.md.'
+run_case missing_issue_status fail 'error: AGENTS.md lists the status label needs-triage, and scripts/issue-labels does not. Add it to the status list in scripts/issue-labels, or remove it from the status list in AGENTS.md.'
+run_case extra_issue_type fail 'error: scripts/issue-labels lists the type label ready, and AGENTS.md does not. Add it to the type list in AGENTS.md, or remove it from the type list in scripts/issue-labels.'
+run_case extra_issue_status fail 'error: scripts/issue-labels lists the status label dependencies, and AGENTS.md does not. Add it to the status list in AGENTS.md, or remove it from the status list in scripts/issue-labels.'
+run_case swapped_issue_categories fail 'AGENTS.md lists the type label bug, and scripts/issue-labels does not.'
+run_case swapped_issue_categories fail 'scripts/issue-labels lists the type label needs-triage, and AGENTS.md does not.'
+run_case swapped_issue_categories fail 'AGENTS.md lists the status label needs-triage, and scripts/issue-labels does not.'
+run_case swapped_issue_categories fail 'scripts/issue-labels lists the status label bug, and AGENTS.md does not.'
+run_case empty_issue_types fail 'AGENTS.md lists the type label bug, and scripts/issue-labels does not.'
+run_case empty_issue_types fail 'AGENTS.md lists the type label feature, and scripts/issue-labels does not.'
+run_case empty_issue_types fail 'AGENTS.md lists the type label maintenance, and scripts/issue-labels does not.'
+run_case empty_issue_types fail 'AGENTS.md lists the type label research, and scripts/issue-labels does not.'
+run_case empty_issue_statuses fail 'AGENTS.md lists the status label needs-triage, and scripts/issue-labels does not.'
+run_case empty_issue_statuses fail 'AGENTS.md lists the status label needs-breakdown, and scripts/issue-labels does not.'
+run_case empty_issue_statuses fail 'AGENTS.md lists the status label needs-decision, and scripts/issue-labels does not.'
+run_case empty_documented_types fail 'scripts/issue-labels lists the type label bug, and AGENTS.md does not.'
+run_case empty_documented_statuses fail 'scripts/issue-labels lists the status label needs-triage, and AGENTS.md does not.'
+run_case matching_empty_types pass
+run_case matching_empty_statuses pass
+
 title_check_without_a_type() {
   replace_text scripts/check-title "|perf|" "|"
 }
