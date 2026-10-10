@@ -82,9 +82,9 @@ An issue from a maintainer's account can get `ready` when all of these are true:
 - Nothing is left to decide, except a question about how to build it that a research issue blocking it will answer. If the answer could change what the issue asks for, the issue isn't ready, and it keeps `needs-decision` until a maintainer decides.
 - "What should change" says what's out of scope, if the agent that builds the issue might otherwise do more than the issue asks for.
 - It's blocked by every issue whose change it needs first.
-- It has one type label and no status label.
+- It has no status label.
 
-A research issue is ready when its question and what depends on the answer are clear, and it has its type label and no status label. A parent is ready when someone could check each of its "Done when" items, it has its type label and no status label, and each of its sub-issues is ready.
+A research issue is ready when its question and what depends on the answer are clear, and it has no status label. A parent is ready when someone could check each of its "Done when" items, it has no status label, and each of its sub-issues is ready.
 
 ## Plan the next work
 

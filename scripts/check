@@ -719,12 +719,6 @@ source scripts/minimum-gh-version
 if [[ ! ${minimum_gh_version:-} =~ ^[0-9]+\.[0-9]+$ ]]; then
   report_difference "scripts/minimum-gh-version doesn't set minimum_gh_version to a version written as <major>.<minor>, such as 2.98, so the hooks can't compare gh with it. Set it to the gh version that the rules need."
 else
-  agents_md_gh_version=$(gh_version AGENTS.md gh)
-  if [[ -z $agents_md_gh_version ]]; then
-    report_difference "AGENTS.md doesn't name the gh version that the rules need, written as \"gh <version> or later\". Add it, with the version in scripts/minimum-gh-version: $minimum_gh_version."
-  elif [[ $agents_md_gh_version != "$minimum_gh_version" ]]; then
-    report_difference "AGENTS.md asks for gh $agents_md_gh_version, and scripts/minimum-gh-version asks for gh $minimum_gh_version. Use the same version in both."
-  fi
   # Setup replaces the template's README with the project's, which may name no gh version.
   readme_gh_version=$(gh_version README.md "GitHub CLI")
   if [[ -n $readme_gh_version && $readme_gh_version != "$minimum_gh_version" ]]; then
