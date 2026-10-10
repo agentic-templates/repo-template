@@ -447,7 +447,7 @@ yaml_value() {
 # Prints the labels in the labels: lists of a YAML file. A list is written as [a, b], as lines that start with "- ",
 # or as a string with commas, which issue forms also allow.
 yaml_labels() {
-  local line value item key_column=""
+  local line value item items key_column=""
   local key_pattern='^([[:space:]]*(-[[:space:]]+)?)labels:(.*)$' item_pattern='^([[:space:]]*)-[[:space:]]+(.*)$'
   while IFS= read -r line || [[ -n $line ]]; do
     line=${line%%[[:space:]]#*}
@@ -472,9 +472,12 @@ yaml_labels() {
     fi
     value=${value#\[}
     value=${value%\]}
+    # The function splits the items before it prints one, because of the write error that
+    # scripts/required-checks describes.
+    items=$(tr ',' '\n' <<<"$value")
     while IFS= read -r item; do
       yaml_value "$item"
-    done < <(tr ',' '\n' <<<"$value")
+    done <<<"$items"
   done < "$1"
 }
 
@@ -494,7 +497,10 @@ created_labels() {
 
 # Prints the types under "Use one of these types" in "Commits" in AGENTS.md: the word in backticks that starts each item.
 listed_types() {
-  local line is_in_list="" pattern="^[[:space:]]+- \`([^\`]+)\`"
+  local line commits is_in_list="" pattern="^[[:space:]]+- \`([^\`]+)\`"
+  # The function reads the whole section before it prints a type, because of the write error that
+  # scripts/required-checks describes.
+  commits=$(section AGENTS.md Commits)
   while IFS= read -r line; do
     if [[ $line == *"Use one of these types"* ]]; then
       is_in_list=yes
@@ -504,7 +510,7 @@ listed_types() {
       fi
       printf '%s\n' "${BASH_REMATCH[1]}"
     fi
-  done < <(section AGENTS.md Commits)
+  done <<<"$commits"
 }
 
 # shellcheck source=scripts/required-checks
