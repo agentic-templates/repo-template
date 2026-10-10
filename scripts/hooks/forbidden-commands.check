@@ -13,8 +13,7 @@ source "${BASH_SOURCE[0]%/*}/helpers.bash"
 # shellcheck source=scripts/minimum-gh-version
 source "${BASH_SOURCE[0]%/*}/../minimum-gh-version"
 
-# The flags that take a value, as gh api --help, gh pr close --help, gh issue develop --help and git push -h list them.
-api_flags_with_value=" --cache -F --field -H --header --hostname --input -q --jq -X --method -p --preview -f --raw-field -t --template "
+# The flags that take a value, as gh pr close --help, gh issue develop --help and git push -h list them.
 close_flags_with_value=" -c --comment -R --repo "
 develop_flags_with_value=" -b --base --branch-repo -n --name --worktree -R --repo "
 push_flags_with_value=" --repo --recurse-submodules --receive-pack --exec -o --push-option "
