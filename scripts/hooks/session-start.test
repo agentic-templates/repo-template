@@ -40,11 +40,16 @@ mkdir -p "$no_gh"
 ln -s "$(command -v bash)" "$no_gh/bash"
 ln -s "$(command -v jq)" "$no_gh/jq"
 
-# Gives each case a new home and working folder, with a repository that has an AGENTS.md.
+# The file that the hook reads on standard input, in place of the JSON that Claude Code sends it.
+input_file=$base/input
+
+# Gives each case a new home and working folder, with a repository that has an AGENTS.md,
+# and the input that Claude Code sends when a session starts.
 new_folders() {
   rm -rf "$home"
   mkdir -p "$work/.git"
   echo "# How to work in this repository" >"$work/AGENTS.md"
+  echo '{"source": "startup"}' >"$input_file"
 }
 
 # Runs the hook in the working folder as Claude Code does on a person's machine, and sets hook_status and hook_output.
@@ -52,7 +57,7 @@ new_folders() {
 run_session_start() {
   hook_status=0
   hook_output=$(cd "$work" && env -u CLAUDE_CODE_REMOTE -u CLAUDE_ENV_FILE HOME="$home" CLAUDECODE=1 PATH="$stand_in:$PATH" "$@" \
-    "$hooks_folder/session-start") || hook_status=$?
+    "$hooks_folder/session-start" <"$input_file") || hook_status=$?
 }
 
 # Checks the hook's output: expect_output <description> <text the output holds, or "" for no output>
@@ -68,7 +73,63 @@ expect_output() {
   fi
 }
 
+# Checks that the hook's output doesn't hold a text: expect_output_without <description> <text>
+expect_output_without() {
+  local description=$1 text=$2
+  case_count=$((case_count + 1))
+  if [[ $hook_output == *"$text"* ]]; then
+    echo "error: $description, the hook must not print \"$text\", but it printed: $hook_output" >&2
+    failed_cases=$((failed_cases + 1))
+  fi
+}
+
 hidden="Claude Code didn't load AGENTS.md"
+compacted="This conversation was just compacted, so the guides that this session read from docs/ survive only in the summary. Read again each guide that \"Read the guides\" in AGENTS.md names for the work you're doing, and AGENTS.md itself if its text isn't in your context."
+
+new_folders
+echo '{"source": "compact"}' >"$input_file"
+run_session_start
+expect_output "After a compaction" "$compacted"
+
+new_folders
+echo '{"source": "compact"}' >"$input_file"
+echo "Rules" >"$work/CLAUDE.md"
+run_session_start
+expect_output "After a compaction, with a CLAUDE.md in the working folder, the note about the compaction comes first" \
+  "$compacted"$'\n'"$hidden"
+
+for source in startup clear resume; do
+  new_folders
+  echo "{\"source\": \"$source\"}" >"$input_file"
+  run_session_start
+  expect_output "With the source $source" ""
+done
+
+new_folders
+: >"$input_file"
+run_session_start
+expect_output "With no input" ""
+
+new_folders
+echo '{}' >"$input_file"
+run_session_start
+expect_output "With the input {}" ""
+
+new_folders
+echo 'source: compact' >"$input_file"
+run_session_start
+expect_output "With input that isn't JSON" ""
+
+new_folders
+echo '{"source": "compact"}' >"$input_file"
+hook_output=$(cd "$work" && HOME=$home CLAUDECODE=1 PATH=$no_jq "$hooks_folder/session-start" <"$input_file")
+expect_output_without "After a compaction, without jq" "$compacted"
+expect_output "After a compaction, without jq" "The hooks in scripts/hooks need jq"
+
+new_folders
+echo '{"source": "compact"}' >"$input_file"
+hook_output=$(cd "$work" && HOME=$home PATH=$stand_in:$PATH env -u CLAUDECODE "$hooks_folder/session-start" <"$input_file")
+expect_output "After a compaction, without CLAUDECODE" ""
 
 new_folders
 run_session_start
@@ -116,7 +177,7 @@ expect_output "With Project instructions set to read both files" ""
 
 new_folders
 echo "Rules" >"$work/CLAUDE.md"
-hook_output=$(cd "$work" && HOME=$home PATH=$stand_in:$PATH env -u CLAUDECODE "$hooks_folder/session-start")
+hook_output=$(cd "$work" && HOME=$home PATH=$stand_in:$PATH env -u CLAUDECODE "$hooks_folder/session-start" <"$input_file")
 expect_output "Without CLAUDECODE" ""
 
 new_folders
@@ -129,14 +190,14 @@ expect_output "With a gh whose version can't be read" ""
 TEST_GH_VERSION=2.98.0
 
 new_folders
-hook_output=$(cd "$work" && HOME=$home CLAUDECODE=1 PATH=$no_gh "$hooks_folder/session-start")
+hook_output=$(cd "$work" && HOME=$home CLAUDECODE=1 PATH=$no_gh "$hooks_folder/session-start" <"$input_file")
 expect_output "Without gh" "need gh 2.98 or later, and gh isn't installed"
 
 new_folders
 echo "Rules" >"$work/CLAUDE.md"
 mkdir -p "$home/.claude"
 echo '{"pluginConfigs": {"agents-md@builtin": {"options": {"instructionFiles": "claude-md-and-agents-md"}}}}' >"$home/.claude/settings.json"
-hook_output=$(cd "$work" && HOME=$home CLAUDECODE=1 PATH=$no_jq "$hooks_folder/session-start")
+hook_output=$(cd "$work" && HOME=$home CLAUDECODE=1 PATH=$no_jq "$hooks_folder/session-start" <"$input_file")
 expect_output "Without jq" "The hooks in scripts/hooks need jq"
 expect_output "Without jq, which the hook needs to read the settings" "$hidden"
 
