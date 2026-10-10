@@ -54,7 +54,7 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 - Test the edges of each requirement as well as a typical case: empty input, and the values on both sides of each limit, such as files of 50,000 and 50,001 rows.
 - Before you change what the code does, write or change the tests for the behavior that your issue adds, changes or fixes. Take the expected results from the issue, and run the tests to see them fail. Then change the code until they pass. If a test for any other requirement fails, fix the code, not the test.
 - Name each test for the behavior and the condition, such as "leaves an expense in a foreign currency out of the total".
-- Keep tests independent of anything that can differ from one run to the next, such as the network, the clock, random numbers and the order in which the tests run. Give the code fixed values or stand-ins for those only, and never a stand-in for the project's own code.
+- Keep tests independent of the order in which they run, and of anything else that can differ from one run to the next, such as the network, the clock and random numbers. Give the code fixed values or stand-ins only for those. Never use a stand-in for the project's own code, except for code that does nothing but read the clock or send requests over the network, such as a function that returns today's date.
 - Never weaken a test. You weaken a test when you change it so that it passes for code that made it fail before, while the requirement it checks stays the same. Skipping or deleting a test weakens it too. Delete a test only when your issue removes its requirement.
 - If you think a test is wrong, leave it as it is and open an issue for it.
 - Say in the pull request which tests you changed or deleted, and why.
