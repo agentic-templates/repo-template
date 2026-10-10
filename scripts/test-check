@@ -3,6 +3,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# The downstream regression test repeats these cases without repeating unrelated checks.
+workflows_only=""
+if (($# > 0)); then
+  if [[ $# != 1 || $1 != --workflows-only ]]; then
+    echo "usage: scripts/test-check [--workflows-only]" >&2
+    exit 2
+  fi
+  workflows_only=yes
+fi
+
 copy=""
 failed_cases=0
 case_count=0
@@ -61,14 +71,34 @@ check_record() {
   fi
 }
 
-# Runs one case: run_case <function> <pass or fail> [<text that the output must hold>]
+# Runs one case: run_case <function> <pass or fail> [<text that the output must hold>] [<text that it must not hold>]
 # The function gets a fresh copy at $copy, and adds the files that the case needs to it.
 run_case() {
-  local case_function=$1 expected=$2 expected_text=${3:-}
+  local case_function=$1 expected=$2 expected_text=${3:-} forbidden_text=${4:-}
   local output actual=pass
+  if [[ -n $workflows_only ]]; then
+    case $case_function in
+      repository_as_it_is|pinned_action_*|required_check_*) ;;
+      *) return ;;
+    esac
+  fi
   case_count=$((case_count + 1))
   make_copy
   "$case_function"
+  local workflow rule copied_rules
+  for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+    if [[ -f $workflow ]] && ! cmp -s "$workflow" "$copy/$workflow"; then
+      echo "error: the case $case_function changed the pre-existing workflow $workflow." >&2
+      failed_cases=$((failed_cases + 1))
+    fi
+  done
+  copied_rules=$(tr '\n' ' ' < "$copy/scripts/configure-github")
+  while IFS= read -r rule; do
+    if [[ $copied_rules != *"$rule"* ]]; then
+      echo "error: the case $case_function removed the required-check entry $rule." >&2
+      failed_cases=$((failed_cases + 1))
+    fi
+  done < <(tr '\n' ' ' < scripts/configure-github | grep -o '{[^{}]*"context"[^{}]*}')
   git -C "$copy" add --all
   # CHECK_UNDER_TEST stops the copy's scripts/check from running this script again.
   if ! output=$(cd "$copy" && CHECK_UNDER_TEST=1 PATH=$stand_ins:$PATH scripts/check 2>&1); then
@@ -90,6 +120,11 @@ run_case() {
     printf '%s\n' "$output" >&2
     failed_cases=$((failed_cases + 1))
   fi
+  if [[ -n $forbidden_text && $output == *"$forbidden_text"* ]]; then
+    echo "error: in the case $case_function, the output must not hold \"$forbidden_text\". Its output:" >&2
+    printf '%s\n' "$output" >&2
+    failed_cases=$((failed_cases + 1))
+  fi
 }
 
 # Replaces each copy of a text in a file of the copy: replace_text <file> <text> <new text>
@@ -106,6 +141,28 @@ replace_text() {
     content=${content#*"$text"}
   done
   printf '%s\n' "$replaced$content" > "$copy/$file"
+}
+
+# A project may already use a fixture's filename or check name.
+unused_workflow_path() {
+  local path=.github/workflows/$1.yml number=0
+  while [[ -e $path ]]; do
+    number=$((number + 1))
+    path=.github/workflows/$1-$number.yml
+  done
+  printf '%s\n' "$path"
+}
+fixture_workflow=$(unused_workflow_path test-check)
+fixture_push_workflow=$(unused_workflow_path test-check-push)
+fixture_check=test_check
+while grep -Fq "$fixture_check" scripts/configure-github .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null; do
+  fixture_check=${fixture_check}_fixture
+done
+
+# Adds a requirement without replacing the project's existing checks.
+require_fixture_check() {
+  replace_text scripts/configure-github '"required_status_checks": [' \
+    '"required_status_checks": ['$'\n'"          {\"context\": \"$fixture_check\", \"integration_id\": 15368},"
 }
 
 repository_as_it_is() {
@@ -126,11 +183,11 @@ run_case record_that_cant_be_written fail "error: the checks passed, but scripts
 
 checkout_sha=3d3c42e5aac5ba805825da76410c181273ba90b1
 
-# Writes .github/workflows/lint.yml, with a step that checks out the code. The step's uses: line is line 8:
+# Writes a separate workflow, with a step that checks out the code. The step's uses: line is line 8:
 # write_checkout_workflow <uses: line>
 write_checkout_workflow() {
   printf '%s\n' "name: Lint" "on: pull_request" "permissions: {}" "jobs:" "  lint:" "    runs-on: ubuntu-latest" "    steps:" \
-    "      - $1" "        with:" "          persist-credentials: false" > "$copy/.github/workflows/lint.yml"
+    "      - $1" "        with:" "          persist-credentials: false" > "$copy/$fixture_workflow"
 }
 
 pinned_action_without_a_comment() {
@@ -151,8 +208,8 @@ pinned_action_with_a_version_comment_in_quotes() {
   write_checkout_workflow "uses: \"actions/checkout@$checkout_sha\" # v7.0.1"
 }
 
-run_case pinned_action_without_a_comment fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment. Write the version that the SHA pins in a comment after it, as in "# v5.0.0".'
-run_case pinned_action_with_a_comment_that_isnt_a_version fail 'error: .github/workflows/lint.yml:8 pins actions/checkout to a commit SHA without a version comment.'
+run_case pinned_action_without_a_comment fail "error: $fixture_workflow:8 pins actions/checkout to a commit SHA without a version comment. Write the version that the SHA pins in a comment after it, as in \"# v5.0.0\"."
+run_case pinned_action_with_a_comment_that_isnt_a_version fail "error: $fixture_workflow:8 pins actions/checkout to a commit SHA without a version comment."
 run_case pinned_action_without_a_comment_in_a_composite_action fail 'error: .github/actions/setup/action.yaml:6 pins actions/checkout to a commit SHA without a version comment.'
 run_case pinned_action_with_a_version_comment_in_quotes pass
 
@@ -702,7 +759,8 @@ title_check_with_an_extra_type() {
 run_case title_check_without_a_type fail "error: \"Commits\" in AGENTS.md lists the type perf, and the title check in scripts/check-title doesn't allow it. Add it to the types in scripts/check-title, or remove it from AGENTS.md."
 run_case title_check_with_an_extra_type fail "error: the title check in scripts/check-title allows the type wip, and \"Commits\" in AGENTS.md doesn't list it. Add it to AGENTS.md, or remove it from the types in scripts/check-title."
 
-# Writes .github/workflows/lint.yml, with one job that has a step named lint: write_workflow <event> <job key> [<job name>]
+# Writes a separate workflow with one job and a step named after the required check:
+# write_workflow <event> <job key> [<job name>]
 write_workflow() {
   local event=$1 key=$2 name=${3:-}
   {
@@ -710,69 +768,57 @@ write_workflow() {
     if [[ -n $name ]]; then
       printf '%s\n' "    name: $name"
     fi
-    printf '%s\n' "    runs-on: ubuntu-latest" "    steps:" "      - name: lint" "        run: echo \"The style is fine.\""
-  } > "$copy/.github/workflows/lint.yml"
-}
-
-# Writes a workflow with one job for each key given: write_jobs <file in .github/workflows> <event> <job key>...
-write_jobs() {
-  local file=$1 event=$2 key
-  shift 2
-  {
-    printf '%s\n' "name: $file" "on: $event" "permissions: {}" "jobs:"
-    for key in "$@"; do
-      printf '%s\n' "  $key:" "    runs-on: ubuntu-latest" "    steps:" "      - run: echo \"The $key job passed.\""
-    done
-  } > "$copy/.github/workflows/$file"
-}
-
-# Removes the copy's workflows, for a case whose expected error lists the jobs or says that no job reports lint.
-# A project adds jobs of its own, and may name one lint, so such a case writes its own workflows.
-remove_workflows() {
-  rm -rf "$copy/.github/workflows"
-  mkdir "$copy/.github/workflows"
+    printf '%s\n' "    runs-on: ubuntu-latest" "    steps:" "      - name: $fixture_check" "        run: echo \"The style is fine.\""
+  } > "$copy/$fixture_workflow"
 }
 
 required_check_that_no_job_reports() {
-  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
-  remove_workflows
-  write_jobs ci.yml "[pull_request, merge_group]" test build
-  write_jobs deploy.yml push deploy
-  write_jobs pr-title.yml pull_request title
+  local key
+  require_fixture_check
+  printf '%s\n' "name: Deploy" "on: push" "permissions: {}" "jobs:" "  ${fixture_check}_deploy:" \
+    "    runs-on: ubuntu-latest" "    steps:" "      - run: echo deployed" > "$copy/$fixture_push_workflow"
+  {
+    printf '%s\n' "name: Jobs" "on: [pull_request, merge_group]" "permissions: {}" "jobs:"
+    for key in test build title; do
+      printf '%s\n' "  $key:" "    runs-on: ubuntu-latest" "    steps:" "      - run: echo \"The $key job passed.\""
+    done
+  } > "$copy/$fixture_workflow"
 }
 
 required_check_from_a_job_name() {
-  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
-  write_workflow "[push, pull_request, merge_group]" style lint
+  require_fixture_check
+  write_workflow "[push, pull_request, merge_group]" style "$fixture_check"
 }
 
 required_check_from_a_step_name() {
-  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
-  remove_workflows
+  require_fixture_check
   write_workflow pull_request style
 }
 
 required_check_from_a_workflow_that_doesnt_run_on_pull_requests() {
-  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
-  remove_workflows
-  write_workflow pull_request_review lint
+  require_fixture_check
+  write_workflow pull_request_review "$fixture_check"
 }
 
 required_check_from_a_workflow_that_runs_on_both_events() {
-  replace_text scripts/configure-github '"context": "check"' '"context": "lint"'
-  write_workflow "[pull_request, merge_group]" lint
+  require_fixture_check
+  write_workflow "[pull_request, merge_group]" "$fixture_check"
 }
 
 required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue() {
-  replace_text .github/workflows/pr-title.yml "  merge_group:" ""
+  require_fixture_check
+  write_workflow pull_request "$fixture_check"
 }
 
-run_case required_check_that_no_job_reports fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it. The jobs in those workflows report: test, build, title. Rename a job to lint, or change the check in scripts/configure-github."
+missing_fixture_check="error: scripts/configure-github requires the check $fixture_check on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+run_case required_check_that_no_job_reports fail "$missing_fixture_check The jobs in those workflows report:"
+run_case required_check_that_no_job_reports fail "test, build, title" "${fixture_check}_deploy"
+run_case required_check_that_no_job_reports fail "Rename a job to $fixture_check, or change the check in scripts/configure-github."
 run_case required_check_from_a_job_name pass
-run_case required_check_from_a_step_name fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
-run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "error: scripts/configure-github requires the check lint on main, and no job in a workflow in .github/workflows that runs on pull_request reports it."
+run_case required_check_from_a_step_name fail "$missing_fixture_check"
+run_case required_check_from_a_workflow_that_doesnt_run_on_pull_requests fail "$missing_fixture_check"
 run_case required_check_from_a_workflow_that_runs_on_both_events pass
-run_case required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue fail "error: scripts/configure-github requires the check title on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports title on pull_request: .github/workflows/pr-title.yml."
+run_case required_check_from_a_workflow_that_doesnt_run_in_the_merge_queue fail "error: scripts/configure-github requires the check $fixture_check on main, and no job in a workflow in .github/workflows that runs on merge_group reports it, so the merge queue would remove each pull request once the check times out. Add merge_group: to the on: of the workflow that reports $fixture_check on pull_request: $fixture_workflow."
 
 # Writes the README of a new project, followed by the lines given: write_readme [<line>...]
 # The cases that test the README write a README of their own, because the setup replaces the template's README.

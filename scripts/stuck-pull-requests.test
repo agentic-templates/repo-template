@@ -2,6 +2,9 @@
 # Tests scripts/stuck-pull-requests with a stand-in for gh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/testing-required-checks.bash
+source scripts/testing-required-checks.bash
+unrequired_check=$(fixture_check_name lint)
 
 case_count=0
 failed_cases=0
@@ -37,6 +40,7 @@ if [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
   for check in $TEST_MAIN_RULES; do
     echo "$check"
   done
+  printf '%s\n' "$TEST_PROJECT_CHECKS"
   exit 0
 fi
 if [[ $1 == api && $2 == graphql ]]; then
@@ -64,6 +68,7 @@ tab=$'\t'
 # pull_request <number> <from a fork> <author> <in the merge queue> <merge state> [<when auto-merge was turned on>]
 pull_request() {
   printf '%s\n' "pull-request$tab$1$tab$2$tab$3$tab$4$tab$5$tab${6:-}"
+  project_check_runs "$1"
 }
 # check_run <pull request> <ID> <name> [<conclusion>]
 check_run() {
@@ -146,7 +151,7 @@ pull_requests=$(
   check_run 12 103 check SUCCESS
   check_run 12 102 title SUCCESS
   check_run 12 101 check FAILURE
-  check_run 12 104 lint FAILURE
+  check_run 12 104 "$unrequired_check" FAILURE
   pull_request 13 false octocat false BLOCKED $auto_merge
   closes 13 31
   check_run 13 101 check
@@ -189,7 +194,7 @@ pull_requests=$(
   closes 12 30
   check_run 12 101 check NEUTRAL
   check_run 12 102 title SKIPPED
-  check_run 12 103 lint FAILURE
+  check_run 12 103 "$unrequired_check" FAILURE
   pull_request 16 false octocat false BLOCKED $auto_merge
   closes 16 34
   passed_checks 16

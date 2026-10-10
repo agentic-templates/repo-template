@@ -3,6 +3,9 @@
 # stand-in for gh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/testing-required-checks.bash
+source scripts/testing-required-checks.bash
+unrequired_check=$(fixture_check_name lint)
 
 case_count=0
 failed_cases=0
@@ -48,7 +51,13 @@ tab=$'\t'
 case $* in
   "issue list --label ready --assignee @me --limit 200 --json number --jq .[].number") answer "$TEST_ASSIGNED_ISSUES" ;;
   "issue list --label ready --limit 200 --json number --jq .[].number") answer "$TEST_READY_ISSUES" ;;
-  "api repos/{owner}/{repo}/rules/branches/main --jq "*) answer "$TEST_MAIN_RULES" ;;
+  "api repos/{owner}/{repo}/rules/branches/main --jq "*)
+    if [[ $TEST_MAIN_RULES == fail ]]; then
+      answer fail
+    fi
+    printf '%s\n' "$TEST_PROJECT_CHECKS"
+    answer "$TEST_MAIN_RULES"
+    ;;
   "issue edit "*" --remove-assignee @me" | "pr merge "*)
     echo "$*" >>"$TEST_GH_CALLS"
     if [[ $* == "$TEST_FAILING_CALL" ]]; then
@@ -107,6 +116,7 @@ tab=$'\t'
 # pull_request <number> <from a fork> <author> <in the merge queue> <merge state> [<when auto-merge was turned on>]
 pull_request() {
   printf '%s\n' "pull-request$tab$1$tab$2$tab$3$tab$4$tab$5$tab${6:-}"
+  project_check_runs "$1"
 }
 # check_run <pull request> <ID> <name> [<conclusion>]
 check_run() {
@@ -221,7 +231,7 @@ pull_requests=$(
   pull_request 44 false app/dependabot false UNSTABLE
   check_run 44 107 check SUCCESS
   check_run 44 108 title SUCCESS
-  check_run 44 109 lint FAILURE
+  check_run 44 109 "$unrequired_check" FAILURE
 )
 run_start_build_run TEST_PULL_REQUESTS="$pull_requests"
 expect_result 0 "" "pr merge 40"$'\n'"pr merge 41"$'\n'"pr merge 42"$'\n'"pr merge 43"$'\n'"pr merge 44"
