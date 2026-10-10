@@ -51,8 +51,8 @@ jobs:
   bash-3-2:
     runs-on: macos-latest
     timeout-minutes: 30
-    # With this PATH, the scripts' #!/usr/bin/env bash lines find /bin/bash, and the copies that scripts/test-check
-    # makes skip the runner's own shellcheck, actionlint and zizmor. macOS 15 and later have jq and git in /usr/bin.
+    # With this PATH, the scripts' #!/usr/bin/env bash lines find /bin/bash.
+    # macOS 15 and later have jq and git in /usr/bin.
     env:
       PATH: /usr/bin:/bin:/usr/sbin:/sbin
     steps:
@@ -70,14 +70,10 @@ jobs:
           persist-credentials: false
 
       - name: Run the hooks' tests
-        run: |
-          for hook_test in scripts/hooks/*.test; do
-            "$hook_test"
-          done
+        run: scripts/test-hooks
 
-      # With CI set, scripts/check fails on each tool it doesn't find. With CI unset, it skips that tool's check.
       - name: Run scripts/test-check
-        run: env -u CI scripts/test-check
+        run: scripts/test-check
 
   # The rules for main require a job named "check". If you rename it, change scripts/configure-github too.
   # It fails unless each job in needs passed or was skipped. When you add a job to this workflow, add it to needs.

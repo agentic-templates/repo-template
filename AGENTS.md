@@ -29,6 +29,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 - `AGENTS.md`: these rules.
 - `scripts/check`: runs the checks that CI runs on the code.
 - `scripts/test-check`: tests `scripts/check`.
+- `scripts/test-hooks`: runs the hooks' tests at the same time. `scripts/check` and the `bash-3-2` job in `.github/workflows/ci.yml` run it.
 - `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
 - `scripts/configure-github`: applies the repository's settings on GitHub.
 - `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.

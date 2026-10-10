@@ -95,8 +95,10 @@ for checkout in "$repository" "$other"; do
   git init --quiet --initial-branch=main "$checkout"
   mkdir -p "$checkout/scripts/hooks"
   for hook in before-tool session-start; do
+    # The stand-in reads its input before it prints its path. Otherwise it could exit before the command's printf
+    # writes the input, and where SIGPIPE is ignored, as in CI, printf would print an I/O error.
     # shellcheck disable=SC2016 # $0 expands when the hook runs.
-    printf '#!/bin/sh\necho "$0"\n' >"$checkout/scripts/hooks/$hook"
+    printf '#!/bin/sh\ncat >/dev/null\necho "$0"\n' >"$checkout/scripts/hooks/$hook"
     chmod +x "$checkout/scripts/hooks/$hook"
   done
   git -C "$checkout" add scripts
