@@ -17,10 +17,6 @@ type_labels=(bug feature maintenance research)
 change_headings=("What should change" "Why" "Done when")
 research_headings=("Question" "What depends on the answer" "Done when")
 
-# The flags that take a value, as gh issue create --help and gh issue edit --help list them.
-create_flags_with_value=" -a --assignee --attach --blocked-by --blocking -b --body -F --body-file -l --label -m --milestone --parent -p --project --recover -T --template -t --title --type -R --repo "
-edit_flags_with_value=" --add-assignee --add-blocked-by --add-blocking --add-label --add-project --add-sub-issue --attach -b --body -F --body-file -m --milestone --parent --remove-assignee --remove-blocked-by --remove-blocking --remove-label --remove-project --remove-sub-issue -t --title --type -R --repo "
-
 type_label_rule="An issue has exactly one of the type labels bug, feature, maintenance and research, chosen by what changes for users, as \"Labels\" in AGENTS.md describes."
 heading_rule="An issue's body has the headings \"What should change\", \"Why\" and \"Done when\", and a research issue's body has \"Question\", \"What depends on the answer\" and \"Done when\" instead."
 label_commands="Blocked: scripts/configure-github creates the project's labels, the ones that \"Labels\" in AGENTS.md names. To add, change or remove a label, change both files in a pull request, as docs/rules.md describes, and a maintainer runs the script after the merge."
@@ -199,7 +195,7 @@ check_headings() {
 }
 
 check_issue_create() {
-  read_issue_command "$create_flags_with_value"
+  read_issue_command "$issue_create_flags_with_value"
   if [[ -n $asks_for_help ]]; then
     return 0
   fi
@@ -212,7 +208,7 @@ check_issue_create() {
 
 check_issue_edit() {
   local issue answer labels label current_body
-  read_issue_command "$edit_flags_with_value"
+  read_issue_command "$issue_edit_flags_with_value"
   if [[ -n $asks_for_help ]] || ((${#issue_arguments[@]} == 0)); then
     return 0
   fi

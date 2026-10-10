@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 # Functions that find text that breaks a writing rule, for the rules that a check can find by matching text.
-# scripts/check runs them on the repository's files, and scripts/check-pull-request on a pull request's title and body.
-
-# Paths into a person's home folder stay out of the files and pull requests, as "Keep the repository clean" in
+# scripts/check runs them on the repository's files, scripts/check-pull-request on a pull request's title and body, and
+# scripts/hooks/posted-text.check on the text of the issues, comments and reviews that gh posts.
+# Paths into a person's home folder stay out of the files, issues and pull requests, as "Keep the repository clean" in
 # AGENTS.md says.
 # A path counts only at the start of a line or after a character other than a letter, a digit, ".", "_" or "-".
 # So the path of a URL, as in https://example.com/home/docs/, doesn't count, and neither does a relative path, as in src/home/<name>/.
@@ -146,4 +146,67 @@ has_click_here_link() {
   fi
   shopt -u nocasematch
   return "$result"
+}
+
+# Prints a piece of Markdown without its HTML comments, which can span lines. A comment that doesn't end runs to the
+# end of the text: without_html_comments <text>
+without_html_comments() {
+  local rest=$1 text=""
+  while [[ $rest == *"$html_comment_start"* ]]; do
+    text+=${rest%%"$html_comment_start"*}
+    rest=${rest#*"$html_comment_start"}
+    if [[ $rest != *"$html_comment_end"* ]]; then
+      rest=""
+      break
+    fi
+    rest=${rest#*"$html_comment_end"}
+  done
+  printf '%s\n' "$text$rest"
+}
+
+# The functions below print each problem they find in text that's posted on GitHub, such as a pull request's title
+# and body, one to a line. Each problem starts with <where>, which names the text, such as: The title "fix: keep the total"
+
+# Prints the problem with each path into a home folder in a line: home_path_problems <where> <line>
+home_path_problems() {
+  local path
+  while IFS= read -r path; do
+    printf '%s\n' "$1 holds a path into a home folder, $path. Use a path relative to the repository, or ~ or \$HOME."
+  done < <(home_paths_in "$2")
+}
+
+# Prints the problem with each semicolon and dash between words in the prose of a line of Markdown:
+# prose_problems <where> <line>
+prose_problems() {
+  local prose
+  # prose_in only replaces parts of a line, so a line that breaks no rule as it is passes.
+  if [[ $2 != *\;* && ! $2 =~ $dash_between_words ]]; then
+    return 0
+  fi
+  prose=$(prose_in "$2")
+  if [[ $prose == *\;* ]]; then
+    printf '%s\n' "$1 has a semicolon in prose. Replace it with a period or a word such as \"and\", as \"Write clear sentences\" in docs/writing.md says."
+  fi
+  if [[ $prose =~ $dash_between_words ]]; then
+    printf '%s\n' "$1 has a dash between words in prose. If it joins two sentences, write two sentences, as \"Write clear sentences\" in docs/writing.md says. Otherwise, replace it with a word, as in \"pages 10 to 20\"."
+  fi
+}
+
+# Prints the problems in a title: title_problems <title>
+title_problems() {
+  home_path_problems "The title \"$1\"" "$1"
+  prose_problems "The title \"$1\"" "$1"
+}
+
+# Prints the problems in a body of Markdown, each with the line it's on: body_problems <body>
+# A path into a home folder counts on every line, also in a code block or an HTML comment, because they're public too.
+# A semicolon or a dash counts only in prose.
+body_problems() {
+  local line line_number
+  while IFS= read -r line; do
+    home_path_problems "The line \"$line\"" "$line"
+  done <<<"$1"
+  while IFS=$'\t' read -r line_number line; do
+    prose_problems "The line \"$line\"" "$line"
+  done < <(lines_outside_code_blocks <(without_html_comments "$1"))
 }
