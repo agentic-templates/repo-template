@@ -1,14 +1,14 @@
 # Code guide
 
-Write code that a reader understands the first time they read it. If a rule here would make a piece of code harder to read, choose the clearer code and explain why in the pull request. But the conventions that the code already uses for naming style, file layout and error handling win over clearer code, as "Keep the design simple" describes. For example, if the code abbreviates its names, abbreviate the names you add in the same way. When such a convention makes a piece of code harder to read, open an issue to change it everywhere, unless one is open already.
+Write code that a reader understands the first time they read it. If a rule in "Write functions a reader can follow" or "Comment only what the code can't show" would make a piece of code harder to read, choose the clearer code and explain why in the pull request.
 
 ## Keep the design simple
 
 - Build the simplest design that meets what the project needs now, including any accuracy or speed that the issue asks for.
 - Add a layer, an option or a general version of something only when the project needs it now. For example, add a storage interface only once the project has a second storage backend, not in case it gets one.
 - If you find code that was already dead before your change, open an issue to remove it rather than removing it in your change.
-- Follow the conventions the code already uses for naming style, file layout and error handling, even where this guide would choose differently. But don't follow a convention that hides errors, as "Fail with a clear error" describes. To change a convention, open an issue for it, and change it everywhere in a pull request of its own.
-- Write shell scripts for bash 3.2, which macOS ships. CI runs their tests with it.
+- Follow the conventions the code already uses for naming style, file layout and error handling, even where this guide would choose differently. But don't follow a convention that hides errors, as "Fail with a clear error" describes. When a convention makes a piece of code harder to read, open an issue to change it everywhere, unless one is open already. To change a convention, open an issue for it, and change it everywhere in a pull request of its own.
+- Write shell scripts for bash 3.2, which macOS ships.
 - Keep each decision the code makes, such as a limit or how a total is rounded, in one place, so that changing it takes one edit. Before you write code that makes a decision, check whether other code already makes it, and use that code if it does. But two pieces of code or two values can look alike and still be separate decisions. Keep those apart. For example, if the limit on a description and the limit on a category name are both 50 characters, don't use one constant for both, because either limit can change without the other.
 - Keep the code that calculates a result apart from the code that reads input or writes output. Pass every value that can differ from one run to the next, such as today's date, to the calculating code as an argument. The calculating code reads nothing but its arguments, and does nothing but return its result. Files, the network, the screen, the clock, random numbers and environment variables all count as input or output, so the calculating code leaves them to the code that calls it. For example, the function that totals this month's expenses takes the expenses and today's date as arguments and returns the total. The code that calls it reads the expense file and the clock, and prints the result.
 - Fix the cause of a problem, not only the place where it shows up. For example, if an expense may have no category, and listing expenses crashes on such an expense, change the code that reads expenses so that it gives that expense the category "none". Don't catch the crash in the code that prints the list.
@@ -42,13 +42,13 @@ For example, in an expense tracker, this comment gives a reason that the code ca
 
 - Check input where it enters the program: command-line arguments, environment variables, files, network traffic and, in a library, the arguments to its public functions. Trust values that come from inside the program.
 - Catch an error only where you can recover from it or add useful context. Never hide an error, such as by returning an empty list when the expense file can't be read.
-- If the code around yours hides errors by convention, don't hide them in the code you add. Your code may still call that code. Leave it as it is, and open an issue to change the convention everywhere.
+- If the code around yours hides errors by convention, don't hide them in the code you add. Your code may still call that code.
 
 ## Test behavior
 
 - Test what the code does through its public interface, not how it does it.
 - When you write a test before you refactor code that no test runs, take its expected values from the results that the code gives before the refactoring. A result is anything the code gives: what it returns, prints or writes, its exit status and its errors. Check every result, including details that no requirement asks for, such as the order of a list, because a refactoring must keep every result the same.
-- Such a test expects the code's result even where your issue or the project's docs give another value, because a test that expects that value would fail before the refactoring and after it. If the docs give a value that the code doesn't give, open a `bug` issue for the difference, unless one is open already. The test keeps the code's result until that issue is fixed.
+- Such a test expects the code's result even where your issue or the project's docs give another value, because a test that expects that value would fail before the refactoring and after it. If the docs give a value that the code doesn't give, open a `bug` issue for the difference, unless one is open already.
 - In every other test, check the result against what the requirement says: a fixed expected value, or a rule that must hold for every input, such as "reading a saved expense back gives the same expense". Don't take the expected value from the code's own output, and don't compute it the way the code does, because then the test repeats the code instead of checking it. The tests may still compare optimized code with a plain version of it, because the plain version computes the result another way.
 - When you write a test, other than one before you refactor code that no test runs, don't check what the requirement leaves open, such as the order of a list when the requirement doesn't ask for a particular order.
 - Test the edges of each requirement as well as a typical case: empty input, and the values on both sides of each limit, such as files of 50,000 and 50,001 rows.
