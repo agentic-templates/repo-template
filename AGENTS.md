@@ -23,29 +23,6 @@ repo-template gives a new GitHub project the rules, hooks, checks and settings t
 
 When a request doesn't fit this direction, say so, and ask the maintainer whether to change the request or the direction.
 
-## Where things are
-
-- `README.md`: what the project does, how to set it up, and an example.
-- `AGENTS.md`: these rules.
-- `scripts/check`: runs the checks that CI runs on the code.
-- `scripts/test-check`: tests `scripts/check`.
-- `scripts/test-hooks`: runs the hooks' tests at the same time. `scripts/check` and the `bash-3-2` job in `.github/workflows/ci.yml` run it.
-- `scripts/install-check-tools`: installs shellcheck, actionlint and zizmor into the folder you give it.
-- `scripts/configure-github`: applies the repository's settings on GitHub.
-- `scripts/next-version`: prints the version of the next release, from the titles of the commits since the latest release.
-- `scripts/check-title`: checks that a pull request's title has the form of a commit subject.
-- `scripts/check-pull-request`: checks that a pull request's body closes one open issue and fills in the template. It also checks the title and body for the writing problems that `scripts/check` finds in files, and the commits for a `Co-authored-by` trailer. The `title` job in `.github/workflows/pr-title.yml` runs it and `scripts/check-title`, and a hook runs both before `gh pr create`.
-- `scripts/check-main-rules`: fails when the rules for main no longer require a check that `scripts/configure-github` requires there. A hook runs it before each `gh pr merge`, and a workflow runs it each week.
-- `scripts/queue-auto-merge`: adds to the merge queue each open pull request whose checks have passed and whose auto-merge didn't add it. Step 2 of "Build the ready issues" in `docs/building.md` runs it.
-- `scripts/clear-worktrees`: saves and removes each leftover worktree that holds a ready issue's branch. Step 1 of "Build the ready issues" in `docs/building.md` runs it.
-- `scripts/pull-request-state`: prints the state of an issue's open pull requests, such as `merging` or `left behind <number>`. Steps 1 and 4 of "Build the ready issues" in `docs/building.md` run it.
-- `scripts/check-ready-label`: removes `ready` from an issue that someone without write access opened or labeled, or that has a status label or not exactly one type label. A workflow runs it each time an issue gets `ready`.
-- `scripts/hooks/`: the agent hooks, scripts that Claude Code, Codex, Copilot CLI and Cursor run before each action of the agent, and that Claude Code also runs when a session starts.
-- `scripts/instruction-file-names`: lists the names of the files that make a tool skip AGENTS.md, such as `CLAUDE.md`.
-- `.github/`: the CI workflows, issue forms, pull request template, Dependabot and release notes settings, and the contributing and security pages.
-- `.claude/settings.json`: Claude Code's settings, which Copilot CLI and Cursor also read.
-- `.codex/hooks.json`: has Codex run the hooks.
-
 ## Commands
 
 - `scripts/check`: run it before you push. CI also fails a pull request that adds a dependency with a known vulnerability.
