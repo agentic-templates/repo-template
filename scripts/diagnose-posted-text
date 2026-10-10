@@ -1,0 +1,117 @@
+#!/bin/bash
+# Temporary workload for issue 474. It never executes the command inside the input.
+set -u
+if [[ $(uname -s) != Darwin || $BASH_VERSION != 3.2.* ]]; then
+  echo "error: this workload requires macOS bash 3.2." >&2
+  exit 1
+fi
+root=$(pwd -P)
+work=$(mktemp -d)
+mkdir -p "$work/bin" "$work/project"
+printf '%s\n' '#!/bin/bash' 'exit 1' > "$work/bin/gh"
+chmod +x "$work/bin/gh"
+export PATH="$work/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export HOME="$work/home"
+mkdir -p "$HOME"
+exec 9>>"$work/write-errors.log"
+printf 'System: '; uname -a
+/bin/bash --version
+printf 'Tree: '; git rev-parse HEAD
+printf 'Workers: 8; iterations per worker: 50; solo iterations: 50\n'
+body=$'## What should change\nThe app skips the expenses it already has.\n\n## Why\nPeople import the same file twice.\n\n## Done when\n- Importing a file twice adds each expense once.\nThe app skips the expenses - it keeps the total.'
+command="gh pr review 5 --request-changes --body '$body'"
+jq -n --arg cwd "$work/project" --arg command "$command" \
+ '{conversation_id: "abc123", generation_id: "def456", model: "auto", hook_event_name: "PreToolUse", cursor_version: "2.1.0", workspace_roots: [$cwd], transcript_path: null, tool_name: "Shell", tool_input: {command: $command}}' > "$work/input.json"
+cat "$work/input.json"
+cat > "$work/observe.bash" <<'OBSERVE'
+# Record actual builtin write failures without retrying or changing their status.
+printf() {
+  local status
+  if builtin printf "$@"; then
+    return 0
+  else
+    status=$?
+  fi
+  builtin printf 'printf failed: case=%s status=%s sources=%s lines=%s functions=%s args=' "${DIAGNOSTIC_CASE:-background}" "$status" "${BASH_SOURCE[*]}" "${BASH_LINENO[*]}" "${FUNCNAME[*]}" >&9
+  builtin printf '%q ' "$@" >&9
+  builtin printf '\n' >&9
+  return "$status"
+}
+OBSERVE
+run_worker() {
+  local label=$1 worker=$2 count=$3 iteration status missed=0 wrong=0
+  cd "$work/project" || exit 1
+  for ((iteration=1; iteration<=count; iteration++)); do
+    status=0
+    DIAGNOSTIC_CASE="$label/$worker/$iteration" "$root/scripts/hooks/before-tool" < "$work/input.json" > "$work/$label-$worker.out" 2> "$work/$label-$worker.err" || status=$?
+    if [[ $status == 0 ]]; then
+      missed=$((missed+1))
+      printf 'MISS label=%s worker=%s iteration=%s status=%s\n' "$label" "$worker" "$iteration" "$status"
+      cat "$work/$label-$worker.err"
+    elif [[ $status != 2 ]] || ! grep -q 'has a dash between words in prose' "$work/$label-$worker.err" || [[ -s $work/$label-$worker.out ]]; then
+      wrong=$((wrong+1))
+      printf 'WRONG label=%s worker=%s iteration=%s status=%s\n' "$label" "$worker" "$iteration" "$status"
+      cat "$work/$label-$worker.err"
+    fi
+  done
+  printf 'COUNT label=%s worker=%s total=%s missed=%s wrong=%s\n' "$label" "$worker" "$count" "$missed" "$wrong"
+}
+for mode in plain observed; do
+  if [[ $mode == observed ]]; then
+    export BASH_ENV="$work/observe.bash"
+  else
+    unset BASH_ENV
+  fi
+  run_worker "$mode-alone" 0 50
+  cd "$root" || exit 1
+  pids=()
+  for test in scripts/hooks/*.test; do
+    if [[ $test != scripts/hooks/posted-text.test ]]; then
+      "$test" > "$work/$mode-$(basename "$test").log" 2>&1 &
+      pids+=("$!")
+    fi
+  done
+  for ((worker=1; worker<=8; worker++)); do
+    run_worker "$mode-loaded" "$worker" 50 &
+    pids+=("$!")
+  done
+  for pid in "${pids[@]}"; do
+    wait "$pid" || printf 'Background test failed: pid=%s mode=%s\n' "$pid" "$mode"
+  done
+  for log in "$work/$mode-"*.test.log; do
+    cat "$log"
+  done
+done
+# This separate cohort tests the same text-reading functions without the other checks.
+# Its counts do not count as reproductions through before-tool.
+run_direct_worker() {
+  local worker=$1 iteration status output missed=0 wrong=0
+  for ((iteration=1; iteration<=1000; iteration++)); do
+    status=0
+    output=$(DIAGNOSTIC_CASE="direct/$worker/$iteration" /bin/bash -c '
+      source "$1/scripts/hooks/helpers.bash"
+      source "$1/scripts/text-rules"
+      body_problems "$2"
+    ' _ "$root" "$body" 2> "$work/direct-$worker.err") || status=$?
+    if [[ $output != *"has a dash between words in prose"* ]]; then
+      missed=$((missed+1))
+      printf 'DIRECT MISS worker=%s iteration=%s status=%s\n' "$worker" "$iteration" "$status"
+      cat "$work/direct-$worker.err"
+    elif [[ $status != 0 ]]; then
+      wrong=$((wrong+1))
+    fi
+  done
+  printf 'DIRECT COUNT worker=%s total=1000 missed=%s wrong=%s\n' "$worker" "$missed" "$wrong"
+}
+cd "$root" || exit 1
+pids=()
+for ((worker=1; worker<=12; worker++)); do
+  run_direct_worker "$worker" &
+  pids+=("$!")
+done
+for pid in "${pids[@]}"; do
+  wait "$pid" || printf 'Direct worker failed: pid=%s\n' "$pid"
+done
+printf '\nActual write failures:\n'
+cat "$work/write-errors.log"
+printf 'Diagnostic files: %s\n' "$work"

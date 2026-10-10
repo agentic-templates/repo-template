@@ -1,0 +1,20 @@
+name: Diagnose posted text
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  posted-text:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    env:
+      PATH: /usr/bin:/bin:/usr/sbin:/sbin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Reproduce the Cursor review check under bash 3.2
+        run: /bin/bash scripts/diagnose-posted-text
