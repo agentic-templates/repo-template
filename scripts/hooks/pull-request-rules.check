@@ -62,7 +62,7 @@ check_gh_pr_create() {
   # The scripts mark each error for GitHub Actions.
   message="Blocked: the checks on pull requests in CI would fail on this one:"$'\n'"${problems//::error::/}"
   message+="Fix each problem, and run gh pr create again."
-  if [[ -n $body_may_expand || $pr_title == *[\$\`]* ]]; then
+  if [[ -n $body_may_expand || -n $pr_title_may_expand ]]; then
     message+=" This hook reads the title and body as the command writes them, without running \$( ) or filling in variables."
   fi
   block "$message"

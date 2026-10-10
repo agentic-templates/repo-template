@@ -31,7 +31,6 @@ home_path_line="The app reads /Users/$person/bank.csv."
 semicolon_line="The app skips the expenses; it keeps the total."
 dash_line="The app skips the expenses - it keeps the total."
 code_span_line="Run \`import; total - 1\` to check it."
-# Its fences are tildes, because the hook adds a note about $( ) to the message for a body that holds a backtick.
 code_block=$'~~~\ncat /home/'"$person"$'/bank.csv\n~~~'
 
 # Prints the message that blocks a command with these problems: blocked <command, such as gh issue comment> <problem>...

@@ -42,11 +42,13 @@ block() {
 # env and NAME=value words before it: drop_command_prefixes <word>...
 drop_command_prefixes() {
   command_words=("$@")
+  command_word_may_expand=(${words_may_expand[@]+"${words_may_expand[@]}"})
   while ((${#command_words[@]} > 0)); do
     if [[ ${command_words[0]} != sudo && ${command_words[0]} != env && ! ${command_words[0]} =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
       return 0
     fi
     command_words=("${command_words[@]:1}")
+    command_word_may_expand=("${command_word_may_expand[@]:1}")
   done
 }
 
@@ -74,6 +76,8 @@ move_gh_repository_flags() {
   fi
   command_words=("${command_words[@]:0:2}" "${command_words[index]}"
     "${command_words[@]:2:index-2}" "${command_words[@]:index+1}")
+  command_word_may_expand=("${command_word_may_expand[@]:0:2}" "${command_word_may_expand[index]}"
+    "${command_word_may_expand[@]:2:index-2}" "${command_word_may_expand[@]:index+1}")
 }
 
 # The flags of gh api that take a value, as gh api --help lists them.
@@ -141,7 +145,7 @@ pr_create_flags_with_value=" -a --assignee --attach -B --base -b --body -F --bod
 # Succeeds if command_words opens a pull request with gh pr create, or its alias gh pr new, rather than show the
 # command's help or do a dry run. It sets pr_base, pr_head and pr_title to the values of --base, --head and --title,
 # or to empty when the command doesn't give the flag, and pr_has_title to yes when it gives --title, whose value can
-# be empty. It sets body_source, body_word and body_file for read_body, and empties body_may_expand.
+# be empty. It also records expansion syntax in the title and body, and sets the body source for read_body.
 # The word after a flag that takes a value is that value, even if it starts with a dash.
 opens_pull_request() {
   local i word flag value
@@ -151,7 +155,7 @@ opens_pull_request() {
   if [[ ${command_words[2]:-} != create && ${command_words[2]:-} != new ]]; then
     return 1
   fi
-  pr_base="" pr_head="" pr_title="" pr_has_title="" body_source="" body_word="" body_file="" body_may_expand=""
+  pr_base="" pr_head="" pr_title="" pr_has_title="" pr_title_may_expand="" body_source="" body_word="" body_file="" body_may_expand=""
   for ((i = 3; i < ${#command_words[@]}; i++)); do
     word=${command_words[i]}
     case $word in
@@ -173,8 +177,8 @@ opens_pull_request() {
     case $flag in
       -B | --base) pr_base=$value ;;
       -H | --head) pr_head=$value ;;
-      -t | --title) pr_title=$value pr_has_title=yes ;;
-      -b | --body) body_source=text body_word=$value ;;
+      -t | --title) pr_title=$value pr_has_title=yes pr_title_may_expand=${command_word_may_expand[i]:-} ;;
+      -b | --body) body_source=text body_word=$value body_may_expand=${command_word_may_expand[i]:-} ;;
       -F | --body-file) body_source=file body_file=$value ;;
     esac
   done
@@ -260,8 +264,9 @@ check_heredoc_substitutions() {
 # Here-document bodies stay available to the checks that read issue and pull request bodies.
 for_each_simple_command() {
   local function=$1 text=$2 command_text index
-  local -a heredocs=() heredoc_expands=()
+  local -a heredocs=() heredoc_expands=() heredoc_note_expands=()
   split_heredocs "$text"
+  heredoc_note_expands=(${heredoc_expands[@]+"${heredoc_expands[@]}"})
   split_simple_commands "$function" "$command_text"
   for ((index = 0; index < ${#heredocs[@]}; index++)); do
     if [[ ${heredoc_expands[index]} == yes ]]; then
@@ -280,14 +285,26 @@ for_each_simple_command() {
 split_simple_commands() {
   local function=$1 text=$2
   local length=${#text} i char next
-  local word="" has_word=false quote="" descriptor="" operator="" starts_redirection
-  local substitution_body substitution_end
+  local word="" has_word=false quote="" descriptor="" operator="" starts_redirection word_may_expand=""
+  local substitution_body substitution_end rest
   local -a redirections=()
-  local -a words=()
+  local -a words=() words_may_expand=()
 
   for ((i = 0; i <= length; i++)); do
     char=${text:i:1}
     next=${text:i+1:1}
+
+    # The extractor also recognizes heredoc-shaped literal words. Only their notes use this quote context.
+    if [[ $quote == "'" && $char == "$marker" ]]; then
+      rest=${text:i}
+      if [[ $rest =~ ^$heredoc_reference ]]; then
+        heredoc_note_expands[BASH_REMATCH[1]]=no
+      fi
+    fi
+
+    if [[ $quote != "'" ]] && starts_expansion "$char" "$next"; then
+      word_may_expand=yes
+    fi
 
     if [[ $quote != "'" && ($char == '`' || ($char == '$' && $next == '(')) ]]; then
       read_substitution "$text" "$i"
@@ -356,8 +373,9 @@ split_simple_commands() {
         descriptor=$word
       else
         words+=("$word")
+        words_may_expand+=("$word_may_expand")
       fi
-      word="" has_word=false
+      word="" has_word=false word_may_expand=""
     fi
 
     if $starts_redirection; then
@@ -377,6 +395,7 @@ split_simple_commands() {
         "$function" "${words[@]}"
       fi
       words=()
+      words_may_expand=()
       redirections=()
       operator=""
     fi
@@ -507,13 +526,13 @@ read_body_file() {
 
 give_the_body="Give the body with --body, or write it to a file and give the file with --body-file."
 
-# Sets body to the body that a gh command gives, and body_may_expand to yes if the shell would change it, or blocks
-# when the hook can't read the body: read_body <what the hook checks, such as: the issue's headings>
+# Sets body to the text that a gh command gives, and body_may_expand to yes for active expansion syntax in it.
+# Blocks when the hook can't read the body: read_body <what the hook checks, such as: the issue's headings>
 # It reads the body as the command writes it, without running $( ) or filling in variables: from --body, from the
 # file that --body-file names, or from a here-document. It reads what the check found in the command's words:
 # body_source (empty, text or file), body_word and body_file. Run split_heredocs on the command first.
 read_body() {
-  local rest i
+  local rest i index
   body=""
   case $body_source in
     "")
@@ -522,19 +541,22 @@ read_body() {
     text)
       if [[ ! $body_word =~ $heredoc_reference ]]; then
         body=$body_word
-        if [[ $body == *[\$\`]* ]]; then
-          body_may_expand=yes
-        fi
         return 0
       fi
       # The text of each here-document in the word, such as "$(cat <<'EOF' ... EOF)"
       rest=$body_word
+      body_may_expand=""
       while [[ $rest =~ $heredoc_reference ]]; do
-        body+=${heredocs[BASH_REMATCH[1]]}
+        i=${BASH_REMATCH[1]}
         rest=${rest#*"${BASH_REMATCH[0]}"}
+        body+=${heredocs[i]}
+        if [[ ${heredoc_note_expands[i]} == yes ]] && heredoc_has_expansion "${heredocs[i]}"; then
+          body_may_expand=yes
+        fi
       done
       ;;
     file)
+      body_may_expand=""
       if [[ $body_file != - ]]; then
         read_body_file "$body_file"
         return 0
@@ -542,7 +564,11 @@ read_body() {
       # Standard input, from a here-document or a file
       for ((i = 0; i < ${#redirections[@]}; i += 2)); do
         if [[ ${redirections[i]} =~ ^0?\<\<-?$ && ${redirections[i + 1]} =~ $heredoc_reference ]]; then
-          body=${heredocs[BASH_REMATCH[1]]}
+          index=${BASH_REMATCH[1]}
+          body=${heredocs[index]}
+          if [[ ${heredoc_note_expands[index]} == yes ]] && heredoc_has_expansion "$body"; then
+            body_may_expand=yes
+          fi
           return 0
         fi
         if [[ ${redirections[i]} =~ ^0?\<$ ]]; then
@@ -553,4 +579,23 @@ read_body() {
       block "Blocked: this hook can't read a body from standard input, other than from a here-document, so it can't check $1. $give_the_body"
       ;;
   esac
+}
+
+# Succeeds at the start of parameter, command or arithmetic expansion syntax.
+starts_expansion() {
+  [[ $1 == '`' || ($1 == '$' && $2 == [a-zA-Z0-9_\$\?\!\#\*\@\{\(\[-]) ]]
+}
+
+# Quotes are literal in a here-document body. Backslashes protect $, backticks and backslashes.
+heredoc_has_expansion() {
+  local text=$1 i char next
+  for ((i = 0; i < ${#text}; i++)); do
+    char=${text:i:1} next=${text:i+1:1}
+    if [[ $char == \\ && $next == [\$\`\\] ]]; then
+      i=$((i + 1))
+    elif starts_expansion "$char" "$next"; then
+      return 0
+    fi
+  done
+  return 1
 }
