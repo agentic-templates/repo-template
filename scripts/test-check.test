@@ -17,9 +17,15 @@ for script in scripts/test-check scripts/hooks/maintainer-commands.test; do
   if [[ $script == scripts/hooks/* ]]; then
     option=--main-rules-only
   fi
-  expect_usage "$script" "$option" --unknown
-  expect_usage "$script" "$option" "$option" extra
-  expect_usage "$script" "$option" ""
+  usage_options=$option
+  if [[ $script == scripts/test-check ]]; then
+    usage_options+='|--shellcheck-only'
+    expect_usage "$script" "$usage_options" --shellcheck-only extra
+    expect_usage "$script" "$usage_options" --workflows-only --shellcheck-only
+  fi
+  expect_usage "$script" "$usage_options" --unknown
+  expect_usage "$script" "$usage_options" "$option" extra
+  expect_usage "$script" "$usage_options" ""
 done
 
 base=$(mktemp -d)
