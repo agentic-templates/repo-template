@@ -3,25 +3,32 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# The downstream regression test repeats these cases without repeating unrelated checks.
+# The downstream regression test repeats workflow cases. The normal check also runs the real ShellCheck cases.
 workflows_only=""
+shellcheck_only=""
 if (($# > 0)); then
-  if [[ $# != 1 || $1 != --workflows-only ]]; then
-    echo "usage: scripts/test-check [--workflows-only]" >&2
+  if [[ $# != 1 || ($1 != --workflows-only && $1 != --shellcheck-only) ]]; then
+    echo "usage: scripts/test-check [--workflows-only|--shellcheck-only]" >&2
     exit 2
   fi
-  workflows_only=yes
+  if [[ $1 == --workflows-only ]]; then
+    workflows_only=yes
+  else
+    shellcheck_only=yes
+  fi
 fi
 
 copy=""
 failed_cases=0
 case_count=0
 
-# The copies skip shellcheck, actionlint and zizmor, so a case can test only what scripts/check finds by itself.
-# Stand-ins for the three tools come first on the PATH of each copy's run, and fail, so that a case fails if a copy
-# runs one.
+# Only --shellcheck-only runs real ShellCheck. The other cases test what scripts/check finds by itself.
+# Stand-ins for skipped tools come first on each copy's PATH and fail if a copy runs one.
 stand_ins=$(mktemp -d)
 for tool in shellcheck actionlint zizmor; do
+  if [[ $tool == shellcheck && -n $shellcheck_only ]]; then
+    continue
+  fi
   printf '%s\n' '#!/usr/bin/env bash' "echo \"error: the copy ran $tool, and the copies that scripts/test-check makes must skip it.\" >&2" \
     'exit 1' > "$stand_ins/$tool"
   chmod +x "$stand_ins/$tool"
@@ -75,7 +82,15 @@ check_record() {
 # The function gets a fresh copy at $copy, and adds the files that the case needs to it.
 run_case() {
   local case_function=$1 expected=$2 expected_text=${3:-} forbidden_text=${4:-}
-  local output actual=pass
+  local output actual=pass check_under_test=1
+  if [[ -n $shellcheck_only ]]; then
+    if [[ $case_function != shellcheck_* && $case_function != project_check_that_fails ]]; then
+      return
+    fi
+    check_under_test=shellcheck
+  elif [[ $case_function == shellcheck_* ]]; then
+    return
+  fi
   if [[ -n $workflows_only ]]; then
     case $case_function in
       repository_as_it_is|pinned_action_*|required_check_*) ;;
@@ -101,7 +116,7 @@ run_case() {
   done < <(tr '\n' ' ' < scripts/configure-github | grep -o '{[^{}]*"context"[^{}]*}')
   git -C "$copy" add --all
   # CHECK_UNDER_TEST stops the copy's scripts/check from running this script again.
-  if ! output=$(cd "$copy" && CHECK_UNDER_TEST=1 PATH=$stand_ins:$PATH scripts/check 2>&1); then
+  if ! output=$(cd "$copy" && CHECK_UNDER_TEST=$check_under_test PATH=$stand_ins:$PATH scripts/check 2>&1); then
     actual=fail
   fi
 
@@ -170,6 +185,39 @@ repository_as_it_is() {
 }
 
 run_case repository_as_it_is pass
+
+# These cases run only from the normal ShellCheck check, so the Bash 3.2 job needs no external linters.
+shellcheck_fixture=scripts/shellcheck-fixture
+while [[ -e $shellcheck_fixture ]]; do
+  shellcheck_fixture=$shellcheck_fixture-fixture
+done
+
+shellcheck_repository_as_it_is() {
+  :
+}
+
+shellcheck_unquoted_variable() {
+  cat > "$copy/$shellcheck_fixture" <<'SCRIPT'
+#!/usr/bin/env bash
+value='two words'
+printf '%s\n' $value
+SCRIPT
+  chmod +x "$copy/$shellcheck_fixture"
+}
+
+shellcheck_quoted_variable() {
+  cat > "$copy/$shellcheck_fixture" <<'SCRIPT'
+#!/usr/bin/env bash
+value='two words'
+printf '%s\n' "$value"
+SCRIPT
+  chmod +x "$copy/$shellcheck_fixture"
+}
+
+run_case shellcheck_repository_as_it_is pass
+run_case shellcheck_unquoted_variable fail "$shellcheck_fixture"
+run_case shellcheck_unquoted_variable fail "SC2086"
+run_case shellcheck_quoted_variable pass
 
 # Case for the record of a pass, which run_case checks in every case.
 
