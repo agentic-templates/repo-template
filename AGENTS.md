@@ -61,7 +61,6 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 
 ## Commits
 
-- Make each commit a small working change that can be reviewed on its own.
 - Write the subject as `<type>: <what changed>` in plain words. Describe the change as a user or developer would notice it, not how it was built.
   - Not `feat: dedupe imported rows with a SHA-256 of date, amount and description`
   - But `feat: skip expenses that were already imported`
