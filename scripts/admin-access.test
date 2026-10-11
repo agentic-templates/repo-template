@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$PWD
 
-base=$(mktemp -d)
+base=$(cd "$(mktemp -d)" && pwd -P)
 trap 'rm -rf "$base"' EXIT
 mkdir "$base/bin"
 
