@@ -16,6 +16,8 @@
 # this checkout, or the one in GH_REPO.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/admin-access
+source scripts/admin-access
 
 # git fails instead of asking for a password that nobody can type, such as for a fork it has no access to.
 export GIT_TERMINAL_PROMPT=0
@@ -50,13 +52,10 @@ base=${1:-origin/main}
 if ! repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>&1); then
   stop "can't read the repository's name, because gh failed: $repo"
 fi
-# The message is the one that scripts/configure-github gives.
 if ! permission=$(gh repo view --json viewerPermission --jq .viewerPermission 2>&1); then
   stop "can't read your access to $repo, because gh failed: $permission"
 fi
-if [[ $permission != ADMIN ]]; then
-  stop "listing the security advisories of $repo needs admin access, and you have $permission access. Ask a maintainer with admin access to run this script."
-fi
+require_admin "$permission" "$repo" "listing the security advisories"
 
 if ! answer=$(git fetch --quiet origin 2>&1); then
   stop "can't fetch origin, because git failed: $answer"

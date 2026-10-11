@@ -12,6 +12,8 @@
 # GH_REPO.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/admin-access
+source scripts/admin-access
 
 # How often the script checks whether the fork has main, and how long it waits for main
 check_interval_seconds=5
@@ -61,9 +63,7 @@ fi
 if ! permission=$(gh repo view --json viewerPermission --jq .viewerPermission 2>&1); then
   stop "can't read your access to $repo, because gh failed: $permission"
 fi
-if [[ $permission != ADMIN ]]; then
-  stop "creating a private fork for a security advisory of $repo needs admin access, and you have $permission access. Ask a maintainer with admin access to run this script."
-fi
+require_admin "$permission" "$repo" "creating a private fork for a security advisory"
 
 if ! fork=$(gh api "repos/$repo/security-advisories/$ghsa_id" --jq '.private_fork.full_name // ""' 2>&1); then
   stop "can't read the security advisory $ghsa_id of $repo, because gh failed: $fork"
