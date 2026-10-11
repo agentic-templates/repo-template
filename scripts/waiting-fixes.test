@@ -63,7 +63,7 @@ new_repositories() {
   git -C "$work" push --quiet origin main v1.0.0
   git clone --quiet "$origin" "$clone"
   mkdir "$clone/scripts"
-  cp -p scripts/waiting-fixes "$clone/scripts/"
+  cp -p scripts/waiting-fixes scripts/admin-access "$clone/scripts/"
   : >"$base/advisories"
 }
 

@@ -3,13 +3,12 @@
 # from a template, so run this once after you create a repository from it.
 # Running it again is safe. It resets every setting below, and deletes any label it doesn't list.
 set -euo pipefail
+# shellcheck source=scripts/admin-access
+source "$(dirname "$0")/admin-access"
 
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 permission=$(gh repo view --json viewerPermission --jq .viewerPermission)
-if [[ "$permission" != "ADMIN" ]]; then
-  echo "error: changing the settings of $repo needs admin access, and you have $permission access. Ask a maintainer with admin access to run this script." >&2
-  exit 1
-fi
+require_admin "$permission" "$repo" "changing the settings"
 visibility=$(gh repo view --json visibility --jq '.visibility | ascii_downcase')
 if [[ "$visibility" != "public" ]]; then
   echo "error: $repo is $visibility, and the template supports only public repositories. Make the repository public, and run this script again." >&2
