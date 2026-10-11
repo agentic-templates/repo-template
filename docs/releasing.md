@@ -43,7 +43,7 @@ As soon as you find a vulnerability that isn't public yet, write its summary and
 
 ## Fix a security vulnerability
 
-1. Run `scripts/create-private-fork <GHSA ID>` with the advisory's GHSA ID. The script needs admin access. If the advisory has no temporary private fork yet, the script creates one. It prints the fork's full name. Build the fix in that fork.
+1. Run `scripts/create-private-fork <GHSA ID>` with the advisory's GHSA ID. The script needs admin access. If the advisory has no temporary private fork yet, the script creates one. It prints the fork's full name. The fix's commits say only what the change does, not what the vulnerability is. Build the fix in that fork.
 2. When the maintainer asks for a release that includes the fix, check that main meets step 2 of "Publish a release", so that nothing stops the release once the fix is public.
-3. The fix's issue, pull request and commits say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. Go on to step 4 below only once the merge queue has merged it, so that the release includes the fix.
+3. The fix's issue and pull request say only what the change does, not what the vulnerability is. Push the fix to the repository, and open its issue and pull request. Go on to step 4 below only once the merge queue has merged it, so that the release includes the fix.
 4. Publish the release in the same session.
