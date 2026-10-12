@@ -67,7 +67,7 @@ If an issue came from an account that isn't a maintainer's, and its verdict is *
 
 ## Write a research issue
 
-- A research issue's "Done when" asks for a comment with the answer, the evidence and a recommendation.
+- A research issue's "Done when" asks for a comment with the answer, a recommendation and the evidence that the maintainer needs to decide.
 - Each issue that depends on the answer is blocked by the research issue.
 
 ## Definition of ready
