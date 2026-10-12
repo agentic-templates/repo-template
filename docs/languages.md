@@ -5,7 +5,7 @@
 1. Pin the version of the language, its package manager and each framework and database that the code in the language uses, as [Pin versions](dependencies.md#pin-versions) describes. Add steps to `.github/workflows/ci.yml` that install those versions and the packages.
 2. If the package manager has a release-age control, configure it to reject versions less than 7 days old when it resolves new or updated dependencies, transitive ones too where it can, and leave its list of exempt packages empty. Check the documentation of the package manager's pinned version for what the control covers and where its cutoff falls, and check release dates yourself for what it doesn't cover.
 3. If the package manager has a frozen or locked install mode that rejects a missing or out-of-date lockfile without rewriting it, use that mode in CI.
-4. Add the formatter, the linter, the type checker if the language has one, and the tests to `scripts/check`. Turn on each of these settings that the compiler, the type checker, the linter or the test runner has built in, for the tests as well as the code:
+4. Add the formatter, the linter, the type checker if the language has one, and the tests to `scripts/check`. Turn on each of these settings, for the tests as well as the code:
    - the type checker's strict mode, or the compiler's setting that turns warnings into errors
    - the linter's rules against unused code
    - the linter's rules against code that ignores an error, such as an empty `catch` block, a returned error that the caller never checks or a promise that nothing awaits
