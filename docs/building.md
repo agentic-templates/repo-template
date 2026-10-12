@@ -1,34 +1,41 @@
 # Building guide
 
-This guide holds the steps for building the ready issues, and for working on a ready issue outside a build run.
-
 ## Build the ready issues
 
 When a maintainer asks you to build the ready issues, work through them without stopping to ask. Don't wait for each pull request's checks: turn on auto-merge, and take the next issue. A maintainer starts a build run only when no other build run is going on the repository, so you don't need to check for another one.
 
-If you can start agents that each work in their own clone or worktree, build several issues at once with as many helpers as can work at the same time, or with the number the maintainer names, such as "with up to 3 helpers". Take each issue as step 3 below describes, give it to a new helper, and go back to step 2. When that many helpers are working, don't take another issue. Wait until the first of them reports or fails, and then go back to step 2. In each helper's instructions, give the line that `scripts/take-next-issue` printed for its issue, say that it builds that issue as a helper in this build run, and ask it to read `docs/building.md` first. A helper uses the same model and effort as you. If the maintainer names another model, or an agent that the maintainer set up for helpers, the helper uses that instead. The helper builds that one issue as step 4 below describes, and gives it back as step 5 below describes if it can't finish it. It tells you its pull request's number or why it stopped, and any problems it noticed outside its issue. If a helper fails without saying why, run `scripts/clear-worktrees <issue>` for its issue. If the script exits with a code other than 0, it couldn't free the issue's branch, so give the issue back as step 5 below describes. Otherwise, remove the assignment from the issue, so that another helper can try it. If that helper fails too, give the issue back as step 5 below describes. You do the other steps below yourself, including step 2 for the helpers' pull requests.
+If you can start agents that each work in their own clone or worktree, build several issues at once with as many helpers as can work at the same time, or with the number the maintainer names, such as "with up to 3 helpers". Take each issue as step 3 below describes, give it to a new helper, and go back to step 2. When that many helpers are working, don't take another issue. Wait until the first of them reports or fails, and then go back to step 2. In each helper's instructions, give the line that `scripts/take-next-issue` printed for its issue, say that it builds that issue as a helper in this build run, and ask it to read only "Build one issue" in `docs/building.md` first. A helper uses the same model and effort as you. If the maintainer names another model, or an agent that the maintainer set up for helpers, the helper uses that instead. If a helper fails without saying why, run `scripts/clear-worktrees <issue>` for its issue. If the script exits with a code other than 0, it couldn't free the issue's branch, so give the issue back as step 5 below describes. Otherwise, remove the assignment from the issue, so that another helper can try it. If that helper fails too, give the issue back as step 5 below describes. A helper does steps 4 and 5 for its own issue. You do the other steps below yourself, including step 2 for the helpers' pull requests.
 
-1. Run `scripts/start-build-run`. It saves and removes each leftover worktree that holds a ready issue's branch, and says which ones it left and why. In step 3, skip the issues of the worktrees it left, and name those worktrees in your report in step 6. When you build an issue whose branch ends in a commit with the subject `chore: save the unfinished work of a stopped session`, check each file the commit adds or changes, and undo each change that the issue doesn't need.
+1. Run `scripts/start-build-run`. It saves and removes each leftover worktree that holds a ready issue's branch, and says which ones it left and why. In step 3, skip the issues of the worktrees it left, and name those worktrees in your report in step 6.
 2. Run `scripts/stuck-pull-requests`. It prints a line for each stuck pull request, with what's wrong, and how many times the merge queue removed it and why:
    - For one that closes a ready issue and that the queue removed 2 times or more, give its issue back as step 5 below describes.
    - For any other one that closes a ready issue and is `DIRTY`, failed its checks or isn't back in the queue, ask the helper that built it to fix it, if you can still message that helper. Leave the pull request alone until the helper reports, and count the helper as working until then. If no helper built it, or you can't message the one that did, resolve the conflicts with main, fix the checks as step 4 of "Make a change" in AGENTS.md describes, or fix what the queue's reason for removing it says went wrong, if anything. Once a pull request that the queue removed is fixed, add it to the queue again with `gh pr merge <number>`.
    - For one that's `BLOCKED` outside the queue after all its checks passed, check whether the script printed it on your last pass through this step too. If it did, give its issue back as step 5 below describes. Otherwise, leave it until your next pass.
    - Leave each of Dependabot's for the maintainer.
 3. Run `scripts/take-next-issue`, followed by the number of each issue that step 1 says to skip. It assigns you the lowest-numbered ready issue that a build run can start, and prints the issue's number and its kind, such as `12 other`. If it prints `none`, go on with step 6.
-4. Build the issue by its kind:
-   - For `research`, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. Check each issue that the research issue blocks. If the answer changes what that issue asks for, add `needs-decision` to it and comment there with the decision it needs. Then close the research issue.
-   - For `parent`, don't build anything. Close it if its "Done when" is met, and give it back if it isn't.
-   - For `left behind <pull request>`, finish that pull request: run `scripts/check` again, update its description, and turn on auto-merge.
-   - For `other`, make the change as steps 2 to 5 of "Make a change" in AGENTS.md describe, which end with opening the pull request. Once the change meets the definition of done in AGENTS.md, turn on auto-merge with `gh pr merge <number>`.
-
-   Then go back to step 2.
-5. Give an issue back to the maintainer when you can't finish it, for example because it's unclear, against one of the rules in AGENTS.md or too big for one pull request, or because its pull request can't merge and you can't fix that. Comment on the issue with what you need, and remove your assignment with `gh issue edit <issue> --remove-assignee @me`. If it's too big, add `needs-breakdown`. Otherwise, if the issue is now blocked by another issue, add no status label, because a build run skips it until its blocking issues are closed. Otherwise, add `needs-decision`. If it has a pull request, close it with `gh pr close <number>`.
+4. Build the issue as "Build one issue" below describes. Then go back to step 2.
+5. Give an issue back as "Build one issue" below describes.
 6. When no issue is left that you can start, wait for your helpers, if you have any. Also wait for the checks of each open pull request that closes a ready issue and has auto-merge turned on, with `gh pr checks <number> --watch`. For each one that's in the merge queue, run `scripts/merge <number>` every minute until it prints `merged` or stops with an error. Then go back to step 2. But if a helper reports or fails while you wait, go back to step 2 right away. Once no such pull request is open, no helper is working and no issue is left that you can start, run `scripts/build-run-report`. Report to the maintainer what it prints, and add:
    - the issues you opened on your own, for problems you noticed
    - the security vulnerabilities you noticed
    - the worktrees that `scripts/start-build-run` and `scripts/clear-worktrees` left, and why
    - what a hook or a script asked you to list in your report
    - anything else a maintainer needs to run, such as `scripts/configure-github`
+
+## Build one issue
+
+Build the issue by the kind that `scripts/take-next-issue` printed:
+
+- For `research`, don't open a pull request. Answer its question in a comment, with the evidence and a recommendation. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. Check each issue that the research issue blocks. If the answer changes what that issue asks for, add `needs-decision` to it and comment there with the decision it needs. Then close the research issue.
+- For `parent`, don't build anything. Close it if its "Done when" is met, and give it back if it isn't.
+- For `left behind <pull request>`, finish that pull request: run `scripts/check` again, update its description, and turn on auto-merge.
+- For `other`, make the change as steps 2 to 5 of "Make a change" in AGENTS.md describe, which end with opening the pull request. Once the change meets the definition of done in AGENTS.md, turn on auto-merge with `gh pr merge <number>`, which adds the pull request to the merge queue once its checks pass.
+
+If you build on a branch that ends in a commit with the subject `chore: save the unfinished work of a stopped session`, check each file the commit adds or changes, and undo each change that the issue doesn't need.
+
+Give the issue back to the maintainer when you can't finish it, for example because it's unclear, against one of the rules in AGENTS.md or too big for one pull request, or because its pull request can't merge and you can't fix that. Comment on the issue with what you need, and remove your assignment with `gh issue edit <issue> --remove-assignee @me`. If it's too big, add `needs-breakdown`. Otherwise, if the issue is now blocked by another issue, add no status label, because a build run skips it until its blocking issues are closed. Otherwise, add `needs-decision`. If it has a pull request, close it with `gh pr close <number>`.
+
+A helper tells the agent that started it how its issue ended, with the number of its pull request if it opened one, and any problems it noticed outside its issue.
 
 ## Work on a ready issue outside a build run
 
