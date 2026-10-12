@@ -13,7 +13,7 @@ Read each guide before you first do its kind of work in a session, even when the
 - [docs/dependencies.md](docs/dependencies.md), before you add or update a tool, a package or a GitHub Action.
 - [docs/languages.md](docs/languages.md), before you add a language to the project, at setup or later.
 - [docs/planning.md](docs/planning.md), before you triage, turn ideas into issues or plan the next work.
-- [docs/building.md](docs/building.md), before you build the ready issues. That work is called a build run.
+- [docs/building.md](docs/building.md), before you build the ready issues, which is called a build run. An agent that a build run starts to build one issue reads only the guide's section "Build one issue".
 - [docs/reviewing.md](docs/reviewing.md), before you review a pull request or review the code for security problems.
 - [docs/releasing.md](docs/releasing.md), before you publish a release, write a workflow that publishes or deploys the project, check the security advisories, or record or fix a security vulnerability that isn't public yet.
 
