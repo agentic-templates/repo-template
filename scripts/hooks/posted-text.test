@@ -93,6 +93,18 @@ for template in "${body_commands[@]}"; do
     "$(blocked "$name" "$(home_path "The line \"cat /home/$person/bank.csv\"" "/home/$person/")")"
 done
 
+# A review that asks for changes, with the dash line written as two sentences, with an empty body, with no body, and
+# with the dash line only in code, then also as prose after the code
+review_template="gh pr review 5 --request-changes --body TEXT"
+expect_allow Bash "$(with_text "$review_template" "$change_body"$'\n'"The app skips the expenses. It keeps the total.")"
+expect_allow Bash "$(with_text "$review_template" "")"
+expect_allow Bash "gh pr review 5 --request-changes"
+for code in "\`$dash_line\`" $'~~~\n'"$dash_line"$'\n~~~'; do
+  expect_allow Bash "$(with_text "$review_template" "$change_body"$'\n'"$code")"
+  expect_block Bash "$(with_text "$review_template" "$change_body"$'\n'"$code"$'\n'"$dash_line")" \
+    "$(blocked "gh pr review" "$(dash "The line \"$dash_line\"")")"
+done
+
 # The commands that set a title, with TEXT in place of it
 title_commands=(
   "gh issue create --title TEXT --label feature --body '$change_body'"

@@ -166,13 +166,19 @@ without_html_comments() {
 
 # The functions below print each problem they find in text that's posted on GitHub, such as a pull request's title
 # and body, one to a line. Each problem starts with <where>, which names the text, such as: The title "fix: keep the total"
+# They start no process with <(...), because of the write error that scripts/required-checks describes. The error
+# ends the process that prints, so the problems after it would go unreported.
 
 # Prints the problem with each path into a home folder in a line: home_path_problems <where> <line>
 home_path_problems() {
-  local path
+  local path paths
+  paths=$(home_paths_in "$2")
+  if [[ -z $paths ]]; then
+    return 0
+  fi
   while IFS= read -r path; do
     printf '%s\n' "$1 holds a path into a home folder, $path. Use a path relative to the repository, or ~ or \$HOME."
-  done < <(home_paths_in "$2")
+  done <<<"$paths"
 }
 
 # Prints the problem with each semicolon and dash between words in the prose of a line of Markdown:
@@ -202,11 +208,13 @@ title_problems() {
 # A path into a home folder counts on every line, also in a code block or an HTML comment, because they're public too.
 # A semicolon or a dash counts only in prose.
 body_problems() {
-  local line line_number
+  local line line_number text lines
   while IFS= read -r line; do
     home_path_problems "The line \"$line\"" "$line"
   done <<<"$1"
+  text=$(without_html_comments "$1")
+  lines=$(lines_outside_code_blocks /dev/stdin <<<"$text")
   while IFS=$'\t' read -r line_number line; do
     prose_problems "The line \"$line\"" "$line"
-  done < <(lines_outside_code_blocks <(without_html_comments "$1"))
+  done <<<"$lines"
 }
