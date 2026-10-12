@@ -66,16 +66,16 @@ If a maintainer asks for something that's bigger than one pull request or needs 
   - But `feat: skip expenses that were already imported`
   - For a change that only developers notice: `refactor: keep all import code in one module`
 - Use one of these types:
-  - `feat`: new behavior
-  - `fix`: a bug fix
+  - `feat`
+  - `fix`
   - `docs`: docs that only the people who work on the project read. A change to docs that users read is a `feat` or a `fix`.
-  - `test`: tests only
-  - `refactor`: a code change that keeps behavior the same
-  - `perf`: a change that makes the code faster or use less memory
-  - `build`: the toolchain, dependencies or packaging
-  - `ci`: the CI workflows
-  - `revert`: undoes an earlier commit
-  - `chore`: anything else
+  - `test`
+  - `refactor`
+  - `perf`
+  - `build`
+  - `ci`
+  - `revert`
+  - `chore`
 - Add `!` before the colon when the change breaks existing use.
 
 ## Pull requests
@@ -90,13 +90,12 @@ A change is done when all of these are true:
 - New behavior in the code has tests, and a fix to the code has a test that fails without the fix.
 - The docs match the change: README, AGENTS.md, help text and comments.
 - Nothing is left behind: no dead code, debug output, commented-out code or TODO comments. Open an issue for unfinished work instead.
-- Each page that needs a fresh-reader review, as `docs/pages.md` describes, has had one.
 
 ## Keep the repository clean
 
 Everything in the repository, and in its issues and pull requests, is public.
 
-- Don't commit plans, notes, session logs, TODO lists or review records. An old plan in the repository misleads readers and agents, who take it as current. Keep working files outside the repository.
+- Don't commit plans, notes, session logs, TODO lists or review records. Keep working files outside the repository.
 - Never read, print or commit secrets. Keep them in `.env`, and list each variable in `.env.example` with a placeholder value.
 - Keep personal email addresses, local paths, private links and internal ticket numbers out of files, commit messages, issues and pull requests.
 - Don't create a `CLAUDE.md` or `CLAUDE.local.md` in any folder above the repository, including your home folder.

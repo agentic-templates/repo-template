@@ -23,7 +23,7 @@ Triage is for ideas: anything a maintainer wants judged before deciding whether 
    - **Too vague:** it doesn't say what should change, or you can't tell why anyone would want it. If you can guess the likely reason, propose it and ask the maintainer to confirm. Otherwise give the idea back, and say what it's missing.
    - **Duplicate:** an issue already covers it.
      - If an open issue covers it, add the idea's new details to that issue's body. If that issue has `ready`, ask the maintainer in step 4 whether to add them. If they say no, add nothing.
-     - If only a closed issue covers it, ask the maintainer in step 4 whether they still want the change. If they do, open a new issue that mentions the closed one. If they don't, create nothing. If they want to decide later, the idea becomes an issue with `needs-decision`.
+     - If only a closed issue covers it, ask the maintainer in step 4 whether they still want the change, as step 1 of "Make a change" in AGENTS.md describes. If they want to decide later, the idea becomes an issue with `needs-decision`.
    - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
 
    When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, if no reading of an idea would fit the project, recommend **Drop**, not **Too vague**.
@@ -74,7 +74,7 @@ If an issue came from an account that isn't a maintainer's, and its verdict is *
 
 Every issue that gets the `ready` label, including research issues and parents, must come from a maintainer's account.
 
-An issue from a maintainer's account can get `ready` when all of these are true:
+An issue can get `ready` when all of these are true:
 
 - It asks for one change that fits in one pull request.
 - "Why" says who needs the change and what for.
