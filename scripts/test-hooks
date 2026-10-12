@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs the hooks' tests, the .test files in scripts/hooks/, at the same time, because one after another they take
 # minutes. It prints each test's output once the test ends, in the order of the tests' names, so that the outputs
-# don't mix. It fails if a test fails. scripts/check and the bash-3-2 job in .github/workflows/ci.yml run it.
+# don't mix. It fails if a test fails. scripts/test-scripts runs it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

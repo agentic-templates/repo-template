@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Tests scripts/check. Each case runs it on a copy of the repository. scripts/check runs this script.
+# Tests scripts/check. Each case runs it on a copy of the repository. scripts/test-scripts runs this script.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# The downstream regression test repeats workflow cases. The normal check also runs the real ShellCheck cases.
+# The downstream regression test repeats workflow cases. scripts/test-scripts also runs the real ShellCheck cases.
 workflows_only=""
 shellcheck_only=""
 if (($# > 0)); then
@@ -21,6 +21,8 @@ fi
 copy=""
 failed_cases=0
 case_count=0
+# A case sets this to make the copy's scripts/check skip the tests of the scripts and hooks, with SKIP_SCRIPT_TESTS.
+skip_script_tests=""
 
 # Only --shellcheck-only runs real ShellCheck. The other cases test what scripts/check finds by itself.
 # Stand-ins for skipped tools come first on each copy's PATH and fail if a copy runs one.
@@ -55,14 +57,20 @@ make_copy() {
   git -C "$copy" init --quiet
 }
 
-# Checks that scripts/check recorded the tree of the copy's files in .git/check-passed if it passed, and nothing if it failed.
+# Checks that scripts/check recorded the tree of the copy's files in .git/check-passed if it passed, and nothing if it failed
+# or skipped the tests of the scripts and hooks because of SKIP_SCRIPT_TESTS.
 # Every file of the copy is staged, so the tree of the index is the tree of the files on disk.
 # Prints an error and fails if the record is wrong: check_record <function> <pass or fail>
 check_record() {
-  local case_function=$1 result=$2 record=$copy/.git/check-passed tree
+  local case_function=$1 result=$2 record=$copy/.git/check-passed tree reason=""
   if [[ $result == fail ]]; then
+    reason="failed"
+  elif [[ -n $skip_script_tests ]]; then
+    reason="skipped the tests of the scripts and hooks"
+  fi
+  if [[ -n $reason ]]; then
     if [[ -f $record ]]; then
-      echo "error: in the case $case_function, scripts/check failed, so it must not write .git/check-passed, but it did." >&2
+      echo "error: in the case $case_function, scripts/check $reason, so it must not write .git/check-passed, but it did." >&2
       return 1
     fi
     return 0
@@ -99,6 +107,7 @@ run_case() {
   fi
   case_count=$((case_count + 1))
   make_copy
+  skip_script_tests=""
   "$case_function"
   local workflow rule copied_rules
   for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
@@ -116,7 +125,8 @@ run_case() {
   done < <(tr '\n' ' ' < scripts/configure-github | grep -o '{[^{}]*"context"[^{}]*}')
   git -C "$copy" add --all
   # CHECK_UNDER_TEST stops the copy's scripts/check from running this script again.
-  if ! output=$(cd "$copy" && CHECK_UNDER_TEST=$check_under_test PATH=$stand_ins:$PATH scripts/check 2>&1); then
+  if ! output=$(cd "$copy" && CHECK_UNDER_TEST=$check_under_test SKIP_SCRIPT_TESTS=$skip_script_tests PATH=$stand_ins:$PATH \
+    scripts/check 2>&1); then
     actual=fail
   fi
 
@@ -186,7 +196,8 @@ repository_as_it_is() {
 
 run_case repository_as_it_is pass
 
-# These cases run only from the normal ShellCheck check, so the Bash 3.2 job needs no external linters.
+# These cases run only with --shellcheck-only, which scripts/test-scripts uses only where shellcheck is installed,
+# so the bash-3-2 job needs no external linters.
 shellcheck_fixture=scripts/shellcheck-fixture
 while [[ -e $shellcheck_fixture ]]; do
   shellcheck_fixture=$shellcheck_fixture-fixture
@@ -226,6 +237,21 @@ record_that_cant_be_written() {
 }
 
 run_case record_that_cant_be_written fail "error: the checks passed, but scripts/check can't record the pass in .git/check-passed, and a hook blocks opening a pull request without that record."
+
+# Cases for SKIP_SCRIPT_TESTS, which makes scripts/check skip the tests of the scripts and hooks.
+# run_case checks that scripts/check records no pass then.
+
+script_tests_skipped() {
+  skip_script_tests=1
+}
+
+claude_md_with_the_script_tests_skipped() {
+  skip_script_tests=1
+  echo "Rules" > "$copy/CLAUDE.md"
+}
+
+run_case script_tests_skipped pass "Skipped the tests of the scripts and hooks because SKIP_SCRIPT_TESTS is set."
+run_case claude_md_with_the_script_tests_skipped fail "error: CLAUDE.md makes a tool skip AGENTS.md."
 
 # Cases for the check that each action pinned to a commit SHA has a version comment.
 

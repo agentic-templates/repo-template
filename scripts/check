@@ -34,22 +34,8 @@ if [[ -n "$found_pin_without_version" ]]; then
   exit 1
 fi
 
-# CI installs every tool, so a missing tool there is an error.
-# On your machine the check is skipped, and CI still runs it.
-skipped=""
-has() {
-  local tool=$1 install_url=$2
-  if command -v "$tool" >/dev/null; then
-    return 0
-  fi
-  if [[ -n "${CI:-}" ]]; then
-    echo "error: $tool is not installed. Install it in scripts/install-check-tools, or in the step of .github/workflows/ci.yml that installs the project's toolchain." >&2
-    exit 1
-  fi
-  echo "Skipped the $tool check because $tool is not installed. To run it here, install it: $install_url" >&2
-  skipped="${skipped:+$skipped, }$tool"
-  return 1
-}
+# shellcheck source=scripts/missing-tools
+source scripts/missing-tools
 
 # Some tools read a file with one of these names instead of AGENTS.md.
 # shellcheck source=scripts/instruction-file-names
@@ -770,9 +756,6 @@ if [[ -z "${CHECK_UNDER_TEST:-}" || ${CHECK_UNDER_TEST:-} == shellcheck ]]; then
         printf '%s\0' "$file"
       fi
     done | xargs -0 shellcheck -x
-    if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
-      scripts/test-check --shellcheck-only
-    fi
   fi
 fi
 
@@ -790,23 +773,23 @@ if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
   # Add the project's formatter check, linter, type checker, tests and coverage check here.
   # The copies that scripts/test-check makes skip these checks, because the copies hold only the tracked files.
   # Keep this comment after setup, because a case in scripts/test-check finds the place by it.
-
-  scripts/test-check
-  if has jq https://jqlang.org/download/; then
-    scripts/test-hooks
-  fi
-  # -f skips the pattern itself, which the loop gets when no test matches it.
-  for script_test in scripts/*.test; do
-    if [[ -f $script_test ]]; then
-      "$script_test"
-    fi
-  done
 fi
 
-record=$(pass_record_path)
-if [[ -z $checked_tree ]] || ! printf '%s\n' "$checked_tree" > "$record"; then
-  echo "error: the checks passed, but scripts/check can't record the pass in $record, and a hook blocks opening a pull request without that record. Fix the error above, and run scripts/check again." >&2
-  exit 1
+# The linux job in .github/workflows/ci.yml sets SKIP_SCRIPT_TESTS, because the script-tests job runs the tests of the
+# scripts and hooks. A hook blocks opening a pull request until scripts/check has passed on the pull request's files,
+# so a run without those tests records no pass.
+if [[ -n "${SKIP_SCRIPT_TESTS:-}" ]]; then
+  echo "Skipped the tests of the scripts and hooks because SKIP_SCRIPT_TESTS is set. A run without them records no pass, so a hook blocks opening a pull request until scripts/check passes without SKIP_SCRIPT_TESTS." >&2
+  skipped="${skipped:+$skipped, }the tests of the scripts and hooks"
+else
+  if [[ -z "${CHECK_UNDER_TEST:-}" ]]; then
+    scripts/test-scripts
+  fi
+  record=$(pass_record_path)
+  if [[ -z $checked_tree ]] || ! printf '%s\n' "$checked_tree" > "$record"; then
+    echo "error: the checks passed, but scripts/check can't record the pass in $record, and a hook blocks opening a pull request without that record. Fix the error above, and run scripts/check again." >&2
+    exit 1
+  fi
 fi
 
 if [[ -n "$skipped" ]]; then
