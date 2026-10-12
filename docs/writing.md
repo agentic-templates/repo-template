@@ -11,8 +11,7 @@ The aim is text that a reader understands the first time they read it.
 
 ## Use plain words
 
-- Use everyday words for the actual action. Write "adds the expense to the month's total", not "processes the expense".
-- Replace vague verbs such as "handles", "deals with" and "manages" with the verb for what happens.
+- Use everyday words for the actual action, not vague verbs such as "handles", "deals with" or "manages". Write "adds the expense to the month's total", not "processes the expense".
 - Keep a technical term only when it is the precise name for the thing. Explain it where it first appears, unless people in the reader's field use it every day.
 - Use one term for one thing, everywhere.
 - Don't use metaphors or marketing words such as "seamless", "powerful" or "blazing fast".
@@ -39,9 +38,7 @@ For example, in a README for people who use an expense tracker:
 
 ## Claim only what is true
 
-- Claim only what the project delivers today. Never invent results, demos, benchmarks, users or quotes.
 - In docs and READMEs, mention planned work only when an open issue with the `ready` label describes it, and link to that issue.
-- State what the project can't do, not only what it can.
 - Say only what you verified. If you didn't run a check, don't say that it passed.
 
 ## Write error messages
