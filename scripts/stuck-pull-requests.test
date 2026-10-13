@@ -216,8 +216,8 @@ pull_requests=$(
   closes 18 35
 )
 run_stuck_pull_requests "$pull_requests"
-expect_result "When pull requests close no open ready issue in this repository, come from a fork, are UNKNOWN or have no auto-merge" \
-  0 "" ""
+expect_result "When pull requests close no open issue in this repository, close one without ready, come from a fork, are UNKNOWN or have no auto-merge" \
+  0 "Pull request 13 closes issue #31. It's DIRTY." ""
 
 pull_requests=$(
   pull_request 50 false app/dependabot false DIRTY $auto_merge

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Does step 2 of "Build the ready issues" in docs/building.md. It goes through each open pull request into main that
-# has auto-merge on, is in the merge queue or was removed from it. It leaves out pull requests from forks, and pull requests in the merge state
-# UNKNOWN, which GitHub hasn't worked out yet.
+# has auto-merge on, is in the merge queue or was removed from it. It leaves out pull requests from forks, and pull
+# requests in the merge state UNKNOWN, which GitHub hasn't worked out yet.
 # - It turns off auto-merge on each pull request of Dependabot's that has auto-merge on, isn't in the merge queue, and
 #   is DIRTY or has a failed check.
 # - It prints a line for each pull request that the lead of the build run acts on, with what's wrong:
-#   - one that closes an open ready issue and is DIRTY, has a failed check, or was removed from the merge queue and
-#     isn't back in it. A pull request counts as back in the queue too when auto-merge was turned on after the latest
-#     removal, because auto-merge adds it to the queue once its checks pass.
-#   - one that closes an open ready issue and is BLOCKED outside the merge queue after all its checks passed
+#   - one that closes an open issue in this repository and is DIRTY, has a failed check, or was removed from the merge
+#     queue and isn't back in it. A pull request counts as back in the queue too when auto-merge was turned on after
+#     the latest removal, because auto-merge adds it to the queue once its checks pass.
+#   - one that closes an open issue in this repository and is BLOCKED outside the merge queue after all its checks
+#     passed
 #   - one of Dependabot's that it turned off, or that the merge queue removed and that isn't back in it
 #   If the merge queue ever removed the pull request, the line says how many times, and each reason.
 # It stops with an error, and exits with code 1, when gh fails. It asks gh about the repository of this checkout,
@@ -42,16 +43,16 @@ removals_in_words() {
   echo "$sentence."
 }
 
-# Prints the ready issues that a pull request closes, as in a sentence, such as issue #12 or issues #12 and #13, or
-# nothing if it closes none: ready_issues_in_words <pull request>
-ready_issues_in_words() {
+# Prints the open issues in this repository that a pull request closes, as in a sentence, such as issue #12 or issues
+# #12 and #13, or nothing if it closes none: issues_in_words <pull request>
+issues_in_words() {
   local issue issues="" count=0
   while IFS= read -r issue; do
     if [[ -n $issue ]]; then
       issues+="#$issue"$'\n'
       count=$((count + 1))
     fi
-  done <<<"$(ready_issues_closed_by "$1")"
+  done <<<"$(open_issues_closed_by "$1")"
   if ((count == 1)); then
     echo "issue $(in_words "$issues")"
   elif ((count > 1)); then
@@ -92,7 +93,7 @@ while IFS=$'\t' read -r kind number is_from_fork author is_in_queue merge_state 
     continue
   fi
 
-  issues=$(ready_issues_in_words "$number")
+  issues=$(issues_in_words "$number")
   if [[ -z $issues ]]; then
     continue
   fi

@@ -161,12 +161,11 @@ is_out_of_queue() {
   [[ -n $latest && ! $3 > $latest ]]
 }
 
-# Prints each open issue with the ready label in this repository that a pull request closes: ready_issues_closed_by
-# <pull request>
-ready_issues_closed_by() {
-  local issue is_in_this_repository state has_ready
-  while IFS=$'\t' read -r issue is_in_this_repository state has_ready; do
-    if [[ $is_in_this_repository == true && $state == OPEN && $has_ready == true ]]; then
+# Prints each open issue in this repository that a pull request closes: open_issues_closed_by <pull request>
+open_issues_closed_by() {
+  local issue is_in_this_repository state
+  while IFS=$'\t' read -r issue is_in_this_repository state _; do
+    if [[ $is_in_this_repository == true && $state == OPEN ]]; then
       printf '%s\n' "$issue"
     fi
   done <<<"$(facts closes "$1")"
