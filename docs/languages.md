@@ -2,7 +2,7 @@
 
 ## Add a language
 
-1. Pin the version of the language, its package manager and each framework and database that the code in the language uses, as [Pin versions](dependencies.md#pin-versions) describes. Add steps to `.github/workflows/ci.yml` that install those versions and the packages.
+1. Pin the version of the language, its package manager and each framework and database that the code in the language uses, as [Pin versions](dependencies.md#pin-versions) describes. Add steps to `.github/workflows/ci.yml` that install those versions and the language's packages.
 2. If the package manager has a release-age control, configure it to reject versions less than 7 days old when it resolves new or updated dependencies, transitive ones too where it can, and leave its list of exempt packages empty. Check the documentation of the package manager's pinned version for what the control covers and where its cutoff falls, and check release dates yourself for what it doesn't cover.
 3. If the package manager has a frozen or locked install mode that rejects a missing or out-of-date lockfile without rewriting it, use that mode in CI.
 4. Add the formatter, the linter, the type checker if the language has one, and the tests to `scripts/check`. In the tools you choose, including their standard language plugins, turn on these settings where available, for the tests as well as the code:
