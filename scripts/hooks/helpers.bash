@@ -7,29 +7,27 @@
 set -eEuo pipefail
 trap 'exit 1' ERR
 
-# Reads the tool's input from stdin into these variables. Every tool sends Claude Code's form:
-# one JSON object, with the tool in tool_name and its input in tool_input.
+# Sets these variables from the fields of the tool's input, which scripts/hooks/before-tool reads once for all the
+# checks. Every tool sends Claude Code's form: one JSON object, with the tool in tool_name and its input in tool_input.
 # - tool_name: the tool, such as Bash or Read. Cursor's Shell counts as Bash.
 # - shell_command: the command that Bash runs, or empty.
 # - patch: the patch text that Codex's apply_patch applies, or empty.
 # - file_path: the file that Read, Write or Edit uses, or empty.
 # - cwd: the folder the agent works in, or empty if the tool doesn't send it.
 read_input() {
-  local input
-  input=$(jq -c .)
-  tool_name=$(jq -r '.tool_name // "" | tostring' <<<"$input")
+  tool_name=${HOOK_TOOL_NAME:-}
   if [[ $tool_name == Shell ]]; then
     tool_name=Bash
   fi
   shell_command=""
   patch=""
   if [[ $tool_name == apply_patch ]]; then
-    patch=$(jq -r '.tool_input.command // "" | tostring' <<<"$input")
+    patch=${HOOK_COMMAND:-}
   else
-    shell_command=$(jq -r '.tool_input.command // "" | tostring' <<<"$input")
+    shell_command=${HOOK_COMMAND:-}
   fi
-  file_path=$(jq -r '.tool_input.file_path // "" | tostring' <<<"$input")
-  cwd=$(jq -r '.cwd // "" | tostring' <<<"$input")
+  file_path=${HOOK_FILE_PATH:-}
+  cwd=${HOOK_CWD:-}
 }
 
 # Blocks the action, and tells the agent why: block <reason>
@@ -286,11 +284,28 @@ split_simple_commands() {
   local function=$1 text=$2
   local length=${#text} i char next
   local word="" has_word=false quote="" descriptor="" operator="" starts_redirection word_may_expand=""
-  local substitution_body substitution_end rest
+  local substitution_body substitution_end rest chunk
   local -a redirections=()
   local -a words=() words_may_expand=()
 
   for ((i = 0; i <= length; i++)); do
+    # Inside quotes, the text up to the next character that matters joins the word in one step, because adding one
+    # character at a time to a long word, such as a body in quotes, takes time that grows with the square of its
+    # length. In single quotes only the quote and the marker matter, and in double quotes the quote, \, $ and `.
+    if [[ -n $quote ]] && ((i < length)); then
+      rest=${text:i}
+      if [[ $quote == "'" ]]; then
+        chunk=${rest%%[\'"$marker"]*}
+      else
+        chunk=${rest%%[\"\\\$\`]*}
+      fi
+      if [[ -n $chunk ]]; then
+        word+=$chunk
+        i=$((i + ${#chunk} - 1))
+        continue
+      fi
+    fi
+
     char=${text:i:1}
     next=${text:i+1:1}
 

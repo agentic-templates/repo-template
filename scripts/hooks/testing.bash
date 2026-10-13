@@ -65,6 +65,18 @@ tools_for() {
   esac
 }
 
+# Runs one check on an input, as scripts/hooks/before-tool runs it, and prints what the check prints:
+# run_check <check, such as posted-text> <input>
+run_check() {
+  local fields
+  fields=$(jq -r -f "$hooks_folder/input.jq" <<<"$2")
+  (
+    eval "$fields"
+    export HOOK_TOOL_NAME HOOK_COMMAND HOOK_FILE_PATH HOOK_CWD LC_ALL=C
+    "$hooks_folder/$1.check"
+  )
+}
+
 # Runs the hook on an input, and sets hook_status and hook_message: run_hook <input>
 run_hook() {
   hook_status=0

@@ -198,4 +198,17 @@ for template in "${body_commands[@]}" "${title_commands[@]}"; do
   expect_repository_flags 0 "" "$group" "$subcommand" "$(with_text "$rest" "$change_body") --help"
 done
 
+# A long body in quotes takes about as long as a short one, because the hooks read quoted text in pieces and in the
+# C locale. Before, a body of 400 lines took more than a minute on a Mac.
+long_body=$change_body
+for ((line = 1; line <= 400; line++)); do
+  long_body+=$'\n'"Line $line of the comment, which says what changed and why."
+done
+started=$SECONDS
+expect_allow Bash "gh issue comment 7 --body '$long_body'"
+if ((SECONDS - started > 10)); then
+  echo "error: the hook took $((SECONDS - started)) seconds for a command with a body of 400 lines in quotes, and the limit is 10." >&2
+  failed_cases=$((failed_cases + 1))
+fi
+
 finish_tests
