@@ -286,11 +286,28 @@ split_simple_commands() {
   local function=$1 text=$2
   local length=${#text} i char next
   local word="" has_word=false quote="" descriptor="" operator="" starts_redirection word_may_expand=""
-  local substitution_body substitution_end rest
+  local substitution_body substitution_end rest chunk
   local -a redirections=()
   local -a words=() words_may_expand=()
 
   for ((i = 0; i <= length; i++)); do
+    # Inside quotes, the text up to the next character that matters joins the word in one step, because adding one
+    # character at a time to a long word, such as a body in quotes, takes time that grows with the square of its
+    # length. In single quotes only the quote and the marker matter, and in double quotes the quote, \, $ and `.
+    if [[ -n $quote ]] && ((i < length)); then
+      rest=${text:i}
+      if [[ $quote == "'" ]]; then
+        chunk=${rest%%[\'"$marker"]*}
+      else
+        chunk=${rest%%[\"\\\$\`]*}
+      fi
+      if [[ -n $chunk ]]; then
+        word+=$chunk
+        i=$((i + ${#chunk} - 1))
+        continue
+      fi
+    fi
+
     char=${text:i:1}
     next=${text:i+1:1}
 

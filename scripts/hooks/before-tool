@@ -13,6 +13,10 @@
 # code 0, so the action goes ahead. A broken hook must never stop work, and Copilot CLI blocks on every
 # exit code other than 0 and 2.
 
+# The checks read a command one character at a time. In a multibyte locale, such as en_US.UTF-8, bash takes longer to
+# find each character the longer the command is, so a long body in a command would take seconds.
+export LC_ALL=C
+
 IFS= read -r -d '' input
 # This fails without jq, too.
 if ! jq -e 'type == "object"' >/dev/null 2>&1 <<<"$input"; then
