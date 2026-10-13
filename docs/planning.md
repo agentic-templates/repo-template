@@ -2,58 +2,40 @@
 
 ## Labels
 
-- `needs-triage`: issues a maintainer asks for don't get it, including the ones created at triage or while planning.
-- `needs-decision`: when you add it, write the question in the issue. When the maintainer decides, write the decision into the issue's body. Then remove the label.
+- `needs-triage`: the issue forms add it to the issues that others open. Don't add it to an issue that a maintainer asked for, or that you create at triage or while planning.
+- `needs-decision`: only for a question that the maintainer must answer, as "Decide or ask" in AGENTS.md describes. Write the question in the issue, with the option you recommend. When the maintainer decides, write the decision into the issue's body, and remove the label.
 
 ## Triage new ideas
 
 Triage is for ideas: anything a maintainer wants judged before deciding whether to build it.
 
 1. Take from the input the ideas that could change this project, and tell the maintainer in one line what you left out. Split them into single ideas. One idea is one result that someone wants. Merge ideas that ask for the same result.
-2. Check each idea:
+2. Judge each idea on its merits, not on how much the maintainer seems to want it:
    - Does it fit the direction in "What this project is" in AGENTS.md?
    - Does an open or closed issue already cover it?
-   - Can the project build it, and is it worth what it costs? Count what it adds for agents to read in later sessions, such as rules, checks and options.
-   - Does it rely on claims about the project, such as how the code works or what users need? Check those claims against the code and AGENTS.md. List the ones that are out of date or contradict something. Ask the maintainer about them right away, before step 3.
-3. Recommend one verdict for each idea, with the reason:
-   - **Accept:** the idea becomes an issue in the backlog.
-   - **Accept, too big:** the idea becomes one issue with `needs-breakdown`.
-   - **Research first:** a maintainer can't decide whether to build the idea, or what to build, until an open question is answered. The idea becomes an issue with `needs-decision`, blocked by a new research issue for the question.
-   - **Needs a decision:** only a maintainer can settle it, such as which of two approaches to take. Ask the maintainer in step 4, and replace this verdict with the one that their answer leads to. If they want to decide later, the idea becomes an issue with `needs-decision`.
-   - **Too vague:** it doesn't say what should change, or you can't tell why anyone would want it. If you can guess the likely reason, propose it and ask the maintainer to confirm. Otherwise give the idea back, and say what it's missing.
-   - **Duplicate:** an issue already covers it.
-     - If an open issue covers it, add the idea's new details to that issue's body. If that issue has `ready`, ask the maintainer in step 4 whether to add them. If they say no, add nothing.
-     - If only a closed issue covers it, ask the maintainer in step 4 whether they still want the change, as step 1 of "Make a change" in AGENTS.md describes. If they want to decide later, the idea becomes an issue with `needs-decision`.
-   - **Drop:** it doesn't fit the project's direction, can't be built or isn't worth its cost. Nothing is created.
+   - Can the project build it, and is it worth what it costs? Count what it adds for agents to read and run in later sessions, such as rules, checks and options.
+   - Do its claims about the project, such as how the code works, match the code and AGENTS.md? If they don't, judge the idea with the claims corrected.
+3. Give each idea one verdict:
+   - **Accept:** the idea becomes an issue in the backlog, with `needs-breakdown` if it's too big for one pull request. If an open issue covers it, add the idea's new details to that issue instead. If a closed issue covered it, mention that issue in the new one.
+   - **Research first:** the idea can't be judged until a question is answered. It becomes an issue with `needs-decision`, blocked by a new research issue for the question.
+   - **Drop:** it doesn't fit the project's direction, can't be built, isn't worth its cost, or was closed as not planned before. Nothing is created.
+   - **Ask:** only the maintainer can settle it, such as an idea too vague to judge, or one that needs a decision on taste or risk.
+4. Show the maintainer a table of the ideas, verdicts and reasons, one line each. Carry out **Accept** and **Research first** right away. In the same message, ask about each **Drop** and **Ask**, with the answer you recommend. Then carry out what the maintainer decides.
 
-   When two verdicts fit, recommend the one that leaves less for the maintainer to decide. For example, if no reading of an idea would fit the project, recommend **Drop**, not **Too vague**.
+Write each new issue in your own words. Leave out private details from the input. If part of the input comes from a public source, link that source instead of copying it.
 
-   Four verdicts don't need the maintainer's approval: **Accept**, **Accept, too big**, **Research first** and **Duplicate**.
-4. Before you show the maintainer your verdicts, ask a fresh critic about each idea that's big or that you're unsure about, as "Ask a fresh critic" describes. If the critic recommends revising or dropping an idea whose verdict doesn't need approval, make its verdict **Needs a decision**. Show the maintainer a table of the ideas, verdicts and reasons, and mark the verdicts that you'll carry out without asking. Then ask the questions that only a maintainer can answer, one at a time, each with the answer you recommend. Finally, ask the maintainer to approve the verdicts that the table doesn't mark.
-5. Carry out the verdicts that the table marks, the verdicts the maintainer approved, and any verdict that an answer turned into one of the four, without asking again. Write each new issue in your own words. Leave out private details from the input. If part of the input comes from a public source, link that source instead of copying it.
-
-Judge each idea on its merits. Don't agree with an idea because the maintainer seems to want it, and say plainly when you think one is weak.
-
-If the maintainer's answers change the project's direction, open a pull request that updates "What this project is", as "Make a change" in AGENTS.md describes. Then, before you carry out any verdicts, redo the ones that the change affects.
-
-### Ask a fresh critic
-
-The critic mustn't see the maintainer's enthusiasm, so start a new agent without your conversation. Give it the "What this project is" section from AGENTS.md, the idea in plain words, and this prompt:
-
-"Give the strongest case for building this idea and the strongest case against it. List what's unclear. Then recommend one: build it, revise it, or drop it. If you recommend revising it, say how. Say which concerns, if they were answered, would change your recommendation."
-
-Add its recommendation and its main concerns to the triage table. Only a maintainer revises an idea. Don't ask another critic about it until the maintainer has revised it.
+If the maintainer's answers change the project's direction, open a pull request that updates "What this project is", as "Make a change" in AGENTS.md describes.
 
 ## Triage issues that others open
 
-Triage every issue that has `needs-triage` or has no type label. Check each issue as step 2 of "Triage new ideas" describes, and recommend one of the verdicts below. Then carry out what the maintainer decides:
+Triage every issue that has `needs-triage` or has no type label. Judge each issue as step 2 of "Triage new ideas" describes, and give it one of the verdicts below. Carry out **Duplicate**, **Question** and **Too vague** right away, and **Accept** for a bug that you can reproduce. Ask the maintainer about the others in one message, with your recommendations, and carry out what they decide.
 
 - **Accept:** remove `needs-triage` and give the issue its type label, plus `needs-breakdown` if it's too big.
 - **Research first:** give the issue its type label, and replace `needs-triage` with `needs-decision`. Create a research issue for the question, and mark this issue as blocked by it.
-- **Needs a decision:** give the issue its type label, and replace `needs-triage` with `needs-decision`.
+- **Needs a decision:** only the maintainer can settle it, and they want to decide later. Give the issue its type label, and replace `needs-triage` with `needs-decision`.
 - **Too vague:** comment with a question that asks for the missing detail, and leave `needs-triage`. If nobody answers within two weeks, comment that the issue is closing for lack of detail, and close it as not planned.
 - **Duplicate:** close it with `gh issue close <issue> --duplicate-of <other issue>`.
-- **A question about using the project:** answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
+- **Question:** for a question about using the project, answer it in a comment, and close the issue. If the docs should have answered it, also open a `bug` about the docs.
 - **Drop:** comment why, then close it with `gh issue close <issue> --reason "not planned"`.
 
 If an issue came from an account that isn't a maintainer's, and its verdict is **Accept**, **Research first** or **Needs a decision**, carry out the verdict on a new issue instead of the original. Write the new issue in your own words, and include what the maintainer decided or the question that's still open. Then close the original with `gh issue close <issue> --duplicate-of <new issue>`, and add a comment that points its author to the new issue. If they opened a pull request for the original, also ask them to change its `Closes` line to the new issue.
@@ -78,8 +60,8 @@ An issue can get `ready` when all of these are true:
 
 - It asks for one change that fits in one pull request.
 - "Why" says who needs the change and what for.
-- Someone could check each "Done when" item by running or looking at something. Where quality matters, such as accuracy or speed, the item gives a number that a maintainer chose or approved. An item about what the code does gives example inputs with the result a test should check for each, or a rule that must hold for every input. Whether it gives examples or a rule, such an item also gives the results for the edges of the requirement: empty input, and the values on both sides of each limit.
-- Nothing is left to decide, except a question about how to build it that a research issue blocking it will answer. If the answer could change what the issue asks for, the issue isn't ready, and it keeps `needs-decision` until a maintainer decides.
+- Someone could check each "Done when" item by running or looking at something. Where speed or accuracy matters, the item gives a number that the maintainer approved.
+- Nothing is left that only the maintainer can decide.
 - "What should change" says what's out of scope, if the agent that builds the issue might otherwise do more than the issue asks for.
 - It's blocked by every issue whose change it needs first.
 - It has no status label.
@@ -94,6 +76,6 @@ Plan all the issues that a goal needs before anyone builds them.
 2. Triage anything new, including open issues that need triage.
 3. Choose the backlog issues that the goal needs, and leave out the rest. Add the issues the goal still lacks, including research issues for what someone has to find out, and break down any big issue you chose.
 4. Link each issue to the issues whose change it needs first, with `gh issue edit <issue> --add-blocked-by <other issue>`. Link only real dependencies. Every blocker must be part of this plan, have the `ready` label already or be closed. A build run can build several issues at once, so only a link makes sure that one change comes before another.
-5. Make every issue meet the definition of ready. Then have a fresh reader check each one. Start a new agent without your conversation, let it read the code, and give it the issue with this prompt: "You're about to build this issue. You can read the code, but you know nothing else. List what you'd have to guess that could change what you build." Fix what it lists, and ask the maintainer about anything that's their decision.
-6. Ask the maintainer to review the issues.
+5. Make every issue meet the definition of ready. Decide what you can, as "Decide or ask" in AGENTS.md describes.
+6. Show the maintainer the issues as a list, one line each, with any question that only they can answer.
 7. Add the `ready` label to each issue the maintainer approved, with `gh issue edit <issue> --add-label ready`.
