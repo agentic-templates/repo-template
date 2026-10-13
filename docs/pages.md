@@ -20,9 +20,7 @@ Until the example ends, explain only what the reader needs in order to use the p
 
 ## Review a changed page with a fresh reader
 
-A README or docs page where you added or rewrote text gets a review by a reader who has seen only that page. The text you added or rewrote includes each sentence that the issue gives word for word, and each sentence that became unclear because you cut a sentence next to it. Run the review before you open the pull request:
+Before you open the pull request, have a reader who has seen only the page review each README or docs page where you added or rewrote text:
 
 1. Run `scripts/fresh-reader "<reader>" <page>`, where `<reader>` is the page's reader and what they want to do, such as "a developer who wants to use this project". The script prints the sentences that the reader had to read twice or didn't need, each with the reader's reason. If `claude` isn't installed, start a new agent with no other context, and give it the page's text and the prompt in `scripts/fresh-reader`, with `<reader>` filled in.
-2. In the text you added or rewrote, rewrite each sentence that you agree is unclear, so that it says the same thing in clearer words. If you reword a sentence that the issue gives word for word, say in the pull request how it differs from the issue. Leave quoted sentences elsewhere on the page as they are. Open an issue for one of them only if the repository's files, a command's output or a tool's docs show that it's wrong, or if it contradicts another rule so that no agent can follow both.
-3. If you rewrote or cut sentences after the first review, run one more review with a new reader, and then stop. Change nothing after that review.
-4. In the pull request, list each sentence of the text you added or rewrote that the last reader quoted, with the reader's reason.
+2. In the text you added or rewrote, rewrite each sentence that you agree is unclear, so that it says the same thing in clearer words, and cut each one that you agree isn't needed. Leave the other sentences on the page as they are.
