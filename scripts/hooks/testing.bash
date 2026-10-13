@@ -93,19 +93,36 @@ expect_result() {
   fi
 }
 
-# Checks that the hook blocks an action in every tool that sends it: expect_block <tool name> <command, patch or path> <message>
+# Every tool's input goes through read_input in helpers.bash, so a case runs only in the first tool that sends its action,
+# unless the test file sets every_tool to yes. The tests for secret files and instruction files do, to cover each
+# tool's form of input.
+every_tool=""
+
+# Prints the tools that a case runs in: case_tools <tool name>
+case_tools() {
+  local tools
+  tools=$(tools_for "$1")
+  if [[ -n $every_tool ]]; then
+    echo "$tools"
+  else
+    echo "${tools%% *}"
+  fi
+}
+
+# Checks that the hook blocks an action in the tools that case_tools prints:
+# expect_block <tool name> <command, patch or path> <message>
 expect_block() {
   local tool
-  for tool in $(tools_for "$1"); do
+  for tool in $(case_tools "$1"); do
     run_hook "$(sample_input "$tool" "$1" "$2")"
     expect_result "In $tool, the hook for $1 \"$2\"" 2 "$3"
   done
 }
 
-# Checks that the hook allows an action in every tool that sends it: expect_allow <tool name> <command, patch or path>
+# Checks that the hook allows an action in the tools that case_tools prints: expect_allow <tool name> <command, patch or path>
 expect_allow() {
   local tool
-  for tool in $(tools_for "$1"); do
+  for tool in $(case_tools "$1"); do
     run_hook "$(sample_input "$tool" "$1" "$2")"
     expect_result "In $tool, the hook for $1 \"$2\"" 0 ""
   done
