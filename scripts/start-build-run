@@ -17,8 +17,17 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/open-pull-requests
 source scripts/open-pull-requests
-# shellcheck source=scripts/merge-queue
-source scripts/merge-queue
+
+# Prints the error of scripts/check-main-rules and fails when the rules for main no longer require a check that
+# scripts/configure-github requires there. Like the hook for gh pr merge, it succeeds when it can't tell.
+main_requires_checks() {
+  local problem status=0
+  problem=$(scripts/check-main-rules 2>&1) || status=$?
+  if ((status == 1)); then
+    printf '%s\n' "$problem" >&2
+    return 1
+  fi
+}
 
 # Prints an error and stops: stop <message>
 stop() {
