@@ -3,6 +3,7 @@
 set -euo pipefail
 # shellcheck source=scripts/hooks/testing.bash
 source "${BASH_SOURCE[0]%/*}/testing.bash"
+every_tool=yes
 
 # The hook checks the paths against the repository it runs in, which is this one.
 root=$(cd "$hooks_folder/../.." && pwd -P)

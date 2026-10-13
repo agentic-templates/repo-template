@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests scripts/hooks/forbidden-commands.check through scripts/hooks/before-tool, with a sample input from each tool.
+# Tests scripts/hooks/forbidden-commands.check through scripts/hooks/before-tool.
 set -euo pipefail
 # shellcheck source=scripts/hooks/testing.bash
 source "${BASH_SOURCE[0]%/*}/testing.bash"
