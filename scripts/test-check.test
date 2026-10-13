@@ -95,7 +95,7 @@ if ! (cd "$copy" && scripts/test-check --workflows-only) > "$base/output" 2>&1; 
   echo "error: scripts/test-check failed with downstream workflows and required checks." >&2
   exit 1
 fi
-for test in check-main-rules merge queue-auto-merge start-build-run stuck-pull-requests hooks/maintainer-commands; do
+for test in check-main-rules start-build-run stuck-pull-requests hooks/maintainer-commands; do
   argument=""
   if [[ $test == hooks/maintainer-commands ]]; then
     argument=--main-rules-only

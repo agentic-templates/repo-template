@@ -56,8 +56,7 @@ If a maintainer asks for something that's bigger than one pull request or needs 
 2. Run `scripts/start-issue <issue>`. It checks out the issue's branch, and creates the branch if the issue has none.
 3. Before you edit a file, read every AGENTS.md from the root down to the file's own folder. Where the AGENTS.md files differ, the one closest to the file wins.
 4. Make the change. Run `scripts/check` and fix every failure that your change causes. A failure that also happens on main isn't yours, and neither is any other problem you notice outside your issue. Open an issue for each one, with `needs-triage` and the type that fits, unless one is open already. If your change can't pass until that issue is fixed, mark your issue as blocked by it with `gh issue edit <issue> --add-blocked-by <other issue>`, and tell the maintainer. If main or a release has a security vulnerability that isn't public yet, don't describe it in an issue, a pull request or a commit before a release fixes it. Tell the maintainer, and record it as "Record a vulnerability privately" in `docs/releasing.md` describes.
-5. Push the branch and open a pull request with `gh pr create`.
-6. Run `scripts/merge <number>` every minute until it prints `merged`. When it stops with an error, fix what it names as step 4 describes, and run it again.
+5. Push the branch, open a pull request with `gh pr create`, and turn on auto-merge with `gh pr merge <number>`. Auto-merge is the maintainer's standing request for every pull request of work they asked for, so don't ask about merging, and don't offer Auto-fix. GitHub merges the pull request once its checks pass, so don't wait for them. If the maintainer wants to see the pull request before it merges, open it with `--draft`, and leave out `gh pr merge`.
 
 ## Commits
 

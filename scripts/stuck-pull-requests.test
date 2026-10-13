@@ -14,9 +14,8 @@ trap 'rm -rf "$base"' EXIT
 mkdir -p "$base/bin"
 
 # A stand-in for gh, first on the PATH. With fail in place of an answer, it fails, as gh does without the network.
-# - It answers the command in scripts/check-main-rules with the checks in TEST_MAIN_RULES, one to a line.
 # - It answers the command in scripts/open-pull-requests that lists the open pull requests with TEST_PULL_REQUESTS, as
-#   that script's --jq filter prints them, and the one in scripts/queue-auto-merge with TEST_QUEUE_PULL_REQUESTS.
+#   that script's --jq filter prints them.
 # - It writes each gh pr merge command to TEST_GH_CALLS, one to a line, and fails the one that matches
 #   TEST_FAILING_MERGE.
 cat >"$base/bin/gh" <<'STAND_IN'
@@ -33,22 +32,8 @@ answer() {
   exit 0
 }
 
-if [[ $1 == api && $2 == "repos/{owner}/{repo}/rules/branches/main" ]]; then
-  if [[ $TEST_MAIN_RULES == fail ]]; then
-    answer fail
-  fi
-  for check in $TEST_MAIN_RULES; do
-    echo "$check"
-  done
-  printf '%s\n' "$TEST_PROJECT_CHECKS"
-  exit 0
-fi
 if [[ $1 == api && $2 == graphql ]]; then
-  # Only the query in scripts/open-pull-requests asks for the checks.
-  if [[ $* == *statusCheckRollup* ]]; then
-    answer "$TEST_PULL_REQUESTS"
-  fi
-  answer "$TEST_QUEUE_PULL_REQUESTS"
+  answer "$TEST_PULL_REQUESTS"
 fi
 if [[ $1 == pr && $2 == merge ]]; then
   echo "$*" >>"$TEST_GH_CALLS"
@@ -93,16 +78,15 @@ auto_merge=2026-05-04T09:00:00Z
 removed_at=2026-05-04T09:10:00Z
 later=2026-05-04T09:20:00Z
 
-# Runs scripts/stuck-pull-requests, and sets status, output and merges, the gh pr merge commands that it and
-# scripts/queue-auto-merge ran: run_stuck_pull_requests <open pull requests, or fail> [<NAME=value>...]
-# Each NAME=value sets one of the stand-in's other TEST_ variables, which are empty otherwise, except TEST_MAIN_RULES,
-# which lists the checks that scripts/configure-github requires.
+# Runs scripts/stuck-pull-requests, and sets status, output and merges, the gh pr merge commands that it ran:
+# run_stuck_pull_requests <open pull requests, or fail> [<NAME=value>...]
+# Each NAME=value sets one of the stand-in's other TEST_ variables, which are empty otherwise.
 run_stuck_pull_requests() {
   local pull_requests=$1
   shift
   status=0
   : >"$base/calls"
-  output=$(env TEST_MAIN_RULES="check title" TEST_QUEUE_PULL_REQUESTS="" TEST_FAILING_MERGE="" "$@" \
+  output=$(env TEST_FAILING_MERGE="" "$@" \
     TEST_PULL_REQUESTS="$pull_requests" TEST_GH_CALLS="$base/calls" PATH="$base/bin:$PATH" \
     scripts/stuck-pull-requests 2>&1) || status=$?
   merges=$(<"$base/calls")
@@ -270,19 +254,6 @@ expect_result "When gh can't turn off auto-merge" 1 \
 run_stuck_pull_requests fail
 expect_result "When gh can't list the open pull requests" 1 \
   "error: can't list the open pull requests, because gh failed: error connecting to api.github.com" ""
-
-queue_pull_request="12${tab}false${tab}false${tab}CLEAN${tab}true"
-run_stuck_pull_requests "" TEST_QUEUE_PULL_REQUESTS="$queue_pull_request"
-expect_result "When scripts/queue-auto-merge adds a pull request to the merge queue" 0 "" \
-  "pr merge 12 --disable-auto"$'\n'"pr merge 12"
-
-pull_requests=$(
-  pull_request 12 false octocat false DIRTY $auto_merge
-  closes 12 30
-)
-run_stuck_pull_requests "$pull_requests" TEST_QUEUE_PULL_REQUESTS=fail
-expect_result "When scripts/queue-auto-merge fails" 0 \
-  "error: can't list the open pull requests, because gh failed: error connecting to api.github.com"$'\n'"Pull request 12 closes issue #30. It's DIRTY." ""
 
 if ((failed_cases > 0)); then
   echo "error: $failed_cases of the $case_count cases in scripts/stuck-pull-requests.test failed. The errors above say which." >&2

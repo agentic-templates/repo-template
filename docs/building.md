@@ -15,7 +15,7 @@ If you can start agents that each work in their own clone or worktree, build sev
 3. Run `scripts/take-next-issue`, followed by the number of each issue that step 1 says to skip. It assigns you the lowest-numbered ready issue that a build run can start, and prints the issue's number and its kind, such as `12 other`. If it prints `none`, go on with step 6.
 4. Build the issue as "Build one issue" below describes. Then go back to step 2.
 5. Give an issue back as "Build one issue" below describes.
-6. When no issue is left that you can start, wait for your helpers, if you have any. Also wait for the checks of each open pull request that closes a ready issue and has auto-merge turned on, with `gh pr checks <number> --watch`. For each one that's in the merge queue, run `scripts/merge <number>` every minute until it prints `merged` or stops with an error. Then go back to step 2. But if a helper reports or fails while you wait, go back to step 2 right away. Once no such pull request is open, no helper is working and no issue is left that you can start, run `scripts/build-run-report`. Report to the maintainer what it prints, and add:
+6. When no issue is left that you can start, wait for your helpers, if you have any, and go back to step 2 each time one reports or fails. Don't wait for pull requests to merge. An issue that waits for one is left for the next build run. Once no helper is working and no issue is left that you can start, run `scripts/build-run-report`. Report to the maintainer what it prints, and add:
    - the issues you opened on your own, for problems you noticed
    - the security vulnerabilities you noticed
    - the worktrees that `scripts/start-build-run` and `scripts/clear-worktrees` left, and why
@@ -28,8 +28,8 @@ Build the issue by the kind that `scripts/take-next-issue` printed:
 
 - For `research`, don't open a pull request. Answer its question in a comment, with a recommendation and the evidence that the maintainer needs to decide. If you need to try code, do it outside the repository, and put the short parts that show the answer in the comment. Check each issue that the research issue blocks. If the answer changes what that issue asks for, add `needs-decision` to it and comment there with the decision it needs. Then close the research issue.
 - For `parent`, don't build anything. Close it if its "Done when" is met, and give it back if it isn't.
-- For `left behind <pull request>`, finish that pull request: run `scripts/check` again, update its description, and turn on auto-merge.
-- For `other`, make the change as steps 2 to 5 of "Make a change" in AGENTS.md describe, which end with opening the pull request. Once the change meets the definition of done in AGENTS.md, turn on auto-merge with `gh pr merge <number>`, which adds the pull request to the merge queue once its checks pass.
+- For `left behind <pull request>`, finish that pull request: run `scripts/check` again, update its description, and turn on auto-merge with `gh pr merge <number>`.
+- For `other`, make the change as steps 2 to 5 of "Make a change" in AGENTS.md describe.
 
 If you build on a branch that ends in a commit with the subject `chore: save the unfinished work of a stopped session`, check each file the commit adds or changes, and undo each change that the issue doesn't need.
 
