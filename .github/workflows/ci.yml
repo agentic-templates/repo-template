@@ -47,9 +47,57 @@ jobs:
           ZIZMOR_GITHUB_TOKEN: ${{ github.token }}
           SKIP_SCRIPT_TESTS: 1
 
+  # Says whether the change needs the tests of the scripts and hooks, as scripts/script-tests-needed decides from the
+  # files it changes. When it can't list them, and on a push, the tests run.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      script_tests: ${{ steps.decide.outputs.script_tests }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # GitHub's compare API lists at most 300 files, so a merge group with more runs the tests.
+      - id: decide
+        name: Decide whether the tests of the scripts and hooks run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.merge_group.base_sha }}
+          HEAD: ${{ github.event.merge_group.head_sha }}
+        run: |
+          paths=scripts/
+          case $EVENT in
+            pull_request)
+              paths=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST/files" \
+                --jq '.[] | .filename, (.previous_filename // empty)') || paths=scripts/
+              ;;
+            merge_group)
+              paths=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$HEAD" \
+                --jq 'if (.files | length) < 300 then (.files[] | .filename, (.previous_filename // empty)) else "scripts/" end') ||
+                paths=scripts/
+              ;;
+          esac
+          # Only code 1 means that the change doesn't need the tests.
+          needed=0
+          scripts/script-tests-needed <<<"$paths" || needed=$?
+          script_tests=true
+          if ((needed == 1)); then
+            script_tests=false
+          fi
+          echo "script_tests=$script_tests" >>"$GITHUB_OUTPUT"
+
   # Runs the tests of the scripts and hooks while the linux job runs the other checks, because the tests took most of
   # the linux job's time.
   script-tests:
+    needs: changes
+    if: needs.changes.outputs.script_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -74,6 +122,8 @@ jobs:
   # the hooks and scripts/check run with it. The script-tests job's bash is newer, and shellcheck doesn't flag what
   # bash 3.2 lacks, such as declare -A.
   bash-3-2:
+    needs: changes
+    if: needs.changes.outputs.script_tests == 'true'
     runs-on: macos-latest
     timeout-minutes: 30
     # With this PATH, the scripts' #!/usr/bin/env bash lines find /bin/bash.
@@ -101,7 +151,7 @@ jobs:
   # It fails unless each job in needs passed or was skipped. When you add a job to this workflow, add it to needs.
   # It runs with if: always(), because otherwise a failed job would skip it, and GitHub counts a skip as a pass.
   check:
-    needs: [linux, script-tests, bash-3-2]
+    needs: [changes, linux, script-tests, bash-3-2]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
