@@ -82,7 +82,7 @@ Then name it in your request: "Build the ready issues, with up to 3 helpers usin
 For your project's later versions, use the same three requests. The requests below cover the rest of the work:
 
 - **"Triage these ideas:"**, followed by the text or a link to it. The agent splits the text into single ideas. It opens issues for the ideas it accepts, and asks you about the ones it would drop, that are too vague or that need your decision. The issues wait in the backlog until you ask to make them ready to build.
-- **"Triage the new issues."** The agent recommends what to do with each issue that waits for triage, such as a bug report from a user, and carries out what you decide.
+- **"Triage the new issues."** The agent sorts each issue that waits for triage, such as a bug report from a user. It accepts the bugs it can reproduce and closes duplicates on its own, and asks you about the rest.
 - **"Make #14 ready to build."** Use it for any issue in the backlog, including one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
 - **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers.
 - **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it.
