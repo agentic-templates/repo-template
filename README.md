@@ -84,6 +84,7 @@ For your project's later versions, use the same three requests. The requests bel
 - **"Triage these ideas:"**, followed by the text or a link to it. The agent splits the text into single ideas. It opens issues for the ideas it accepts, and asks you about the ones it would drop, that are too vague or that need your decision. The issues wait in the backlog until you ask to make them ready to build.
 - **"Triage the new issues."** The agent sorts each issue that waits for triage, such as a bug report from a user. It accepts the bugs it can reproduce and closes duplicates on its own, and asks you about the rest.
 - **"Make #14 ready to build."** Use it for any issue in the backlog, including one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
+- **"Fix the pull requests that didn't merge."** The agent fixes each open pull request whose checks failed or that conflicts with main, so that it merges. A build run does this too.
 - **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers.
 - **"Fix the typo in the README's first sentence."**, or any other small change. The agent opens an issue and a pull request for it.
 - **"Review pull request #12."** The agent compares the change with its issue and comments with what should change.
