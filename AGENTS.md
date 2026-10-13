@@ -33,7 +33,7 @@ When a request doesn't fit this direction, say so, and ask the maintainer whethe
 
 - `scripts/check`: runs the checks that CI runs on the code.
 
-Keep the checks on a pull request within ten minutes.
+Keep the checks on a pull request within five minutes.
 
 ## Labels
 
