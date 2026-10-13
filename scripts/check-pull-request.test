@@ -79,8 +79,7 @@ git -C "$repository" commit --quiet -am "feat: turn on code scanning" -m "Co-aut
 template=$(<.github/pull_request_template.md)
 # The template with each part filled in, as a pull request for #12
 filled_in=${template/"Closes #"/Closes #12}
-filled_in=${filled_in/"## How it was checked"/The app skips the expenses that it has already imported.$'\n\n'## How it was checked}
-filled_in+=$'\n'"scripts/check passes."
+filled_in+=$'\n'"The app skips the expenses that it has already imported."
 
 # The title of the pull request, and its branch, which a case can change for itself, as in title=<title> expect_pass ...
 title="feat: skip the expenses that were already imported"
@@ -199,7 +198,7 @@ expect_errors "With a section that's empty" \
   $'Closes #12\n\n## What changed and why\n\n## How it was checked\nscripts/check passes.' \
   "$(no_text "What changed and why")"
 expect_errors "With the template as it is, apart from the closing line" "${template/"Closes #"/Closes #12}" \
-  "$(no_text "What changed and why")" "$(no_text "How it was checked")"
+  "$(no_text "What changed and why")"
 expect_errors "With a section whose text is all in a comment over two lines" \
   $'Closes #12\n## What changed and why\n<!-- The app skips\nimported expenses. -->\n## How it was checked\nscripts/check passes.' \
   "$(no_text "What changed and why")"
@@ -207,7 +206,7 @@ expect_errors "With a heading in a comment" \
   $'Closes #12\n<!--\n## What changed and why\n-->\nThe app skips imported expenses.\n## How it was checked\nscripts/check passes.' \
   "$(no_heading "What changed and why")"
 expect_errors "With an empty body" "" \
-  "$no_closing_line" "$(no_heading "What changed and why")" "$(no_heading "How it was checked")"
+  "$no_closing_line" "$(no_heading "What changed and why")"
 
 # The prose of the title
 title="feat: skip imported expenses; keep the total" expect_errors "With a semicolon in the title" "$filled_in" \

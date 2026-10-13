@@ -54,8 +54,8 @@ An error message says what failed and what the reader can do about it. When a li
 
 - Write for a reader who hasn't seen your conversation, notes or session. Don't refer to any of them, or to what happened in an earlier session, such as a build run on a given date.
 - An issue's body describes what to build now. When a decision, an answer or a new detail changes the issue, rewrite the sentences it changes, so that the body reads as if it had been written that way from the start.
-- Write a pull request for a developer who joins the project later, not only for today's reviewer. Don't list the changed files.
-- Say how you checked the change: the checks you ran and what they showed. Name any check from AGENTS.md that you skipped, and say why.
+- Write a pull request for a developer who joins the project later, in a few sentences: what changed, why, and what that reader might otherwise get wrong. Don't list the changed files, and don't repeat what CI shows.
+- Say how you checked the change only where CI doesn't show it, such as a test by hand, or a check from AGENTS.md that you skipped and why.
 
 ## Write replies and reports
 
