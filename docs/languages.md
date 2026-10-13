@@ -11,6 +11,7 @@
    - the linter's rules against code that ignores an error, such as an empty `catch` block, a returned error that the caller never checks or a promise that nothing awaits
    - the tools' checks against blanket and unused suppression comments or attributes, such as `# noqa`
    - a failure on a focused test, such as `test.only`
+   - the linter's limit on how complex one function can be: the cognitive count where the linter has one, and the cyclomatic count otherwise, with a limit of 15, or 10 for Ruff's C901, which doesn't count `and` and `or`. Where the count ignores nesting, also limit nesting to 4 levels, unless that rule is experimental.
 
    Don't add a separate tool or plugin solely to supply a missing setting. For each setting that you turned on, add a small example that breaks it, and see `scripts/check` fail on it. Delete each example before you commit.
 5. Add a hook to `.claude/settings.json` and `.codex/hooks.json` that runs the formatter on each file in the language that the agent edits.
