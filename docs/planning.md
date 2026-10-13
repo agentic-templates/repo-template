@@ -54,7 +54,7 @@ If an issue came from an account that isn't a maintainer's, and its verdict is *
 
 ## Definition of ready
 
-Every issue that gets the `ready` label, including research issues and parents, must come from a maintainer's account.
+Every issue that gets the `ready` label, including research issues and parents, must come from a maintainer's account. A maintainer approves each one, except a bug that an agent reproduced, which the agent marks itself, as step 4 of "Make a change" in AGENTS.md describes.
 
 An issue can get `ready` when all of these are true:
 
