@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 # Tests scripts/hooks/maintainer-commands.check through scripts/hooks/before-tool, with a sample input from each tool.
 set -euo pipefail
-main_rules_only=""
-if (($# > 0)); then
-  if [[ $# != 1 || $1 != --main-rules-only ]]; then
-    echo "usage: scripts/hooks/maintainer-commands.test [--main-rules-only]" >&2
-    exit 2
-  fi
-  main_rules_only=yes
-fi
 # shellcheck source=scripts/hooks/testing.bash
 source "${BASH_SOURCE[0]%/*}/testing.bash"
 # shellcheck source=scripts/testing-required-checks.bash
@@ -135,12 +127,6 @@ test_main_rules() {
 
   TEST_MAIN_RULES="check title"
 }
-
-if [[ -n $main_rules_only ]]; then
-  test_main_rules
-  finish_tests
-  exit 0
-fi
 
 second_run="Blocked: this repository's settings were applied before, so a maintainer with admin access runs scripts/configure-github again. Go on with the other work, and list the command in your report for the maintainer, who runs it."
 merge_reason="comes from a fork, so a maintainer merges it. Go on with the other work, and list the command in your report for the maintainer, who runs it."
