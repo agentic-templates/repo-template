@@ -1,6 +1,6 @@
 # repo-template
 
-Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. You don't need to review each pull request. You approve the issues before agents build them, or ask an agent for a change yourself. Agents approve only the bugs that they find and reproduce. Either way, the agent's pull request merges once its checks pass.
+Start a GitHub project where people and coding agents follow the same rules to plan, build and release it. Every change goes from an issue to a branch to a pull request. You don't need to review each pull request. You approve the issues before agents build them, or ask an agent for a change yourself. Either way, the agent's pull request merges once its checks pass. Agents approve one kind of issue themselves: a bug that they find and reproduce while they work on another issue.
 
 The template works with any language, and with any coding tool that runs the hooks set up in `.claude/settings.json` or `.codex/hooks.json`. Agents follow `AGENTS.md` and the guides it links to in `docs/`.
 
@@ -82,7 +82,7 @@ Then name it in your request: "Build the ready issues, with up to 3 helpers usin
 For your project's later versions, use the same three requests. The requests below cover the rest of the work:
 
 - **"Triage these ideas:"**, followed by the text or a link to it. The agent splits the text into single ideas. It opens issues for the ideas it accepts, and asks you about the ones it would drop, that are too vague or that need your decision. The issues wait in the backlog until you ask to make them ready to build.
-- **"Triage the new issues."** The agent sorts each issue that waits for triage, such as a bug report from a user. It accepts the bugs it can reproduce and closes duplicates on its own, and asks you about the rest.
+- **"Triage the new issues."** The agent sorts each issue that waits for triage, such as a bug report from a user. It puts the bugs it can reproduce in the backlog and closes duplicates on its own, and asks you about the rest.
 - **"Make #14 ready to build."** Use it for any issue in the backlog, including one with `needs-breakdown`. The agent splits a big issue into smaller ones, and rewrites each one until it meets the definition of ready in `docs/planning.md`. Then it asks you to approve them.
 - **"Fix the pull requests that didn't merge."** The agent fixes each open pull request whose checks failed or that conflicts with main, so that it merges. A build run does this too.
 - **"Which issues need my decision?"** The agent lists the issues with `needs-decision`, and the question on each. Tell it your answers.
