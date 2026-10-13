@@ -7,29 +7,27 @@
 set -eEuo pipefail
 trap 'exit 1' ERR
 
-# Reads the tool's input from stdin into these variables. Every tool sends Claude Code's form:
-# one JSON object, with the tool in tool_name and its input in tool_input.
+# Sets these variables from the fields of the tool's input, which scripts/hooks/before-tool reads once for all the
+# checks. Every tool sends Claude Code's form: one JSON object, with the tool in tool_name and its input in tool_input.
 # - tool_name: the tool, such as Bash or Read. Cursor's Shell counts as Bash.
 # - shell_command: the command that Bash runs, or empty.
 # - patch: the patch text that Codex's apply_patch applies, or empty.
 # - file_path: the file that Read, Write or Edit uses, or empty.
 # - cwd: the folder the agent works in, or empty if the tool doesn't send it.
 read_input() {
-  local input
-  input=$(jq -c .)
-  tool_name=$(jq -r '.tool_name // "" | tostring' <<<"$input")
+  tool_name=${HOOK_TOOL_NAME:-}
   if [[ $tool_name == Shell ]]; then
     tool_name=Bash
   fi
   shell_command=""
   patch=""
   if [[ $tool_name == apply_patch ]]; then
-    patch=$(jq -r '.tool_input.command // "" | tostring' <<<"$input")
+    patch=${HOOK_COMMAND:-}
   else
-    shell_command=$(jq -r '.tool_input.command // "" | tostring' <<<"$input")
+    shell_command=${HOOK_COMMAND:-}
   fi
-  file_path=$(jq -r '.tool_input.file_path // "" | tostring' <<<"$input")
-  cwd=$(jq -r '.cwd // "" | tostring' <<<"$input")
+  file_path=${HOOK_FILE_PATH:-}
+  cwd=${HOOK_CWD:-}
 }
 
 # Blocks the action, and tells the agent why: block <reason>

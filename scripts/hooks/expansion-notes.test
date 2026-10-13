@@ -23,7 +23,7 @@ git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
 # Every command is already blocked. A note must describe only the text that this check reads.
 expect_note() {
   local check=$1 command=$2 expected=$3 status=0 output actual=no
-  output=$("$hooks_folder/$check.check" <<<"$(sample_input claude-code Bash "$command")" 2>&1) || status=$?
+  output=$(run_check "$check" "$(sample_input claude-code Bash "$command")" 2>&1) || status=$?
   if [[ $output == *"without running \$( ) or filling in variables." ]]; then
     actual=yes
   fi
