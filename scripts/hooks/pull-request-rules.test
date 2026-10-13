@@ -137,7 +137,7 @@ may_expand="This hook reads the title and body as the command writes them, witho
 expect_block Bash "gh pr create --title \"\$type: skip the expenses\" --body-file ../body.md" \
   "$(blocked "The title \"\$type: skip the expenses\" doesn't follow the format \"<type>: <what changed>\". Edit the title to match. The types are feat, fix, docs, test, refactor, perf, build, ci, revert, chore.") $may_expand"
 expect_block Bash "gh pr create --title '$title' --body \"\$(cat ../body.md)\"" \
-  "$(blocked "$no_closing_line" "The body has no heading \"What changed and why\". Add it as .github/pull_request_template.md has it, and write under it what the template's comment asks for." "The body has no heading \"How it was checked\". Add it as .github/pull_request_template.md has it, and write under it what the template's comment asks for.") $may_expand"
+  "$(blocked "$no_closing_line" "The body has no heading \"What changed and why\". Add it as .github/pull_request_template.md has it, and write under it what the template's comment asks for.") $may_expand"
 
 # Commands that give no title or no body, or a body file that the hook can't read before the command runs
 expect_block Bash "gh pr create --fill" "Blocked: the command gives no title, so this hook can't check it. Give the title with --title."

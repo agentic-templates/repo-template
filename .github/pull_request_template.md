@@ -4,8 +4,4 @@ Closes #
 
 ## What changed and why
 
-<!-- What a user or developer notices, and the reasons behind choices a reviewer might question. Name each test that you changed or deleted, and say why. List each coverage exclusion that you added. Don't list the changed files. -->
-
-## How it was checked
-
-<!-- The commands you ran and what they showed. Name any check you didn't run, and say why. -->
+<!-- A few sentences for a developer who joins the project later: what a user or developer notices, and the reasons behind choices that a reader might question. Name each test that you changed or deleted, and say why. List each coverage exclusion that you added. Say how you checked what CI doesn't check, if anything. Don't list the changed files. -->

@@ -7,8 +7,8 @@
 #   which gh looks up, is open, is in this repository, and has neither the label research nor sub-issues.
 # - No word that closes an issue comes right before an issue's number in the middle of a line, as in
 #   "the pull request that fixed #12", because GitHub closes that issue too.
-# - The body has the headings of .github/pull_request_template.md, "What changed and why" and "How it was checked",
-#   at any level, with text under each besides HTML comments.
+# - The body has the heading of .github/pull_request_template.md, "What changed and why", at any level, with text
+#   under it besides HTML comments.
 # - The title and the body have no path into a home folder, and no semicolon or dash between words in prose, as
 #   scripts/text-rules finds them.
 # - If the pull request changes scripts/configure-github, the body says that a maintainer needs to run it.
@@ -163,7 +163,6 @@ check_section() {
 }
 
 check_section "What changed and why"
-check_section "How it was checked"
 
 while IFS= read -r problem; do
   report "$problem"
