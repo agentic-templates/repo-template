@@ -52,11 +52,11 @@ Give your agent these requests in your own words. Each one can start in a new co
 
 2. **"Build the ready issues."**
 
-   The agent builds them lowest number first. It doesn't wait for its pull requests to merge, so an issue that waits for another one to close is left for a later build run.
+   The agent builds them lowest number first, and builds an issue blocked by another as soon as that one closes. It keeps going until each of its pull requests has merged or waits for you, and fixes any that fails its checks or conflicts with main.
 
    If the agent can't finish an issue, it closes the issue's pull request and keeps the work on the issue's branch. The agent comments on the issue with what it needs, and labels it `needs-decision`. An issue that's too big for one pull request gets `needs-breakdown` instead.
 
-   At the end, the agent reports what merged, what is still merging and what waits for you. Tell it your decisions. It writes each one into its issue and removes `needs-decision`. The issue still has `ready`, so your next "Build the ready issues" takes it again, starting from the work on the issue's branch.
+   At the end, the agent reports what merged and what waits for you. Tell it your decisions. It writes each one into its issue and removes `needs-decision`. The issue still has `ready`, so your next "Build the ready issues" takes it again, starting from the work on the issue's branch.
 
 3. **"Publish a release."**
 
