@@ -94,7 +94,7 @@ settings=$PWD/.claude/settings.json
 for checkout in "$repository" "$other"; do
   git init --quiet --initial-branch=main "$checkout"
   mkdir -p "$checkout/scripts/hooks"
-  for hook in before-tool session-start; do
+  for hook in before-tool after-tool session-start; do
     # The stand-in reads its input before it prints its path. Otherwise it could exit before the command's printf
     # writes the input, and where SIGPIPE is ignored, as in CI, printf would print an I/O error.
     # shellcheck disable=SC2016 # $0 expands when the hook runs.
@@ -117,6 +117,9 @@ expect_hook() {
   if [[ $event == SessionStart ]]; then
     input=$(jq -n --arg cwd "$test_cwd" '{session_id: "abc123", cwd: $cwd, hook_event_name: "SessionStart", source: "startup"}')
     expected=$checkout/scripts/hooks/session-start
+  elif [[ $event == PostToolUse ]]; then
+    input=$(sample_input "$tool" Bash ls)
+    expected=$checkout/scripts/hooks/after-tool
   else
     input=$(sample_input "$tool" Bash ls)
     expected=$checkout/scripts/hooks/before-tool
@@ -137,6 +140,7 @@ expect_hook PreToolUse claude-code "$worktree" "$worktree"
 expect_hook PreToolUse copilot-cli "$worktree" "$worktree"
 expect_hook PreToolUse claude-code "$worktree/scripts" "$worktree"
 expect_hook SessionStart claude-code "$worktree" "$worktree"
+expect_hook PostToolUse claude-code "$worktree" "$worktree"
 
 # The main checkout
 expect_hook PreToolUse claude-code "$repository" "$repository"
@@ -148,6 +152,7 @@ expect_hook PreToolUse cursor "$worktree" "$repository"
 # A hook never runs another repository's code, so the hooks of the folder the command runs in run.
 expect_hook PreToolUse claude-code "$other" "$repository"
 expect_hook SessionStart claude-code "$other" "$repository"
+expect_hook PostToolUse claude-code "$other" "$repository"
 
 # A folder outside any repository, and a folder that doesn't exist
 expect_hook PreToolUse claude-code "$checkouts/plain" "$repository"
