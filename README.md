@@ -108,7 +108,6 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - A repository made from the template doesn't get the template's later changes.
 - GitHub's Triage role doesn't give write access, but people with it can add `ready`. A workflow removes a `ready` label that someone without write access adds, usually within a minute. An agent that's building the ready issues can still take the issue in that minute, so give the Triage role only to people you'd let approve work.
 - An agent merges the pull request for each ready issue and for each change you ask for, without anyone reviewing it. When it builds the ready issues, it also merges Dependabot's pull requests. If a change passes the tests, the linters, the type checker, the check of new dependencies and code scanning, it merges, whatever else is wrong with it. Code scanning stops a merge when the changed lines have a security alert of high or critical severity, or an alert that CodeQL marks as an error. Code scanning also checks Dependabot's pull requests, but doesn't stop their merge.
-- In the Claude desktop app, an agent turns on auto-merge only when your own message asks for it, not when AGENTS.md does. Start each session with "Auto-merge my pull requests once their checks pass", or the agent asks you about each pull request.
 - If your project is a library and its language has a tool that finds breaking changes, the setup adds a check that runs it. In any other project, nothing checks for them. So a release can miss a breaking change and raise the version number too little.
 - Ask only one agent at a time to build a repository's ready issues, because two agents can take the same issue. That agent's helpers don't count, and they need an agent that can launch other agents.
 
@@ -129,7 +128,7 @@ Issues and pull requests are public, so the agent keeps a security problem out o
 - `scripts/configure-github`: applies the settings that GitHub doesn't copy from a template.
 - `.github/`: CI, a check of each pull request's title and body, a weekly check that the rules for main still require CI and the title and body check before a merge, issue forms, a pull request template, weekly Dependabot updates, release notes settings, the contributing and security pages, and a workflow that removes a `ready` label that the rules don't allow, such as one that someone without write access adds.
 - `scripts/hooks/`: hooks that block risky actions of the agent, such as reading a `.env` file or checking out a pull request from a fork.
-- `.claude/settings.json`: runs the hooks in Claude Code, Copilot CLI and Cursor, and stops Claude Code from adding its name to commits and pull requests. It also lets Claude Code make files in `scripts/` executable without asking.
+- `.claude/settings.json`: runs the hooks in Claude Code, Copilot CLI and Cursor, turns on auto-merge after Claude Code opens a pull request, and stops Claude Code from adding its name to commits and pull requests. It also lets Claude Code make files in `scripts/` executable without asking.
 - `.codex/hooks.json`: has Codex run the hooks.
 
 ## License
