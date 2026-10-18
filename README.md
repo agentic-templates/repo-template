@@ -8,14 +8,11 @@ It works with any language, in Claude Code, Codex, Copilot CLI and Cursor.
 
 You need:
 
-- The GitHub CLI 2.98 or later, signed in with `gh auth login`.
-- bash, which macOS and Linux include. On Windows, use Git Bash or WSL.
-- [jq](https://jqlang.org/download/). Without it, the hooks let every action through.
-- Claude Code 2.1.281 or later, if you use it. Earlier versions don't always read `AGENTS.md`.
+- The GitHub CLI
+- bash
+- [jq](https://jqlang.org/download/)
 
-Optional: to keep your email address out of public commits, set git's `user.email` to your GitHub noreply address.
-
-1. If you don't have a GitHub organization, create one at https://github.com/account/organizations/new. The template merges through GitHub's merge queue, which only an organization's repositories have.
+1. If you don't have a GitHub organization, create one at https://github.com/account/organizations/new.
 2. Create a public repository from the template, and go into its clone:
 
    ```bash
